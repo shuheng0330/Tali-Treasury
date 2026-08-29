@@ -96,3 +96,13 @@ The product demo now uses Circle-issued Sui Testnet USDC in a separate mandate:
 
 See `USDC_SETUP.md` for Circle metadata, funding details, and verification
 commands. The TypeScript integration exports these IDs as `taliUsdcDemo`.
+
+### First USDC reimbursement
+
+- Payment transaction: `Aksj8wgVoVRnbkVDyCMQ4qMKa1HfkWqDWF8Xptz5yQXA`
+- Amount: `3 USDC`
+- Recipient coin ID: `0xbf53ab0a4db161fd68a876ae7b19135cc532280a36cb296b6ff68483f45955ad`
+- Remaining mandate budget: `17 USDC`
+- Total spent: `3 USDC`
+- Audit event: `PaymentMade`, sequence `0`
+- Agent gas: `0.0023699 SUI`

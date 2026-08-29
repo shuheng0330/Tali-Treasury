@@ -46,3 +46,19 @@ Funding and mandate creation are complete.
 The faucet coin object was consumed by `create_mandate`; this is expected. Its
 20 USDC balance now lives inside the shared mandate rather than directly in the
 treasurer wallet.
+
+## First live USDC reimbursement
+
+- Payment transaction: `Aksj8wgVoVRnbkVDyCMQ4qMKa1HfkWqDWF8Xptz5yQXA`
+- Payment amount: `3000000` atomic units (`3 USDC`)
+- Recipient coin ID: `0xbf53ab0a4db161fd68a876ae7b19135cc532280a36cb296b6ff68483f45955ad`
+- Mandate remaining budget: `17000000` atomic units (`17 USDC`)
+- Mandate amount spent: `3000000` atomic units (`3 USDC`)
+- Member wallet balance: `3 USDC`
+- Agent gas charged: `2369900 MIST` (`0.0023699 SUI`)
+- Audit event: `PaymentMade`, sequence `0`
+
+This is the first complete stablecoin reimbursement proof: the authorized agent
+requested a policy-compliant payment, the Move contract released Circle
+Testnet USDC, the approved member received it, and the on-chain audit state was
+updated atomically.

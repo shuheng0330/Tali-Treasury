@@ -9,4 +9,9 @@ export const taliUsdcDemo = {
   initialBudget: 20_000_000n,
   maxPerClaim: 5_000_000n,
   expiryMs: 1_788_618_628_595n,
+  firstPayment: {
+    transaction: 'Aksj8wgVoVRnbkVDyCMQ4qMKa1HfkWqDWF8Xptz5yQXA',
+    amount: 3_000_000n,
+    recipientCoinId: '0xbf53ab0a4db161fd68a876ae7b19135cc532280a36cb296b6ff68483f45955ad',
+  },
 } as const;
