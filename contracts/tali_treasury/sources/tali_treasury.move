@@ -1,7 +1,9 @@
 module tali_treasury::treasury;
 
 use sui::balance::{Self, Balance};
+use sui::clock::Clock;
 use sui::coin::{Self, Coin};
+use sui::event;
 use sui::object::{Self, ID, UID};
 use sui::transfer;
 use sui::tx_context::{Self, TxContext};
@@ -9,6 +11,14 @@ use sui::tx_context::{Self, TxContext};
 const E_ZERO_BUDGET: u64 = 0;
 const E_INVALID_LIMIT: u64 = 1;
 const E_EMPTY_ALLOWLIST: u64 = 2;
+const E_WRONG_AGENT_CAP: u64 = 3;
+const E_ZERO_AMOUNT: u64 = 4;
+const E_AMOUNT_ABOVE_LIMIT: u64 = 5;
+const E_INSUFFICIENT_BUDGET: u64 = 6;
+const E_RECIPIENT_NOT_APPROVED: u64 = 7;
+const E_MANDATE_EXPIRED: u64 = 8;
+const E_MANDATE_REVOKED: u64 = 9;
+const E_WRONG_ADMIN_CAP: u64 = 10;
 
 public struct AdminCap has key, store {
     id: UID,
@@ -18,6 +28,14 @@ public struct AdminCap has key, store {
 public struct AgentCap has key, store {
     id: UID,
     mandate_id: ID,
+}
+
+public struct PaymentMade has copy, drop {
+    mandate_id: ID,
+    recipient: address,
+    amount: u64,
+    total_spent: u64,
+    paid_at_ms: u64,
 }
 
 public struct Mandate<phantom T> has key {
@@ -38,7 +56,7 @@ public fun create_mandate<T>(
     expiry_ms: u64,
     approved_recipients: vector<address>,
     ctx: &mut TxContext,
-):AdminCap {
+): AdminCap {
     let initial_budget = coin::value(&coin);
 
     assert!(initial_budget > 0, E_ZERO_BUDGET);
@@ -63,8 +81,8 @@ public fun create_mandate<T>(
     };
 
     let admin_cap = AdminCap {
-    id: object::new(ctx),
-    mandate_id,
+        id: object::new(ctx),
+        mandate_id,
     };
 
     transfer::public_transfer(
@@ -78,6 +96,53 @@ public fun create_mandate<T>(
     transfer::share_object(mandate);
 
     admin_cap
+}
+
+public fun spend<T>(
+    agent_cap: &AgentCap,
+    mandate: &mut Mandate<T>,
+    recipient: address,
+    amount: u64,
+    clock: &Clock,
+    ctx: &mut TxContext,
+) {
+    assert!(
+        agent_cap.mandate_id == object::uid_to_inner(&mandate.id),
+        E_WRONG_AGENT_CAP,
+    );
+    assert!(!mandate.revoked, E_MANDATE_REVOKED);
+    assert!(amount > 0, E_ZERO_AMOUNT);
+    assert!(amount <= mandate.max_per_claim, E_AMOUNT_ABOVE_LIMIT);
+    assert!(
+        balance::value(&mandate.budget) >= amount,
+        E_INSUFFICIENT_BUDGET,
+    );
+    assert!(
+        mandate.approved_recipients.contains(&recipient),
+        E_RECIPIENT_NOT_APPROVED,
+    );
+    assert!(clock.timestamp_ms() < mandate.expiry_ms, E_MANDATE_EXPIRED);
+
+    let payment_balance = mandate.budget.split(amount);
+    let payment = coin::from_balance(payment_balance, ctx);
+
+    mandate.amount_spent = mandate.amount_spent + amount;
+    event::emit(PaymentMade {
+        mandate_id: object::uid_to_inner(&mandate.id),
+        recipient,
+        amount,
+        total_spent: mandate.amount_spent,
+        paid_at_ms: clock.timestamp_ms(),
+    });
+    transfer::public_transfer(payment, recipient);
+}
+
+public fun revoke<T>(admin_cap: &AdminCap, mandate: &mut Mandate<T>) {
+    assert!(
+        admin_cap.mandate_id == object::uid_to_inner(&mandate.id),
+        E_WRONG_ADMIN_CAP,
+    );
+    mandate.revoked = true;
 }
 
 public fun mandate_budget<T>(mandate: &Mandate<T>): u64 {
