@@ -11,8 +11,8 @@ Frontend track (`Xiang-UI`). Updated as phases land.
 | 0 | Repo, shared contracts, design tokens | ✅ Done | 29 Aug |
 | 1 | Design system, app shell, status chips | ✅ Done | 29 Aug |
 | 2 | Mobile claim flow — capture to paid | ✅ Done | 29 Aug |
-| 3 | Treasurer dashboard and review queue | ⬜ Not started | — |
-| 4 | Safety Test panel | ⬜ Not started | — |
+| 3 | Treasurer dashboard and review queue | ✅ Done | 29 Aug |
+| 4 | Safety Test panel | ✅ Done | 29 Aug |
 | 5 | Landing page | ⬜ Not started | — |
 | 6 | Wire to live contract and backend | ⬜ Not started | — |
 | 7 | Submission pack | ⬜ Not started | — |
@@ -84,9 +84,69 @@ The mock decides pass or hold by comparing the confirmed amount against the mand
 per-claim cap, so **both demo paths are reachable by typing a different number** — no
 code change, no hidden toggle. Cap is 200; 84 pays, 340 is held.
 
-Routes now: `/` landing · `/claim` member flow · `/system` design reference.
-
 Verified: build passes, all routes serve 200, claim page renders end to end.
+
+## Phase 3 — Treasurer dashboard and review queue ✅
+
+`/treasury`. Mandate header, budget meter, stat strip, tabbed queue, revoke.
+
+- **Rows are decidable without opening them.** Amount right-aligned in tabular figures,
+  submitter and category, then the full rule-fit table with the real comparison on each
+  line — `340.00 vs 200.00`, not "over limit". A verifiable comparison is what makes the
+  verdict checkable rather than assertable.
+- **A failed rule and an uncertain agent are different reviewer tasks**, so they carry
+  different glyphs. A red wedge means a rule failed; an amber circle means every rule
+  passes but the agent is unsure. Merging them into one badge would hide the distinction
+  that decides what the reviewer actually does.
+- **The agent's note is typographically separate** from the rule table — italic, prefixed,
+  muted. The table is fact; the note is judgement. Letting them share a treatment is the
+  most dangerous thing an agentic finance UI can do.
+- **Approve and Reject are not mirror images.** Filled primary against a ghost outline,
+  with a gutter between them, per NN/g on consequential options sitting near benign ones.
+- **Revoke needs type-to-confirm on the event name** and names its collateral damage
+  ("3 claims are awaiting review. They will be cancelled."). Approving is reversible;
+  revoking is not, so only one of them gets a modal.
+- **The empty state is evidence of work done**, not a celebration: how many the agent
+  paid and how many it escalated, plus the route into the safety test.
+
+## Phase 4 — Safety Test panel ✅
+
+`/safety`. The differentiator, and the reason the product exists.
+
+- **The judge sets the amount and the recipient.** Four presets — overspend, unknown
+  recipient, after revocation, drain budget — plus a custom field with a free address.
+  A locked preset list invites "yeah but it's rigged"; an open field kills that.
+- **The dry run predicts the abort before firing**, with the reason stated on screen:
+  we show you this *before* firing so you can check we did not fake it afterwards.
+  Committing to an outcome in advance is far more persuasive than a bare result.
+- **The bypass toggle is real, not decorative.** With it off, the app refuses the send
+  and says so plainly: *a client-side check is a convenience, not a guarantee — we wrote
+  it, so we could remove it.* Tick bypass, fire the identical transaction, and the
+  contract refuses it instead. That two-step is the strongest sequence in the demo.
+- **The reveal is staged, the outcome is not.** Signed → broadcast → executing, with the
+  **digest appearing before the result**, so the judge holds a verifiable handle to a
+  transaction whose outcome is still unknown. The treasury figure sits on screen
+  throughout, labelled unchanged.
+- **A rejection is drawn as enforcement, not failure.** Shield rather than a cross,
+  "Blocked by your rules" rather than "Transaction failed", and the mandate as the
+  grammatical subject: *the mandate refused a 9,000.00 transfer. Nothing left your
+  treasury.* Nobody is blamed and the non-effect is stated out loud.
+- **Rules that passed are shown too.** A blanket refusal proves nothing; a granular one
+  proves the check is real. Where more than one rule would have stopped it, the panel
+  says so.
+- **Gas burned is on screen** — a fake rejection costs nothing, a real on-chain abort
+  costs gas. It is the cheapest proof available.
+- **The counterfactual is one button.** A system that rejects everything is broken, not
+  safe, so the first thing offered after a block is the same path with a valid amount:
+  *same contract, same agent, same code path.*
+- **Abort codes come from `treasuryErrorFromCode`** in Shuheng's package, so the message
+  on screen is the contract's own error text rather than a paraphrase. The abort order
+  follows the assert order in `treasury.move`, so the predicted code is the one the chain
+  would actually raise first.
+
+Routes now: `/` landing · `/claim` · `/treasury` · `/safety` · `/system`.
+
+Verified: build passes, all five routes serve 200 with expected content.
 
 ---
 

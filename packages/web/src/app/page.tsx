@@ -2,6 +2,8 @@ import Link from 'next/link';
 
 const ROUTES = [
   { href: '/claim', title: 'Submit a claim', body: 'The member journey: photograph a receipt, confirm what was read, watch the rules decide.' },
+  { href: '/treasury', title: 'Treasurer view', body: 'The mandate, the budget, and the claims the agent escalated instead of paying.' },
+  { href: '/safety', title: 'Safety test', body: 'Try to make the agent overspend. Watch the contract refuse.' },
   { href: '/system', title: 'Design system', body: 'Status chips, amounts and the budget meter, in both themes.' },
 ];
 
