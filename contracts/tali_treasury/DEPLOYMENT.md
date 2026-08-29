@@ -56,3 +56,26 @@ The mandate is a shared object. The treasurer owns its matching `AdminCap`, and 
 - Audit event: `PaymentMade`, sequence `0`
 
 This transaction proves that the agent can use its capability to reimburse an approved member while the shared mandate enforces its amount limit, remaining budget, expiry, revocation state, and allowlist.
+
+## Live safety tests
+
+Two deliberately invalid reimbursements were submitted to Testnet from the
+agent wallet. Both were rejected by `treasury::spend` as designed:
+
+| Scenario | Transaction | Result |
+| --- | --- | --- |
+| Request `0.15 SUI` when the maximum is `0.10 SUI` | `JD1cvKrj3ieWF8mhWbVJh7pgZpzM1z1VADor53ZsuT4g` | Failed with abort code `5` (`E_AMOUNT_ABOVE_LIMIT`) |
+| Request `0.05 SUI` for a non-approved recipient | `6xU1WoPA53AcckWYi6t8k133TWSsz8obkZK45yZRmiWk` | Failed with abort code `7` (`E_RECIPIENT_NOT_APPROVED`) |
+
+Post-test verification:
+
+- Mandate remaining budget: `450000000 MIST` (`0.45 SUI`), unchanged.
+- Mandate amount spent: `50000000 MIST` (`0.05 SUI`), unchanged.
+- Approved member balance: `50000000 MIST` (`0.05 SUI`), unchanged.
+- Total agent gas for both failed transactions: `2094696 MIST` (`0.002094696 SUI`).
+- No `PaymentMade` event was emitted by either failed transaction.
+
+This proves the core security model: an agent may propose a payment, but the
+Move contract is the final authority. A rejected transaction cannot move
+treasury funds. See `ERROR_CODES.md` for the complete application-facing error
+mapping.
