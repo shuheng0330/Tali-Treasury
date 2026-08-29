@@ -26,7 +26,8 @@ Status words are intentionally precise:
 | TypeScript Sui integration | **Complete locally** | Reads, PTB builders, amount helpers, error mapping |
 | Treasurer mandate dashboard | **Live** (read-only) | Server reads the current mandate from Sui Testnet |
 | Claim, review, revoke, and Safety Test interactions | **Mocked** | Clearly labelled; no signing or state changes |
-| Gemini, Supabase, deterministic backend agent | **Pending** | Backend team integration |
+| Gemini receipt analysis and Supabase claims | **Complete locally** | 58 Vitest tests and 30 pgTAP assertions; hosted migration pending |
+| Deterministic policy and backend agent signing | **Pending** | Separate payment-orchestration slice |
 | Wallet connection and live UI writes | **Pending** | Add after backend/signing boundary is agreed |
 | Hosting and submission pack | **Pending** | Final integration phase |
 
@@ -48,10 +49,13 @@ has paid `3 USDC`, and has `17 USDC` remaining.
 ## How the pieces fit
 
 ```text
-Member UI (mocked claim submission)
+Member UI (still wired to mock claim data)
              |
              v
-Gemini + policy backend (pending)
+Gemini receipt + private Supabase claims (complete locally)
+             |
+             v
+Deterministic policy + signer (pending)
              |
              v
 @tali/treasury-sui (readers and unsigned transaction builders)
@@ -80,6 +84,8 @@ See [`docs/OWNERSHIP.md`](docs/OWNERSHIP.md) before editing shared paths.
 
 - Node.js 22 or a compatible current LTS release.
 - npm.
+- Docker Desktop for the standard local Supabase workflow, or PostgreSQL 16 for
+  migration-only verification.
 - Sui CLI `1.78.1` with the Testnet-compatible Move framework.
 - A Sui Testnet client configuration for Move tests and CLI verification.
 
@@ -133,6 +139,53 @@ Never:
 Both treasurer and agent wallets need Testnet SUI for gas even when the mandate
 holds USDC.
 
+## Receipt backend setup
+
+Set these server-only values in `packages/web/.env.local`:
+
+```dotenv
+SUPABASE_URL=
+SUPABASE_SECRET_KEY=
+SUPABASE_RECEIPT_BUCKET=receipts
+GEMINI_API_KEY=
+GEMINI_MODEL=gemini-3.5-flash-lite
+```
+
+`SUPABASE_SERVICE_ROLE_KEY` remains a temporary fallback for an existing project,
+but `SUPABASE_SECRET_KEY` is preferred. Never add either value to a
+`NEXT_PUBLIC_` variable.
+
+Run the local database checks:
+
+```powershell
+npm run supabase:start
+npm run supabase:reset
+npm run supabase:test
+```
+
+For a hosted project, authenticate and link the Supabase CLI before applying the
+migration:
+
+```powershell
+npm exec supabase -- login
+npm exec supabase -- link --project-ref YOUR_PROJECT_REF
+npm exec supabase -- db push
+```
+
+Verify in Supabase that the `receipts` bucket is private, limited to 10 MiB, and
+accepts only JPEG, PNG, and WebP. The server exposes:
+
+- `POST /api/receipts/analyze` — multipart fields `receipt`, `eventId`, and
+  `submitter`;
+- `POST /api/claims` — the shared `CreateClaimRequest` JSON body;
+- `GET /api/events/:id/claims` — persisted claims with 300-second receipt URLs.
+
+This hackathon slice treats the submitted wallet address as demo identity and
+checks event membership, but it does not verify a wallet signature. The analyze
+response is also not yet signed or persisted as a one-time draft before claim
+creation. Add wallet authentication and a signed analysis token or server-side
+draft before production use or real-fund authorization.
+
 ## Integration handoff
 
 Frontend:
@@ -144,18 +197,19 @@ Frontend:
 
 Backend:
 
-- Implement the endpoint contracts already defined in `packages/shared/src/api.ts`.
+- Deploy and verify the implemented receipt and claim endpoint contracts.
 - Keep the agent private key server-side.
 - Re-run deterministic policy checks before building and signing a payment.
 - Store receipt hashes and private receipt objects outside the chain.
 
 Immediate next vertical slice:
 
-1. Replace simulated receipt analysis with Gemini and private storage.
-2. Persist claims and exact receipt hashes.
-3. Return uncertain claims to the review queue.
-4. Sign one valid `buildSpendTransaction` call from the backend agent.
-5. Refresh the live mandate dashboard after finality.
+1. Apply the migration to hosted Supabase and seed the demo event and members.
+2. Replace the claim UI mock with the three implemented API routes.
+3. Add wallet-signature authentication and bind analysis to claim creation.
+4. Add deterministic policy routing and return uncertain claims to review.
+5. Sign one valid `buildSpendTransaction` call from the backend agent.
+6. Refresh the live mandate dashboard after finality.
 
 ## Documentation index
 
