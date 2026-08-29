@@ -62,3 +62,24 @@ This is the first complete stablecoin reimbursement proof: the authorized agent
 requested a policy-compliant payment, the Move contract released Circle
 Testnet USDC, the approved member received it, and the on-chain audit state was
 updated atomically.
+
+## Live USDC Safety Test
+
+Two invalid reimbursements were deliberately submitted from the authorized
+agent wallet:
+
+| Scenario | Transaction | On-chain result |
+| --- | --- | --- |
+| Request `15 USDC` when the maximum is `5 USDC` | `5fMDNz9dAxJFiamg5Bi5iXnPjnHv2HTUB3hv2wJ2PNpU` | Failed with code `5` (`E_AMOUNT_ABOVE_LIMIT`) |
+| Request `3 USDC` for a non-approved recipient | `2htVB5NJCxhz1QXQtLGDjJ6kLVAwit6MLqzghzGDnk5e` | Failed with code `7` (`E_RECIPIENT_NOT_APPROVED`) |
+
+Post-test verification:
+
+- Mandate remaining budget: `17 USDC`, unchanged.
+- Mandate amount spent: `3 USDC`, unchanged.
+- Approved member balance: `3 USDC`, unchanged.
+- Payment events emitted: none.
+- Total agent gas for both failed transactions: `2095000 MIST` (`0.002095 SUI`).
+
+This is the judge-facing security proof: even the correctly authorized agent
+cannot bypass the immutable amount limit or recipient allowlist.

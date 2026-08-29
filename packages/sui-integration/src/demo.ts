@@ -14,4 +14,10 @@ export const taliUsdcDemo = {
     amount: 3_000_000n,
     recipientCoinId: '0xbf53ab0a4db161fd68a876ae7b19135cc532280a36cb296b6ff68483f45955ad',
   },
+  safetyTest: {
+    oversizedClaimTransaction: '5fMDNz9dAxJFiamg5Bi5iXnPjnHv2HTUB3hv2wJ2PNpU',
+    oversizedClaimAbortCode: 5,
+    unapprovedRecipientTransaction: '2htVB5NJCxhz1QXQtLGDjJ6kLVAwit6MLqzghzGDnk5e',
+    unapprovedRecipientAbortCode: 7,
+  },
 } as const;

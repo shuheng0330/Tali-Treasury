@@ -106,3 +106,14 @@ commands. The TypeScript integration exports these IDs as `taliUsdcDemo`.
 - Total spent: `3 USDC`
 - Audit event: `PaymentMade`, sequence `0`
 - Agent gas: `0.0023699 SUI`
+
+### Live USDC Safety Test
+
+| Scenario | Transaction | Result |
+| --- | --- | --- |
+| `15 USDC` claim against a `5 USDC` maximum | `5fMDNz9dAxJFiamg5Bi5iXnPjnHv2HTUB3hv2wJ2PNpU` | Failed with abort code `5` |
+| `3 USDC` claim to a non-approved recipient | `2htVB5NJCxhz1QXQtLGDjJ6kLVAwit6MLqzghzGDnk5e` | Failed with abort code `7` |
+
+After both rejected transactions, the mandate still held `17 USDC`, the member
+still held `3 USDC`, and neither transaction emitted `PaymentMade`. Only the
+agent's SUI gas balance changed, by `0.002095 SUI` in total.
