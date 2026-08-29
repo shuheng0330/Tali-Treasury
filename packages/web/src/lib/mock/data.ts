@@ -86,3 +86,41 @@ export const seededClaims: Claim[] = [
     updatedAtMs: Date.now() - 93_599_000,
   }),
 ];
+
+export const STRANGER =
+  '0x41ff9a03c2b45e17d8093f6a2c5b8e04d7f1a396c2e5b8d1f4a7c0e3b6d90000';
+
+export const queuedClaims: Claim[] = [
+  claim({
+    id: 'q-0148',
+    state: 'awaiting_review',
+    amount: toBaseUnits('340.00'),
+    merchant: 'Campus Print Shop',
+    category: 'printing',
+    submitterName: 'Wey Cheng',
+    submitter: VENDOR,
+    createdAtMs: Date.now() - 120_000,
+    updatedAtMs: Date.now() - 120_000,
+  }),
+  claim({
+    id: 'q-0147',
+    state: 'awaiting_review',
+    amount: toBaseUnits('180.00'),
+    merchant: 'Dewan Sri Pinang',
+    category: 'venue',
+    submitterName: 'Shu Heng',
+    submitter: STRANGER,
+    createdAtMs: Date.now() - 840_000,
+    updatedAtMs: Date.now() - 840_000,
+  }),
+  claim({
+    id: 'q-0146',
+    state: 'awaiting_review',
+    amount: toBaseUnits('96.00'),
+    merchant: 'Mydin Mall',
+    category: 'materials',
+    submitterName: 'Kian Xiang',
+    createdAtMs: Date.now() - 3_600_000,
+    updatedAtMs: Date.now() - 3_600_000,
+  }),
+];
