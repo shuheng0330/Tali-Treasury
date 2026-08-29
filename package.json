@@ -1,0 +1,16 @@
+{
+  "name": "tali-treasury",
+  "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
+  "devDependencies": {
+    "vite": "8.2.2"
+  },
+  "scripts": {
+    "build": "npm run build -w @tali/treasury-sui && npm run build -w @tali/shared && npm run build -w @tali/web",
+    "dev": "npm run build -w @tali/treasury-sui && npm run build -w @tali/shared && npm run dev -w @tali/web",
+    "test": "npm run test --workspaces --if-present",
+    "typecheck": "npm run build -w @tali/treasury-sui && npm run typecheck -w @tali/treasury-sui && npm run typecheck -w @tali/shared && npm run build -w @tali/shared && npm run typecheck -w @tali/web"
+  }
+}
