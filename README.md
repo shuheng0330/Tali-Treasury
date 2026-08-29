@@ -26,7 +26,7 @@ Status words are intentionally precise:
 | TypeScript Sui integration | **Complete locally** | Reads, PTB builders, amount helpers, error mapping |
 | Treasurer mandate dashboard | **Live** (read-only) | Server reads the current mandate from Sui Testnet |
 | Claim, review, revoke, and Safety Test interactions | **Mocked** | Clearly labelled; no signing or state changes |
-| Gemini receipt analysis and Supabase claims | **Complete locally** | 58 Vitest tests and 30 pgTAP assertions; hosted migration pending |
+| Gemini receipt analysis and Supabase claims | **Complete locally** | 58 Vitest tests and 33 pgTAP assertions; hosted migration pending |
 | Deterministic policy and backend agent signing | **Pending** | Separate payment-orchestration slice |
 | Wallet connection and live UI writes | **Pending** | Add after backend/signing boundary is agreed |
 | Hosting and submission pack | **Pending** | Final integration phase |

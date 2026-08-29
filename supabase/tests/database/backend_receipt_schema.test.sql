@@ -1,6 +1,6 @@
 begin;
 
-select plan(30);
+select plan(33);
 
 create or replace function pg_temp.capture_sqlstate(statement text)
 returns text
@@ -183,6 +183,31 @@ select is(
   'member display names must already be trimmed'
 );
 
+insert into public.event_members (event_id, wallet_address, display_name, active)
+select event_one,
+  '0xdddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd',
+  'Inactive Member',
+  false
+from test_context;
+
+select is(
+  pg_temp.capture_sqlstate($sql$
+    insert into public.claims (
+      event_id, submitter_wallet, receipt_object_path, receipt_sha256,
+      fuzzy_key, state, amount, merchant, currency, receipt_date,
+      category, description, receipt_analysis
+    )
+    select event_one,
+      '0xdddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd',
+      event_one || '/inactive.png', repeat('3', 64), 'inactive',
+      'submitted', 1, 'Shop', 'MYR', '2026-08-30', 'printing', '',
+      jsonb_build_object('receiptHash', repeat('3', 64))
+    from test_context
+  $sql$),
+  '23514',
+  'inactive members cannot submit claims'
+);
+
 select is(
   pg_temp.capture_sqlstate($sql$
     insert into public.claims (
@@ -347,6 +372,31 @@ select is(
   '23514',
   'receipt analysis must be a JSON object'
 );
+
+select is(
+  pg_temp.capture_sqlstate($sql$
+    insert into public.claims (
+      event_id, submitter_wallet, receipt_object_path, receipt_sha256,
+      fuzzy_key, state, amount, merchant, currency, receipt_date,
+      category, description, receipt_analysis
+    )
+    select event_one,
+      '0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+      event_one || '/missing-analysis-hash.png', repeat('4', 64), 'missing hash',
+      'submitted', 1, 'Shop', 'MYR', '2026-08-30', 'printing', '', '{}'::jsonb
+    from test_context
+  $sql$),
+  '23514',
+  'receipt analysis must contain the matching hash'
+);
+
+select lives_ok($sql$
+  update public.event_members
+  set active = false
+  where event_id = (select event_one from test_context)
+    and wallet_address =
+      '0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
+$sql$, 'members can be deactivated without deleting claim history');
 
 create temporary table timestamp_context (before_update timestamptz);
 insert into timestamp_context

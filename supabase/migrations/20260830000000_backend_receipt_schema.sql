@@ -52,7 +52,6 @@ create table public.event_members (
   active boolean not null default true,
   created_at timestamptz not null default now(),
   primary key (event_id, wallet_address),
-  unique (event_id, wallet_address, active),
   constraint event_members_wallet_valid check (
     wallet_address ~ '^0x[0-9a-f]{64}$'
   ),
@@ -66,7 +65,6 @@ create table public.claims (
   id uuid primary key default gen_random_uuid(),
   event_id uuid not null,
   submitter_wallet text not null,
-  submitter_active boolean not null default true,
   receipt_object_path text not null,
   receipt_sha256 text not null,
   fuzzy_key text not null,
@@ -83,9 +81,8 @@ create table public.claims (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   constraint claims_active_member_fk
-    foreign key (event_id, submitter_wallet, submitter_active)
-    references public.event_members(event_id, wallet_address, active),
-  constraint claims_submitter_active check (submitter_active),
+    foreign key (event_id, submitter_wallet)
+    references public.event_members(event_id, wallet_address),
   constraint claims_receipt_object_path_unique unique (receipt_object_path),
   constraint claims_event_receipt_hash_unique unique (event_id, receipt_sha256),
   constraint claims_receipt_object_path_valid check (
@@ -126,7 +123,8 @@ create table public.claims (
     jsonb_typeof(receipt_analysis) = 'object'
   ),
   constraint claims_receipt_analysis_hash_matches check (
-    receipt_analysis ->> 'receiptHash' = receipt_sha256
+    receipt_analysis ? 'receiptHash'
+    and receipt_analysis ->> 'receiptHash' = receipt_sha256
   ),
   constraint claims_decision_object check (
     decision is null or jsonb_typeof(decision) = 'object'
@@ -139,6 +137,33 @@ create table public.claims (
 create index claims_event_created_at_idx
   on public.claims (event_id, created_at desc, id desc);
 
+create function public.enforce_active_claim_member()
+returns trigger
+language plpgsql
+set search_path = ''
+as $$
+begin
+  if exists (
+    select 1
+    from public.event_members
+    where event_id = new.event_id
+      and wallet_address = new.submitter_wallet
+  ) and not exists (
+    select 1
+    from public.event_members
+    where event_id = new.event_id
+      and wallet_address = new.submitter_wallet
+      and active
+  ) then
+    raise check_violation using
+      message = 'claim submitter must be an active event member';
+  end if;
+  return new;
+end;
+$$;
+
+revoke all on function public.enforce_active_claim_member() from public;
+
 create trigger events_set_updated_at
 before update on public.events
 for each row execute function public.set_updated_at();
@@ -146,6 +171,10 @@ for each row execute function public.set_updated_at();
 create trigger claims_set_updated_at
 before update on public.claims
 for each row execute function public.set_updated_at();
+
+create trigger claims_enforce_active_member
+before insert or update of event_id, submitter_wallet on public.claims
+for each row execute function public.enforce_active_claim_member();
 
 alter table public.events enable row level security;
 alter table public.event_members enable row level security;

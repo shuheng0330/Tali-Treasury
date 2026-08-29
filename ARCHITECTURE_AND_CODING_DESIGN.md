@@ -40,8 +40,9 @@ adapter repository store
 - `claims` stores positive integer base units, normalized receipt fields, analysis
   JSON, internal object path and optional later decision/payment JSON.
 - `(event_id, receipt_sha256)` is unique. Receipt object paths are globally unique.
-- A composite foreign key including the active flag prevents claims by inactive or
-  absent members.
+- A composite membership foreign key preserves ownership history, while an insert
+  trigger rejects claims by inactive members without preventing later member
+  deactivation.
 - All three tables enable RLS without browser policies. Explicit grants are limited
   to `service_role`.
 
