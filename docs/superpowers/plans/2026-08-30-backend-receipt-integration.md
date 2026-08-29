@@ -43,7 +43,7 @@
 - Modify: `package-lock.json`
 - Modify: `packages/web/package.json`
 
-- [ ] **Step 1: Add pinned dependencies**
+- [x] **Step 1: Add pinned dependencies**
 
 Run:
 
@@ -53,7 +53,7 @@ npm.cmd install -w @tali/web @google/genai@2.19.0 @supabase/supabase-js@2.57.4 z
 npm.cmd install --save-dev -w @tali/web vitest@4.1.11 vite@8.2.2
 ```
 
-- [ ] **Step 2: Add scripts**
+- [x] **Step 2: Add scripts**
 
 Root scripts:
 
@@ -71,7 +71,7 @@ Web scripts:
 "test": "vitest run src/server src/app/api"
 ```
 
-- [ ] **Step 3: Verify dependency resolution**
+- [x] **Step 3: Verify dependency resolution**
 
 Run:
 
@@ -82,7 +82,7 @@ npm.cmd exec supabase -- --version
 
 Expected: clean install and Supabase CLI `2.116.0`.
 
-- [ ] **Step 4: Commit tooling**
+- [x] **Step 4: Commit tooling**
 
 ```powershell
 git add package.json package-lock.json packages/web/package.json
@@ -99,7 +99,7 @@ git commit -m "chore: add backend integration tooling"
 - Create: `packages/web/src/server/receipts/gemini.test.ts`
 - Create: `packages/web/src/server/receipts/gemini.ts`
 
-- [ ] **Step 1: Write failing schema tests**
+- [x] **Step 1: Write failing schema tests**
 
 Tests must assert that this Gemini-shaped input:
 
@@ -118,13 +118,13 @@ Tests must assert that this Gemini-shaped input:
 
 normalizes to the existing `ReceiptAnalysis` contract with amount `'4500000'`, uppercase currency, a supplied receipt hash/fuzzy key, and trimmed strings. Add independent rejection cases for zero/negative/more-than-two-decimal amounts, invalid dates, unsupported shared categories, confidence outside `0..1`, unknown properties, and uncertainty fields inconsistent with null values.
 
-- [ ] **Step 2: Verify schema tests fail because the module is missing**
+- [x] **Step 2: Verify schema tests fail because the module is missing**
 
 ```powershell
 npm.cmd test -w @tali/web -- src/server/receipts/schema.test.ts
 ```
 
-- [ ] **Step 3: Implement strict schema normalization**
+- [x] **Step 3: Implement strict schema normalization**
 
 Export:
 
@@ -149,17 +149,17 @@ export function toReceiptAnalysis(
 
 Convert a two-decimal displayed amount to six-decimal USDC base units using string/`BigInt` arithmetic. Build `fuzzyKey` from normalized merchant, receipt date, and base-unit amount. Never use `Number` for the amount.
 
-- [ ] **Step 4: Run schema tests to green**
+- [x] **Step 4: Run schema tests to green**
 
 ```powershell
 npm.cmd test -w @tali/web -- src/server/receipts/schema.test.ts
 ```
 
-- [ ] **Step 5: Write failing hash tests**
+- [x] **Step 5: Write failing hash tests**
 
 Assert real SHA-256 output for `hello`, rejection of empty bytes, validation of lowercase 64-character digests, and different duplicate keys for the same hash in two event UUIDs.
 
-- [ ] **Step 6: Implement hashing**
+- [x] **Step 6: Implement hashing**
 
 Export:
 
@@ -168,17 +168,17 @@ export function hashReceipt(bytes: Uint8Array): string;
 export function createReceiptDuplicateKey(eventId: string, hash: string): string;
 ```
 
-- [ ] **Step 7: Run hash tests to green**
+- [x] **Step 7: Run hash tests to green**
 
 ```powershell
 npm.cmd test -w @tali/web -- src/server/receipts/hash.test.ts
 ```
 
-- [ ] **Step 8: Write failing Gemini adapter tests**
+- [x] **Step 8: Write failing Gemini adapter tests**
 
 Use an injected `GeminiModelClient` to assert inline base64 image bytes, allowed MIME types, 10 MiB maximum, strict JSON schema, the selected model, empty/invalid response rejection, and no network call for invalid images.
 
-- [ ] **Step 9: Implement the Gemini adapter**
+- [x] **Step 9: Implement the Gemini adapter**
 
 Export:
 
@@ -196,7 +196,7 @@ export function createGoogleGeminiReceiptAnalyzer(options: {
 }): ReceiptAnalyzer;
 ```
 
-- [ ] **Step 10: Run receipt tests and commit**
+- [x] **Step 10: Run receipt tests and commit**
 
 ```powershell
 npm.cmd test -w @tali/web -- src/server/receipts
@@ -211,7 +211,7 @@ git commit -m "feat: add receipt analysis domain"
 - Create: `supabase/migrations/20260830000000_backend_receipt_schema.sql`
 - Create: `supabase/config.toml`
 
-- [ ] **Step 1: Write the failing pgTAP suite**
+- [x] **Step 1: Write the failing pgTAP suite**
 
 Use a transaction and `pg_temp.capture_sqlstate(text)` helper. Plan assertions for:
 
@@ -232,15 +232,15 @@ cross-event identical hash acceptance
 updated_at trigger
 ```
 
-- [ ] **Step 2: Verify RED against a clean database**
+- [x] **Step 2: Verify RED against a clean database**
 
 Run the suite against the local Supabase PostgreSQL service and confirm it fails because the three public tables do not exist, not because pgTAP or SQL syntax is broken.
 
-- [ ] **Step 3: Implement the migration**
+- [x] **Step 3: Implement the migration**
 
 Create `events`, `event_members`, and `claims` using the exact shared categories and states. Store amounts as `numeric(30,0)` with `amount > 0` and map them to strings in TypeScript. Store analysis/decision/payment as JSONB. Add composite membership and event-hash constraints, timestamp triggers, RLS, privilege revocations, explicit `service_role` grants, and a private `storage.buckets` row for `receipts`.
 
-- [ ] **Step 4: Verify GREEN and lint**
+- [x] **Step 4: Verify GREEN and lint**
 
 ```powershell
 npm.cmd run supabase:reset
@@ -250,7 +250,7 @@ npm.cmd exec supabase -- db lint --local --schema public --level warning --fail-
 
 If the workstation cannot download optional services, recreate a temporary database inside the pinned Supabase PostgreSQL container, apply the migration with `psql`, run the unchanged pgTAP file, and record that environment exception in `PROJECT_STATUS.md`.
 
-- [ ] **Step 5: Commit database behavior**
+- [x] **Step 5: Commit database behavior**
 
 ```powershell
 git add supabase
@@ -266,7 +266,7 @@ git commit -m "feat: add backend receipt database schema"
 - Create: `packages/web/src/server/claims/services.test.ts`
 - Create: `packages/web/src/server/claims/services.ts`
 
-- [ ] **Step 1: Write failing service tests**
+- [x] **Step 1: Write failing service tests**
 
 Use in-memory fakes for these ports:
 
@@ -297,13 +297,13 @@ export interface ReceiptStore {
 
 Test: inactive/non-member analysis fails before Gemini/upload; duplicate analysis skips Gemini/upload; new analysis hashes, analyzes, and uploads; valid claim persists; invalid claim fails before repository access; duplicate repository failure maps to `duplicate_receipt`; listing signs only selected claim paths.
 
-- [ ] **Step 2: Verify RED**
+- [x] **Step 2: Verify RED**
 
 ```powershell
 npm.cmd test -w @tali/web -- src/server/claims/services.test.ts
 ```
 
-- [ ] **Step 3: Implement errors, validation, and services**
+- [x] **Step 3: Implement errors, validation, and services**
 
 Export `ServerError` with `code`, `status`, safe `message`, and optional `cause`. Implement:
 
@@ -324,7 +324,7 @@ export function createListClaimsService(deps: {
 }): (eventId: string) => Promise<ListClaimsResponse>;
 ```
 
-- [ ] **Step 4: Run service tests to green and commit**
+- [x] **Step 4: Run service tests to green and commit**
 
 ```powershell
 npm.cmd test -w @tali/web -- src/server/claims
@@ -342,23 +342,23 @@ git commit -m "feat: add receipt claim services"
 - Create: `packages/web/src/server/supabase/receipt-store.test.ts`
 - Create: `packages/web/src/server/supabase/receipt-store.ts`
 
-- [ ] **Step 1: Write failing adapter tests**
+- [x] **Step 1: Write failing adapter tests**
 
 Assert that client construction rejects missing URL/secret and disables session persistence. Use a narrow fake Supabase query/storage surface to test row mapping, Postgres `23505` duplicate mapping, `23503` membership mapping, private upload options, sanitized upload errors, and 300-second signed URLs.
 
-- [ ] **Step 2: Verify RED**
+- [x] **Step 2: Verify RED**
 
 ```powershell
 npm.cmd test -w @tali/web -- src/server/supabase
 ```
 
-- [ ] **Step 3: Implement adapters**
+- [x] **Step 3: Implement adapters**
 
 `createServerSupabaseClient` reads `SUPABASE_URL` and `SUPABASE_SECRET_KEY`, falling back to `SUPABASE_SERVICE_ROLE_KEY` for the team's existing environment during migration. It must use `auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false }`.
 
 The repository maps numeric/timestamp/JSON values to the existing `Claim` contract and never exposes `receipt_object_path` as a public URL. The storage adapter always targets `SUPABASE_RECEIPT_BUCKET ?? 'receipts'` with `upsert: false`.
 
-- [ ] **Step 4: Run adapter tests and commit**
+- [x] **Step 4: Run adapter tests and commit**
 
 ```powershell
 npm.cmd test -w @tali/web -- src/server/supabase
@@ -377,21 +377,21 @@ git commit -m "feat: add Supabase receipt adapters"
 - Create: `packages/web/src/app/api/events/[id]/claims/route.test.ts`
 - Create: `packages/web/src/app/api/events/[id]/claims/route.ts`
 
-- [ ] **Step 1: Write failing route tests**
+- [x] **Step 1: Write failing route tests**
 
 Inject service functions through exported handler factories. Test missing/invalid multipart fields, JSON validation, dynamic event ID forwarding, success response shapes, and `ServerError` to `ApiError` status mapping. Unexpected errors must return `database_failed`/500 without the original secret-bearing message.
 
-- [ ] **Step 2: Verify RED**
+- [x] **Step 2: Verify RED**
 
 ```powershell
 npm.cmd test -w @tali/web -- src/app/api
 ```
 
-- [ ] **Step 3: Implement composition and routes**
+- [x] **Step 3: Implement composition and routes**
 
 Each route exports its Next.js handler and a testable factory. Use `export const runtime = 'nodejs'`. The analyze route accepts `receipt`, `eventId`, and `submitter`; create claims accepts JSON; list claims reads `context.params.id`.
 
-- [ ] **Step 4: Run API tests, typecheck, and commit**
+- [x] **Step 4: Run API tests, typecheck, and commit**
 
 ```powershell
 npm.cmd test -w @tali/web -- src/app/api
@@ -410,19 +410,19 @@ git commit -m "feat: expose receipt claim APIs"
 - Create: `ARCHITECTURE_AND_CODING_DESIGN.md`
 - Create: `PROJECT_STATUS.md`
 
-- [ ] **Step 1: Update safe environment placeholders**
+- [x] **Step 1: Update safe environment placeholders**
 
 Use `SUPABASE_SECRET_KEY=` as the preferred server credential, retain the legacy service-role placeholder during transition, and set `GEMINI_MODEL=gemini-3.5-flash-lite`. No real value may be committed.
 
-- [ ] **Step 2: Document setup and verification**
+- [x] **Step 2: Document setup and verification**
 
 Document local database commands, hosted `supabase login/link/db push`, private-bucket checks, demo-identity limitation, server-only secret handling, and sample multipart/JSON request fields without credentials.
 
-- [ ] **Step 3: Update project status truthfully**
+- [x] **Step 3: Update project status truthfully**
 
 Mark backend receipt integration as complete locally only after tests pass. Keep hosted migration, frontend mock replacement, wallet authentication, policy, and signing pending until separately verified.
 
-- [ ] **Step 4: Run documentation hygiene and commit**
+- [x] **Step 4: Run documentation hygiene and commit**
 
 ```powershell
 git diff --check
@@ -439,7 +439,7 @@ Expected: whitespace clean and secret scan returns no matches.
 - Verify every file changed above.
 - Modify: `docs/superpowers/plans/2026-08-30-backend-receipt-integration.md`
 
-- [ ] **Step 1: Run the complete repository gate**
+- [x] **Step 1: Run the complete repository gate**
 
 ```powershell
 npm.cmd run build
@@ -450,11 +450,11 @@ git diff --check
 git status --short
 ```
 
-- [ ] **Step 2: Recreate and verify the database**
+- [x] **Step 2: Recreate and verify the database**
 
 Apply the migration to a clean local database, run the pgTAP suite, and lint only the migration-owned `public` schema. Expected: every assertion passes and no public-schema lint result exists.
 
-- [ ] **Step 3: Run security and attribution scans**
+- [x] **Step 3: Run security and attribution scans**
 
 ```powershell
 rg -n "^(GEMINI_API_KEY|SUPABASE_SECRET_KEY|SUPABASE_SERVICE_ROLE_KEY|AGENT_PRIVATE_KEY)=[^[:space:]]+" . --glob '.env*' --glob '!node_modules/**' --glob '!.git/**'
@@ -463,11 +463,11 @@ git log --format='%an%n%ae%n%B' origin/main..HEAD | Select-String -Pattern 'clau
 
 Expected: both scans return no matches.
 
-- [ ] **Step 4: Self-review the complete diff**
+- [x] **Step 4: Self-review the complete diff**
 
 Compare `origin/main..HEAD` against the approved specification. Fix all critical or important findings and rerun affected verification.
 
-- [ ] **Step 5: Record the completed plan**
+- [x] **Step 5: Record the completed plan**
 
 Mark executed checkboxes, then commit:
 
@@ -480,7 +480,7 @@ git commit -m "docs: record backend integration plan"
 
 ```powershell
 git push --set-upstream origin codex/backend-integration
-gh pr create --base main --head codex/backend-integration --title "feat: integrate receipt backend" --body-file docs/superpowers/plans/2026-08-30-backend-receipt-integration.md
+gh pr create --base main --head codex/backend-integration --title "feat: integrate receipt backend" --body "Adds the private receipt and claim vertical slice. Verification: production build, 72 Vitest tests, 33 pgTAP assertions, typechecks, audit, and security scans."
 ```
 
 The pull-request description must summarize the vertical slice and verification rather than include AI attribution or unexecuted plan prose.
