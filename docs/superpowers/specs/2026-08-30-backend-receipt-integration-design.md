@@ -26,7 +26,7 @@ The backend is divided into focused units:
 1. Receipt-domain modules validate Gemini output, calculate SHA-256 from original bytes, normalize values to shared types, and coordinate analysis.
 2. A server-only Supabase client reads privileged credentials from environment variables and is never imported into client components.
 3. A receipt store owns private object upload and short-lived signed URL creation.
-4. A claim repository owns event-scoped duplicate lookup, membership checks, claim insertion, and row-to-domain mapping.
+4. A claim repository owns event-scoped duplicate lookup, membership checks, claim insertion, and row-to-domain mapping. Internal repository records carry private object paths; public `Claim` values do not.
 5. Application services coordinate those units without depending on Next.js request objects.
 6. Thin Next.js route handlers parse HTTP input, call services, and map known failures to stable `ApiError` responses.
 
@@ -85,7 +85,7 @@ The API does not expose a confidence percentage to the DOM. Confidence remains i
 
 1. Validates the request against shared amount, category, address, date, and analysis rules.
 2. Requires the submitter to be an active member of the event through the database foreign key.
-3. Requires the request's receipt hash and storage path to match the analyzed values.
+3. Validates the receipt hash and private storage-path formats.
 4. Inserts the claim in `submitted` state.
 5. Maps database values back to the existing JSON-safe `Claim` type.
 
@@ -96,6 +96,8 @@ The database unique constraint remains the final race-safe duplicate check. A du
 ## Authentication boundary
 
 The current repository has no wallet-signature authentication. This hackathon slice therefore treats the submitted wallet address as a demo identity, verifies that it belongs to the event, and keeps all privileged credentials off the browser. This is not production authentication and will be recorded as a known limitation.
+
+The analyze response is also not yet cryptographically bound to the later create-claim request. Server validation and database constraints reject malformed, outsider, and duplicate claims, but a production flow must issue a signed one-time analysis token or persist an analysis draft before accepting the confirmed claim.
 
 Wallet signature verification must be added before any production use or before these endpoints can authorize real funds. The later payment-orchestration slice must re-authenticate the requester and rerun deterministic policy checks before signing.
 
