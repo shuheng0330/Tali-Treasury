@@ -1,5 +1,9 @@
 # Official Sui Testnet USDC setup
 
+This runbook explains how to obtain Testnet USDC and recreate a funded mandate.
+For the authoritative current object IDs and transaction evidence, see
+`DEPLOYMENT.md`.
+
 Tali uses Circle-issued Testnet USDC for its stablecoin demo. Testnet tokens
 have no financial value.
 

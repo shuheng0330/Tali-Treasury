@@ -1,5 +1,8 @@
 # Tali Treasury Sui Testnet Deployment
 
+This is the authoritative record for deployed objects and on-chain transaction
+evidence. Operational faucet and recreation steps belong in `USDC_SETUP.md`.
+
 ## Current deployment
 
 - Network: Sui testnet

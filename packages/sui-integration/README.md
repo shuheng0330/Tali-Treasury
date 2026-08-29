@@ -10,6 +10,10 @@ Shared TypeScript integration for the Tali Treasury Move package. It provides:
 The package never reads or stores private keys. The calling frontend wallet or
 backend agent is responsible for signing.
 
+The integrated `/treasury` page uses this package server-side for a real,
+read-only Testnet mandate query. Claim processing and state-changing UI actions
+remain explicitly simulated until the backend signer is connected.
+
 ## Install and verify
 
 From the repository root:
