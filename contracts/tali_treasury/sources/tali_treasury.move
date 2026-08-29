@@ -19,6 +19,7 @@ const E_RECIPIENT_NOT_APPROVED: u64 = 7;
 const E_MANDATE_EXPIRED: u64 = 8;
 const E_MANDATE_REVOKED: u64 = 9;
 const E_WRONG_ADMIN_CAP: u64 = 10;
+const E_NO_FUNDS_TO_WITHDRAW: u64 = 11;
 
 public struct AdminCap has key, store {
     id: UID,
@@ -36,6 +37,12 @@ public struct PaymentMade has copy, drop {
     amount: u64,
     total_spent: u64,
     paid_at_ms: u64,
+}
+
+public struct FundsWithdrawn has copy, drop {
+    mandate_id: ID,
+    recipient: address,
+    amount: u64,
 }
 
 public struct Mandate<phantom T> has key {
@@ -143,6 +150,35 @@ public fun revoke<T>(admin_cap: &AdminCap, mandate: &mut Mandate<T>) {
         E_WRONG_ADMIN_CAP,
     );
     mandate.revoked = true;
+}
+
+public fun withdraw_remaining<T>(
+    admin_cap: AdminCap,
+    mandate: &mut Mandate<T>,
+    recipient: address,
+    ctx: &mut TxContext,
+) {
+    assert!(
+        admin_cap.mandate_id == object::uid_to_inner(&mandate.id),
+        E_WRONG_ADMIN_CAP,
+    );
+
+    let amount = balance::value(&mandate.budget);
+    assert!(amount > 0, E_NO_FUNDS_TO_WITHDRAW);
+
+    let AdminCap { id, mandate_id: _ } = admin_cap;
+    id.delete();
+
+    let withdrawn_balance = mandate.budget.withdraw_all();
+    let withdrawn_coin = coin::from_balance(withdrawn_balance, ctx);
+
+    mandate.revoked = true;
+    event::emit(FundsWithdrawn {
+        mandate_id: object::uid_to_inner(&mandate.id),
+        recipient,
+        amount,
+    });
+    transfer::public_transfer(withdrawn_coin, recipient);
 }
 
 public fun mandate_budget<T>(mandate: &Mandate<T>): u64 {

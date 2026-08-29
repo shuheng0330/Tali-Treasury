@@ -5,6 +5,7 @@ use tali_treasury::treasury::{
     Self,
     AdminCap,
     AgentCap,
+    FundsWithdrawn,
     Mandate,
     PaymentMade,
 };
@@ -492,5 +493,215 @@ fun successful_payment_emits_audit_event() {
     scenario.return_to_sender(agent_cap);
     test_scenario::return_shared(mandate);
     clock::destroy_for_testing(clock);
+    scenario.end();
+}
+
+#[test]
+fun treasurer_can_withdraw_all_remaining_funds() {
+    let mut scenario = test_scenario::begin(TREASURER);
+
+    let funding = coin::mint_for_testing<SUI>(500, scenario.ctx());
+    let admin_cap = treasury::create_mandate(
+        AGENT,
+        funding,
+        50,
+        2_000_000_000_000,
+        vector[MEMBER],
+        scenario.ctx(),
+    );
+    transfer::public_transfer(admin_cap, TREASURER);
+
+    scenario.next_tx(TREASURER);
+
+    let admin_cap = scenario.take_from_sender<AdminCap>();
+    let mut mandate = scenario.take_shared<Mandate<SUI>>();
+
+    treasury::withdraw_remaining(
+        admin_cap,
+        &mut mandate,
+        TREASURER,
+        scenario.ctx(),
+    );
+
+    assert!(treasury::mandate_budget(&mandate) == 0);
+    assert!(treasury::mandate_revoked(&mandate));
+    test_scenario::return_shared(mandate);
+
+    scenario.next_tx(TREASURER);
+
+    let withdrawn = scenario.take_from_sender<Coin<SUI>>();
+    assert!(withdrawn.value() == 500);
+    assert!(coin::burn_for_testing(withdrawn) == 500);
+
+    scenario.end();
+}
+
+#[test, expected_failure(abort_code = 10)]
+fun wrong_admin_cap_cannot_withdraw_mandate() {
+    let mut scenario = test_scenario::begin(TREASURER);
+
+    let first_funding = coin::mint_for_testing<SUI>(100, scenario.ctx());
+    let first_admin_cap = treasury::create_mandate(
+        AGENT,
+        first_funding,
+        50,
+        2_000_000_000_000,
+        vector[MEMBER],
+        scenario.ctx(),
+    );
+    transfer::public_transfer(first_admin_cap, TREASURER);
+
+    let second_funding = coin::mint_for_testing<SUI>(100, scenario.ctx());
+    let second_admin_cap = treasury::create_mandate(
+        OTHER_AGENT,
+        second_funding,
+        50,
+        2_000_000_000_000,
+        vector[MEMBER],
+        scenario.ctx(),
+    );
+    transfer::public_transfer(second_admin_cap, OTHER_AGENT);
+
+    scenario.next_tx(TREASURER);
+
+    let wrong_admin_cap = scenario.take_from_sender<AdminCap>();
+    let mut second_mandate = scenario.take_shared<Mandate<SUI>>();
+
+    treasury::withdraw_remaining(
+        wrong_admin_cap,
+        &mut second_mandate,
+        TREASURER,
+        scenario.ctx(),
+    );
+
+    test_scenario::return_shared(second_mandate);
+    scenario.end();
+}
+
+#[test, expected_failure(abort_code = 9)]
+fun withdrawn_mandate_cannot_make_payment() {
+    let mut scenario = test_scenario::begin(TREASURER);
+
+    let funding = coin::mint_for_testing<SUI>(500, scenario.ctx());
+    let admin_cap = treasury::create_mandate(
+        AGENT,
+        funding,
+        50,
+        2_000_000_000_000,
+        vector[MEMBER],
+        scenario.ctx(),
+    );
+    transfer::public_transfer(admin_cap, TREASURER);
+
+    scenario.next_tx(TREASURER);
+
+    let admin_cap = scenario.take_from_sender<AdminCap>();
+    let mut mandate = scenario.take_shared<Mandate<SUI>>();
+    treasury::withdraw_remaining(
+        admin_cap,
+        &mut mandate,
+        TREASURER,
+        scenario.ctx(),
+    );
+    test_scenario::return_shared(mandate);
+
+    scenario.next_tx(AGENT);
+
+    let agent_cap = scenario.take_from_sender<AgentCap>();
+    let mut mandate = scenario.take_shared<Mandate<SUI>>();
+    let clock = clock::create_for_testing(scenario.ctx());
+
+    treasury::spend(
+        &agent_cap,
+        &mut mandate,
+        MEMBER,
+        40,
+        &clock,
+        scenario.ctx(),
+    );
+
+    scenario.return_to_sender(agent_cap);
+    test_scenario::return_shared(mandate);
+    clock::destroy_for_testing(clock);
+    scenario.end();
+}
+
+#[test]
+fun successful_withdrawal_emits_audit_event() {
+    let mut scenario = test_scenario::begin(TREASURER);
+
+    let funding = coin::mint_for_testing<SUI>(500, scenario.ctx());
+    let admin_cap = treasury::create_mandate(
+        AGENT,
+        funding,
+        50,
+        2_000_000_000_000,
+        vector[MEMBER],
+        scenario.ctx(),
+    );
+    transfer::public_transfer(admin_cap, TREASURER);
+
+    scenario.next_tx(TREASURER);
+
+    let admin_cap = scenario.take_from_sender<AdminCap>();
+    let mut mandate = scenario.take_shared<Mandate<SUI>>();
+
+    treasury::withdraw_remaining(
+        admin_cap,
+        &mut mandate,
+        TREASURER,
+        scenario.ctx(),
+    );
+
+    assert!(event::events_by_type<FundsWithdrawn>().length() == 1);
+
+    test_scenario::return_shared(mandate);
+    scenario.end();
+}
+
+#[test, expected_failure(abort_code = 11)]
+fun empty_mandate_cannot_be_withdrawn() {
+    let mut scenario = test_scenario::begin(TREASURER);
+
+    let funding = coin::mint_for_testing<SUI>(50, scenario.ctx());
+    let admin_cap = treasury::create_mandate(
+        AGENT,
+        funding,
+        50,
+        2_000_000_000_000,
+        vector[MEMBER],
+        scenario.ctx(),
+    );
+    transfer::public_transfer(admin_cap, TREASURER);
+
+    scenario.next_tx(AGENT);
+
+    let agent_cap = scenario.take_from_sender<AgentCap>();
+    let mut mandate = scenario.take_shared<Mandate<SUI>>();
+    let clock = clock::create_for_testing(scenario.ctx());
+    treasury::spend(
+        &agent_cap,
+        &mut mandate,
+        MEMBER,
+        50,
+        &clock,
+        scenario.ctx(),
+    );
+    scenario.return_to_sender(agent_cap);
+    test_scenario::return_shared(mandate);
+    clock::destroy_for_testing(clock);
+
+    scenario.next_tx(TREASURER);
+
+    let admin_cap = scenario.take_from_sender<AdminCap>();
+    let mut mandate = scenario.take_shared<Mandate<SUI>>();
+    treasury::withdraw_remaining(
+        admin_cap,
+        &mut mandate,
+        TREASURER,
+        scenario.ctx(),
+    );
+
+    test_scenario::return_shared(mandate);
     scenario.end();
 }
