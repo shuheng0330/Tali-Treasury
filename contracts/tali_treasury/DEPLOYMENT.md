@@ -79,3 +79,20 @@ This proves the core security model: an agent may propose a payment, but the
 Move contract is the final authority. A rejected transaction cannot move
 treasury funds. See `ERROR_CODES.md` for the complete application-facing error
 mapping.
+
+## Official Testnet USDC mandate
+
+The product demo now uses Circle-issued Sui Testnet USDC in a separate mandate:
+
+- Creation transaction: `7kk5cWL7zCQfTpDs43cMiRDWTuM2ch39ynztAjeGp3vH`
+- Coin type: `0xa1ec7fc00a6f40db9693ad1415d0c193ad3906494428cf252621037bd7117e29::usdc::USDC`
+- Mandate ID: `0x16b9fdc16764d6fa514fb6da55df5ca840d30e5bb057eba6a5ab67cf743c7f6f`
+- AdminCap ID: `0x0c7b45b5d2bf5ded39da7077068b4dee359625dc5de657bbfc35b2584a114245`
+- AgentCap ID: `0x9b2d3f17cfc23e5fb5c2fa561ef9fb551dd11241c376b83b70b183febf31e67a`
+- Budget: `20 USDC`
+- Maximum per claim: `5 USDC`
+- Expiry: `2026-09-05 22:30:28 SGT`
+- Approved member: `0x405200312d4c8ee0159d44429ca69ef0cf035f4a00c12f2035a0bdef882bb16e`
+
+See `USDC_SETUP.md` for Circle metadata, funding details, and verification
+commands. The TypeScript integration exports these IDs as `taliUsdcDemo`.
