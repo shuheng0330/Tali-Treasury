@@ -13,7 +13,7 @@ Frontend track (`Xiang-UI`). Updated as phases land.
 | 2 | Mobile claim flow — capture to paid | ✅ Done | 29 Aug |
 | 3 | Treasurer dashboard and review queue | ✅ Done | 29 Aug |
 | 4 | Safety Test panel | ✅ Done | 29 Aug |
-| 5 | Landing page | ⬜ Not started | — |
+| 5 | Landing page | ✅ Done | 30 Aug |
 | 6 | Wire to live contract and backend | ⬜ Not started | — |
 | 7 | Submission pack | ⬜ Not started | — |
 
@@ -147,6 +147,86 @@ Verified: build passes, all routes serve 200, claim page renders end to end.
 Routes now: `/` landing · `/claim` · `/treasury` · `/safety` · `/system`.
 
 Verified: build passes, all five routes serve 200 with expected content.
+
+## Phase 5 — Landing page ✅
+
+`/`. Hero, the rule apparatus, the objection, why Move, and an honest scope note.
+
+- **The apparatus is the argument.** A claim travels a wire through four gates. The
+  refused claim runs **first** and holds longest, because it is the only one of the two
+  that demonstrates anything — three consecutive successes before a failure is the order
+  for a product tour, not for a claim under scrutiny.
+- **The verdict is 28px, not 14px.** "Over the 200.00 cap. Nothing moved." carries the
+  message; the 12.5px rule table is detail for whoever is close enough to read it. The
+  amount is struck through when refused.
+- **Gate order and abort codes are the contract's.** Verified line by line against
+  `treasury.move`: 9 → 5 → 6 → 7 is the true relative assert order, and a claim breaking
+  both the cap and the budget aborts on 5, which is what the panel predicts.
+- **The panel says it is four of seven.** The hero says `spend()` holds seven checks and
+  the wire draws four, so the wire names the three it omits rather than leaving a judge to
+  find the discrepancy.
+- **Amounts carry a unit.** A money product with bare numbers invites "so an RM 84 receipt
+  pays 84 SUI?" and has no answer. Every amount is now denominated, and the panel states
+  that testnet SUI stands in for a ringgit stablecoin.
+- **The QR is 128px**, generated client-side from `window.location.origin`, so it works on
+  localhost and on the deployed origin without configuration. Always dark-on-white
+  regardless of theme — scanners cope badly with inverted codes.
+
+**Honesty pass.** The first cut of this page presented fabricated evidence: hardcoded
+base58 digests, invented latencies ("Paid in 412 milliseconds"), and copy promising
+"you get the digest either way, so you can look it up without us". None of it was true —
+nothing in the app touches the network yet. All of it is gone. What replaced it:
+
+- The apparatus is labelled **"Illustration — not a live transaction"** in amber at
+  readable size, not 11px grey in a corner.
+- `/safety` carries a banner saying the panel mirrors the deployed contract's rules and
+  abort codes exactly, but does not yet submit to the network.
+- The footer states the split plainly: contract live on testnet, app on sample data,
+  wiring the safety test is next.
+
+This is a product about not having to trust us. One judge pasting an invented digest into
+SuiVision would have ended the competition.
+
+**Rhythm.** Ten sentences on the first draft shared one metre — setup clause, then a terse
+three-word punch. That uniformity is itself the AI tell, more than any single word choice
+is. Three of them are now deliberately plain or over-long.
+
+## Defects found and fixed this phase
+
+Found by review of the deployed contract against the UI, not by testing the happy path.
+
+- **`/system` linked the package ID as if it were the mandate object.** A local constant
+  shadowed the shared one, so `/system` and `/treasury` disagreed about the mandate, and
+  the explorer link resolved to a package.
+- **`MANDATE_ID` in the mock was the package ID.** An object ID and a package ID cannot be
+  the same value.
+- **`MEMBER` and `TREASURER` were 65 hex characters.** Sui addresses are 32 bytes. Both
+  would have been rejected by `normalizeAddress` the moment Phase 6 touched them.
+- **`STRANGER` shared 62 characters with `MEMBER`**, so every truncated display of the two
+  was identical — during the unknown-recipient attack the screen read as the agent paying
+  itself. Given an unrelated prefix.
+- **The raw abort string named the mandate where Sui names the package.** It only ever
+  looked right because the two IDs were accidentally equal.
+- **`total_budget` was marked on-chain while comparing against `remainingBudget − COMMITTED`.**
+  The contract checks its own balance and has no notion of our committed-but-unsettled
+  claims. The on-chain rule now compares against the balance; the reserve is stated
+  separately.
+- **The drain-budget attack could never abort on its own guard.** With a 200 cap and 1,408
+  available, any amount large enough to exhaust the budget breaks the cap first, so the
+  card promised `total_budget` while the dry run predicted `AMOUNT_ABOVE_LIMIT`. It now
+  spends the mandate down below the cap first, which is the only state where the budget
+  rule is the one that has to catch it.
+- **Amounts were labelled USDC in three screens and SUI in another.** Now one unit
+  everywhere.
+
+## Known issue carried into Phase 6
+
+`COIN_DECIMALS` is **6** while `mandate.coinType` is `0x2::sui::SUI`, which has **9**.
+Nothing renders wrong today because every mock figure is minted and displayed through the
+same constant, but the moment real chain data arrives, `toMandateView` copies raw MIST
+straight through and the deployed mandate's 450000000 MIST renders as "450.00" instead of
+0.45. Gas in `AttackResult` has the same fault today. **Decide before wiring:** either
+switch to testnet USDC and keep 6, or keep SUI and move to a per-coin decimals lookup.
 
 ---
 
