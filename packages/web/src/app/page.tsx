@@ -1,42 +1,193 @@
 import Link from 'next/link';
+import { EXPLORER } from '@tali/shared';
+import { TALI_TESTNET_PACKAGE_ID } from '@tali/treasury-sui';
+import { PhoneCode } from '@/components/landing/PhoneCode';
+import { Wire } from '@/components/landing/Wire';
 
-const ROUTES = [
-  { href: '/claim', title: 'Submit a claim', body: 'The member journey: photograph a receipt, confirm what was read, watch the rules decide.' },
-  { href: '/treasury', title: 'Treasurer view', body: 'The mandate, the budget, and the claims the agent escalated instead of paying.' },
-  { href: '/safety', title: 'Safety test', body: 'Try to make the agent overspend. Watch the contract refuse.' },
-  { href: '/system', title: 'Design system', body: 'Status chips, amounts and the budget meter, in both themes.' },
-];
+const PACKAGE_SHORT = `${TALI_TESTNET_PACKAGE_ID.slice(0, 6)}…${TALI_TESTNET_PACKAGE_ID.slice(-4)}`;
+const PACKAGE_LINK = EXPLORER.object(TALI_TESTNET_PACKAGE_ID).suivision;
 
 export default function Page() {
   return (
-    <main className="mx-auto flex min-h-dvh max-w-3xl flex-col justify-center gap-10 px-5 py-16">
-      <div className="flex flex-col gap-4">
-        <h1 className="max-w-2xl text-display">Set the rules once. The money enforces them.</h1>
-        <p className="max-w-xl text-subhead text-ink-2">
-          Your committee photographs receipts. The agent reads them and pays what is allowed —
-          and only that. The limits live on Sui, so nobody has to trust the app.
-        </p>
-      </div>
-
-      <nav className="flex flex-col gap-3">
-        {ROUTES.map((route) => (
-          <Link
-            key={route.href}
-            href={route.href}
-            className="group flex flex-col gap-1 rounded-card border border-rule bg-surface px-5 py-4 transition-colors duration-150 ease-pop hover:border-rule-strong hover:bg-raised"
-          >
-            <span className="flex items-center gap-2 text-subhead font-medium">
-              {route.title}
-              <span className="text-ink-3 transition-transform duration-150 ease-pop group-hover:translate-x-0.5" aria-hidden>
-                →
-              </span>
+    <main className="flex min-h-dvh flex-col">
+      <header className="border-b border-rule">
+        <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-5 py-3">
+          <span className="text-subhead font-semibold">Tali Treasury</span>
+          <nav className="flex items-center gap-5">
+            <span className="hidden font-mono text-label uppercase text-ink-3 sm:inline">
+              sui testnet
             </span>
-            <span className="text-caption text-ink-3">{route.body}</span>
-          </Link>
-        ))}
-      </nav>
+            <Link
+              href="/claim"
+              className="text-caption text-ink-2 underline-offset-4 transition-colors duration-150 hover:text-ink hover:underline"
+            >
+              Open the app
+            </Link>
+          </nav>
+        </div>
+      </header>
 
-      <p className="text-caption text-ink-3">Sui testnet · no mainnet, no real funds</p>
+      <section className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-5 pb-12 pt-12 sm:pt-16">
+        <p className="text-label uppercase text-ink-2">
+          Club and event treasury · Sui testnet
+        </p>
+
+        <h1 className="max-w-4xl text-display md:text-hero">
+          Set the rules once.
+          <span className="block text-ink-2">The money enforces them.</span>
+        </h1>
+
+        <p className="max-w-2xl text-[16px] leading-6 text-ink-2 md:text-[19px] md:leading-7">
+          Your committee photographs receipts, an agent reads them and pays out whatever your
+          rules allow, and the limits it works to are held in a Move contract instead of our
+          backend — which means the agent cannot spend past them, and neither can we, even by
+          accident.
+        </p>
+
+        <p className="max-w-2xl text-[16px] leading-6 text-ink-3">
+          Today one student holds the club card, fronts everyone&rsquo;s money, and spends the
+          next six weeks chasing it back in a WhatsApp group.
+        </p>
+
+        <div className="flex flex-wrap items-center gap-x-5 gap-y-3 pt-1">
+          <Link
+            href="/safety"
+            className="rounded-card bg-accent px-5 py-3 text-[18px] font-semibold text-surface transition-colors duration-150 hover:bg-accent/90"
+          >
+            Try to break it
+          </Link>
+          <Link
+            href="/claim"
+            className="text-[18px] text-ink-2 underline underline-offset-4 transition-colors duration-150 hover:text-ink"
+          >
+            or submit a claim
+          </Link>
+        </div>
+
+        <p className="border-t border-rule pt-5 text-[16px] text-ink-3">
+          Live on Sui testnet · package{' '}
+          <a
+            href={PACKAGE_LINK}
+            target="_blank"
+            rel="noreferrer"
+            className="font-mono text-ink-2 underline underline-offset-4"
+          >
+            {PACKAGE_SHORT}
+          </a>{' '}
+          · seven checks inside <span className="font-mono">spend()</span> · no real funds
+        </p>
+      </section>
+
+      <section className="mx-auto flex w-full max-w-5xl flex-col gap-4 px-5 pb-16">
+        <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1">
+          <h2 className="text-heading">The cap is 200. Watch it refuse 340.</h2>
+          <p className="text-caption text-ink-3">Either claim, whenever you like.</p>
+        </div>
+        <Wire />
+      </section>
+
+      <section className="border-y border-rule bg-surface">
+        <div className="mx-auto flex w-full max-w-5xl flex-col gap-8 px-5 py-14 md:flex-row md:items-start md:gap-14">
+          <blockquote className="max-w-sm shrink-0 border-l-2 border-rule-strong pl-5 text-title text-ink-2">
+            &ldquo;Your app could just be pretending to block it.&rdquo;
+          </blockquote>
+          <div className="flex max-w-xl flex-col gap-4">
+            <p className="text-body text-ink-2">
+              That&rsquo;s the right instinct. A check we wrote is a check we could quietly
+              remove.
+            </p>
+            <p className="text-body text-ink-2">
+              So the safety test hands you the amount and the recipient, and gives you a switch
+              that skips every check this app performs and sends the transaction raw. Once that
+              switch is on, the only thing standing between you and the treasury is the contract
+              itself, which refuses the transaction, burns gas refusing it, and leaves the
+              balance where it was.
+            </p>
+            <Link
+              href="/safety"
+              className="w-fit text-body font-medium text-accent underline underline-offset-4"
+            >
+              Open the safety test
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      <section className="mx-auto flex w-full max-w-5xl flex-col gap-5 px-5 py-14">
+        <h2 className="text-heading">Why this needs Move</h2>
+        <div className="flex max-w-3xl flex-col gap-4">
+          <p className="text-body text-ink-2">
+            The mandate is an object, not a row in our database. When a claim is too large,{' '}
+            <span className="font-mono">spend()</span> aborts on code 5 before it ever reaches
+            the coin, and Move rolls the entire transaction back atomically — so there is no
+            state where the check failed but half the transfer went out anyway. That gap is
+            where most custody bugs live.
+          </p>
+          <p className="text-body text-ink-2">
+            The agent holds an <span className="font-mono">AgentCap</span>, which lets it call{' '}
+            <span className="font-mono">spend()</span> and nothing else. It cannot raise its own
+            cap, add a recipient, or move the budget. The treasurer keeps the{' '}
+            <span className="font-mono">AdminCap</span> and can revoke in one transaction, after
+            which every further call from the agent aborts on code 9.
+          </p>
+          <p className="text-body text-ink-3">
+            We could not have built the same guarantee in our own backend, because our backend is
+            the part you should not have to trust.
+          </p>
+        </div>
+      </section>
+
+      <section className="mx-auto flex w-full max-w-5xl flex-col gap-5 px-5 pb-16">
+        <p className="text-[16px] text-ink-2">
+          Look around as a{' '}
+          <Link href="/claim" className="text-accent underline underline-offset-4">
+            member
+          </Link>
+          , as the{' '}
+          <Link href="/treasury" className="text-accent underline underline-offset-4">
+            treasurer
+          </Link>
+          , or go straight to{' '}
+          <Link href="/safety" className="text-accent underline underline-offset-4">
+            attacking the treasury
+          </Link>
+          .
+        </p>
+        <div className="rounded-card border border-rule bg-surface p-5">
+          <PhoneCode />
+        </div>
+      </section>
+
+      <footer className="mt-auto border-t border-rule">
+        <div className="mx-auto flex w-full max-w-5xl flex-col gap-3 px-5 py-8 text-caption text-ink-3">
+          <p className="max-w-2xl">
+            The contract is live on Sui testnet. The web app runs on sample data — wiring it to
+            the deployed package is the next thing on our list, and the safety test is where that
+            lands first. No mainnet, no real funds, and nothing here is a custody service.
+          </p>
+          <div className="flex flex-wrap items-center justify-between gap-x-8 gap-y-2">
+            <p>
+              Built by Kian Xiang, Shu Heng and Wey Cheng for the MUBA Blockchain Hackathon 2026.
+            </p>
+            <div className="flex flex-wrap gap-5">
+              <a
+                href={PACKAGE_LINK}
+                target="_blank"
+                rel="noreferrer"
+                className="underline underline-offset-4 transition-colors duration-150 hover:text-ink-2"
+              >
+                Package on SuiVision
+              </a>
+              <Link
+                href="/system"
+                className="underline underline-offset-4 transition-colors duration-150 hover:text-ink-2"
+              >
+                Design system
+              </Link>
+            </div>
+          </div>
+        </div>
+      </footer>
     </main>
   );
 }
