@@ -18,7 +18,7 @@ interface Props {
   className?: string;
 }
 
-export function Money({ amount, size = 'inline', unit = 'USDC', struck = false, className = '' }: Props) {
+export function Money({ amount, size = 'inline', unit = 'SUI', struck = false, className = '' }: Props) {
   const scale = SIZES[size];
 
   return (

@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import type { PaymentResult, RuleCheck, SafetyAttackId } from '@tali/shared';
 import { SAFETY_ATTACKS, subtract, toBaseUnits, toDisplay } from '@tali/shared';
 import { COMMITTED, MEMBER, STRANGER, mandate } from '@/lib/mock/data';
-import { fireAttack, simulateAttack, type AttackInput } from '@/lib/mock/api';
+import { DRAINED_BUDGET, fireAttack, simulateAttack, type AttackInput } from '@/lib/mock/api';
 import { AttackResult } from './AttackResult';
 
 type Phase = 'armed' | 'firing' | 'result';
@@ -18,11 +18,23 @@ interface Prediction {
 
 const AVAILABLE = subtract(mandate.remainingBudget, COMMITTED);
 
-function defaultsFor(attack: SafetyAttackId): { amount: string; recipient: string; revoked: boolean } {
-  if (attack === 'unknown_recipient') return { amount: '150.00', recipient: STRANGER, revoked: false };
-  if (attack === 'after_revocation') return { amount: '84.00', recipient: MEMBER, revoked: true };
-  if (attack === 'drain_budget') return { amount: toDisplay(AVAILABLE), recipient: MEMBER, revoked: false };
-  return { amount: '9000.00', recipient: MEMBER, revoked: false };
+interface Preset {
+  amount: string;
+  recipient: string;
+  revoked: boolean;
+  drained: boolean;
+}
+
+function defaultsFor(attack: SafetyAttackId): Preset {
+  if (attack === 'unknown_recipient')
+    return { amount: '150.00', recipient: STRANGER, revoked: false, drained: false };
+  if (attack === 'after_revocation')
+    return { amount: '84.00', recipient: MEMBER, revoked: true, drained: false };
+  // The cap catches any large claim first, so the budget rule can only be the
+  // one that fails once the mandate holds less than the cap.
+  if (attack === 'drain_budget')
+    return { amount: toDisplay(mandate.maxPerClaim), recipient: MEMBER, revoked: false, drained: true };
+  return { amount: '9000.00', recipient: MEMBER, revoked: false, drained: false };
 }
 
 export function SafetyTest() {
@@ -30,6 +42,7 @@ export function SafetyTest() {
   const [amount, setAmount] = useState('9000.00');
   const [recipient, setRecipient] = useState(MEMBER);
   const [revokedFirst, setRevokedFirst] = useState(false);
+  const [drainFirst, setDrainFirst] = useState(false);
   const [bypass, setBypass] = useState(false);
 
   const [phase, setPhase] = useState<Phase>('armed');
@@ -41,21 +54,33 @@ export function SafetyTest() {
   const [tally, setTally] = useState({ fired: 0, blocked: 0, attempted: '0' });
   const [appBlocked, setAppBlocked] = useState(false);
 
-  const input: AttackInput = { attack, amount: toBaseUnits(amount || '0'), recipient, revokedFirst };
+  const input: AttackInput = {
+    attack,
+    amount: toBaseUnits(amount || '0'),
+    recipient,
+    revokedFirst,
+    drainFirst,
+  };
 
   useEffect(() => {
     if (phase !== 'armed') return;
     let live = true;
 
     setPrediction(null);
-    simulateAttack({ attack, amount: toBaseUnits(amount || '0'), recipient, revokedFirst }).then((result) => {
+    simulateAttack({
+      attack,
+      amount: toBaseUnits(amount || '0'),
+      recipient,
+      revokedFirst,
+      drainFirst,
+    }).then((result) => {
       if (live) setPrediction(result);
     });
 
     return () => {
       live = false;
     };
-  }, [attack, amount, recipient, revokedFirst, phase]);
+  }, [attack, amount, recipient, revokedFirst, drainFirst, phase]);
 
   const choose = useCallback((next: SafetyAttackId) => {
     setAttack(next);
@@ -64,6 +89,7 @@ export function SafetyTest() {
     setAmount(preset.amount);
     setRecipient(preset.recipient);
     setRevokedFirst(preset.revoked);
+    setDrainFirst(preset.drained);
   }, []);
 
   async function fire(override?: Partial<AttackInput>) {
@@ -107,7 +133,12 @@ export function SafetyTest() {
           checks={checks}
           onAgain={() => setPhase('armed')}
           onCounterfactual={() =>
-            fire({ amount: toBaseUnits('84.00'), recipient: MEMBER, revokedFirst: false })
+            fire({
+              amount: toBaseUnits('84.00'),
+              recipient: MEMBER,
+              revokedFirst: false,
+              drainFirst: false,
+            })
           }
         />
         <p className="tnum text-center text-caption text-ink-3">
@@ -173,8 +204,14 @@ export function SafetyTest() {
       <header className="flex flex-col gap-2">
         <h1 className="text-title">Safety test</h1>
         <p className="text-body text-ink-2">
-          Try to make the agent overspend. These are real transactions against the mandate.
-          Nothing here is simulated by us — the contract decides.
+          Try to make the agent overspend. Pick any amount and any recipient — the rules that
+          answer you are the ones compiled into the mandate.
+        </p>
+        <p className="rounded-card border border-wait-line bg-wait-soft px-4 py-3 text-caption text-ink-2">
+          <span className="font-medium">Running on sample data.</span> The mandate contract is
+          deployed to Sui testnet and this panel mirrors its rules and abort codes exactly, but
+          the transactions below are not yet submitted to the network, so the digests are
+          placeholders. Wiring this panel to the live package is the next thing we are doing.
         </p>
       </header>
 
@@ -221,7 +258,7 @@ export function SafetyTest() {
             />
           </label>
           <div className="flex flex-wrap gap-2">
-            {['201.00', '9000.00', toDisplay(AVAILABLE), '1.00'].map((preset) => (
+            {['201.00', '9000.00', toDisplay(mandate.maxPerClaim), '1.00'].map((preset) => (
               <button
                 key={preset}
                 type="button"
@@ -233,8 +270,10 @@ export function SafetyTest() {
             ))}
           </div>
           <p className="tnum text-caption text-ink-3">
-            Per-claim cap is {toDisplay(mandate.maxPerClaim)}. Budget available is{' '}
-            {toDisplay(AVAILABLE)}.
+            Per-claim cap is {toDisplay(mandate.maxPerClaim)}. The mandate holds{' '}
+            {toDisplay(drainFirst ? DRAINED_BUDGET : mandate.remainingBudget)}
+            {drainFirst ? ' after the earlier spending' : ''}, of which{' '}
+            {toDisplay(AVAILABLE)} is uncommitted.
           </p>
           <label className="flex items-center gap-2 border-t border-rule pt-3">
             <input
@@ -244,6 +283,18 @@ export function SafetyTest() {
               className="accent-accent"
             />
             <span className="text-caption">Revoke the mandate first</span>
+          </label>
+          <label className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              checked={drainFirst}
+              onChange={(e) => setDrainFirst(e.target.checked)}
+              className="accent-accent"
+            />
+            <span className="text-caption">
+              Spend the budget down to {toDisplay(DRAINED_BUDGET)} first — below the cap, so the
+              budget rule is the one that has to catch it
+            </span>
           </label>
           <label className="flex items-center gap-2">
             <input
@@ -279,8 +330,8 @@ export function SafetyTest() {
                 </p>
               ) : null}
               <p className="pt-1 text-caption text-ink-3">
-                Dry run costs no gas and changes nothing. We show you this{' '}
-                <em>before</em> firing so you can check we did not fake it afterwards.
+                A dry run costs no gas and changes nothing. We commit to the outcome{' '}
+                <em>before</em> firing, so the result cannot be written to fit whatever happens.
               </p>
             </div>
           )}

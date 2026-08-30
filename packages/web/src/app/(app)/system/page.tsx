@@ -2,8 +2,7 @@ import { BudgetMeter } from '@/components/BudgetMeter';
 import { Money } from '@/components/Money';
 import { StatusChip, type ChipStatus } from '@/components/StatusChip';
 import { EXPLORER, toBaseUnits } from '@tali/shared';
-
-const MANDATE_ID = '0x7be8aa82872facbd01372cdeb20375a82f74011dca1512e41737664a759dc523';
+import { MANDATE_ID } from '@/lib/mock/data';
 
 const CLAIM_STATUSES: ChipStatus[] = [
   'draft',

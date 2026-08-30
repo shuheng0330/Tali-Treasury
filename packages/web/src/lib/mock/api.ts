@@ -7,9 +7,9 @@ import type {
   ReceiptAnalysis,
   RuleCheck,
 } from '@tali/shared';
-import { compare, subtract, toBaseUnits, toDisplay } from '@tali/shared';
+import { compare, isAllowedRecipient, subtract, toBaseUnits, toDisplay } from '@tali/shared';
 import type { SafetyAttackId } from '@tali/shared';
-import { treasuryErrorFromCode } from '@tali/treasury-sui';
+import { TALI_TESTNET_PACKAGE_ID, treasuryErrorFromCode } from '@tali/treasury-sui';
 import { COMMITTED, MEMBER, mandate, queuedClaims, seededClaims } from './data';
 
 function wait(ms: number) {
@@ -79,15 +79,15 @@ export function evaluate(draft: DraftClaim): PolicyDecision {
     {
       rule: 'total_budget',
       label: 'Budget remaining',
-      passed: compare(draft.amount, available) <= 0,
-      detail: `${toDisplay(available)} available`,
+      passed: compare(draft.amount, mandate.remainingBudget) <= 0,
+      detail: `${toDisplay(mandate.remainingBudget)} in the mandate, ${toDisplay(available)} uncommitted`,
       onChain: true,
     },
     {
       rule: 'recipient_allowlist',
       label: 'Recipient approved',
-      passed: mandate.approvedRecipients.includes(recipient),
-      detail: mandate.approvedRecipients.includes(recipient)
+      passed: isAllowedRecipient(mandate, recipient),
+      detail: isAllowedRecipient(mandate, recipient)
         ? 'On the mandate allowlist'
         : `${recipient.slice(0, 6)}…${recipient.slice(-4)} is not on the allowlist`,
       onChain: true,
@@ -184,11 +184,23 @@ export interface AttackInput {
   amount: Amount;
   recipient: string;
   revokedFirst: boolean;
+  drainFirst: boolean;
+}
+
+/** What the mandate holds after the treasurer has already spent most of it. Below
+ *  the per-claim cap, which is the only way the budget rule can be the first to
+ *  fail — otherwise the cap always catches a large claim first. */
+export const DRAINED_BUDGET = toBaseUnits('150.00');
+
+/** The contract checks the mandate's own balance. Claims we have committed but
+ *  not settled are an app-side reserve and are deliberately not counted here. */
+export function attackBudget(input: Pick<AttackInput, 'drainFirst'>): Amount {
+  return input.drainFirst ? DRAINED_BUDGET : mandate.remainingBudget;
 }
 
 function attackChecks(input: AttackInput): RuleCheck[] {
-  const available = subtract(mandate.remainingBudget, COMMITTED);
-  const approved = mandate.approvedRecipients.includes(input.recipient);
+  const budget = attackBudget(input);
+  const approved = isAllowedRecipient(mandate, input.recipient);
 
   return [
     {
@@ -201,8 +213,8 @@ function attackChecks(input: AttackInput): RuleCheck[] {
     {
       rule: 'total_budget',
       label: 'Budget remaining',
-      passed: compare(input.amount, available) <= 0,
-      detail: `${toDisplay(input.amount)} vs ${toDisplay(available)} available`,
+      passed: compare(input.amount, budget) <= 0,
+      detail: `${toDisplay(input.amount)} vs ${toDisplay(budget)} in the mandate`,
       onChain: true,
     },
     {
@@ -269,7 +281,7 @@ export async function fireAttack(input: AttackInput) {
   const checks = attackChecks(input);
   const code = firstAbort(checks);
   const error = code === null ? null : treasuryErrorFromCode(code);
-  const available = subtract(mandate.remainingBudget, COMMITTED);
+  const budget = attackBudget(input);
   const digest = hex(8) + 'qR9nK2wLpX7vB4m' + hex(8);
 
   const payment: PaymentResult = {
@@ -284,9 +296,9 @@ export async function fireAttack(input: AttackInput) {
     rawError:
       code === null
         ? null
-        : `Error from '${mandate.id.slice(0, 10)}…::treasury::spend', abort ${code}: "${error?.message ?? ''}"`,
-    budgetBefore: available,
-    budgetAfter: code === null ? subtract(available, input.amount) : available,
+        : `Error from '${TALI_TESTNET_PACKAGE_ID.slice(0, 10)}…::treasury::spend', abort ${code}: "${error?.message ?? ''}"`,
+    budgetBefore: budget,
+    budgetAfter: code === null ? subtract(budget, input.amount) : budget,
   };
 
   return { payment, checks };

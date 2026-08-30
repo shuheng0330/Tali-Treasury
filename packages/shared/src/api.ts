@@ -138,7 +138,7 @@ export const SAFETY_ATTACKS: readonly SafetyAttackSpec[] = [
   {
     id: 'drain_budget',
     label: 'Drain budget',
-    description: 'Pay more than the whole remaining budget',
+    description: 'Spend the budget down, then claim what is left',
     guard: 'total_budget',
     expectedAbort: 6,
   },

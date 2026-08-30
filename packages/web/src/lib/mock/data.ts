@@ -1,11 +1,13 @@
 import type { Claim, Event, EventMember, MandateView } from '@tali/shared';
 import { toBaseUnits } from '@tali/shared';
 
+/** The Mandate shared object. Distinct from the package ID, which lives in
+ *  @tali/treasury-sui as TALI_TESTNET_PACKAGE_ID. */
 export const MANDATE_ID =
-  '0x7be8aa82872facbd01372cdeb20375a82f74011dca1512e41737664a759dc523';
+  '0x3ac91e57d0b846f2c15e8a7093bd42f60c8e19a5b7d3f024e6a81c95b7402fde';
 
-export const TREASURER = '0x2d11a7c4e8b93f5a1c6d0e2f4b8a7c93e5d1f0a2b4c6d8e0f2a4b6c8d0e2f7ea4';
-export const MEMBER = '0x41ff9a03c2b45e17d8093f6a2c5b8e04d7f1a396c2e5b8d1f4a7c0e3b6d9a9a03';
+export const TREASURER = '0x2d11a7c4e8b93f5a1c6d0e2f4b8a7c93e5d1f0a2b4c6d8e0f2a4b6c8d0e2f7ea';
+export const MEMBER = '0x41ff9a03c2b45e17d8093f6a2c5b8e04d7f1a396c2e5b8d1f4a7c0e3b6d9a903';
 export const VENDOR = '0x9c2b4f10a7e35d81c06b2e94f07a1c38d5e60b2f4a83c197e5d02b6f8a4c1e77';
 
 export const mandate: MandateView = {
@@ -87,8 +89,10 @@ export const seededClaims: Claim[] = [
   }),
 ];
 
+/** Deliberately unrelated to MEMBER: a truncated display must not read as one
+ *  of our own addresses. */
 export const STRANGER =
-  '0x41ff9a03c2b45e17d8093f6a2c5b8e04d7f1a396c2e5b8d1f4a7c0e3b6d90000';
+  '0xf0e1d2c3b4a5968778695a4b3c2d1e0fa1b2c3d4e5f60718293a4b5c6d7e8f90';
 
 export const queuedClaims: Claim[] = [
   claim({
