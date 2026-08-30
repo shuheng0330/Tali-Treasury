@@ -85,8 +85,9 @@ The non-secret verification scope and reproduction queries are recorded in
 
 Hosted demo data uses immutable additive migrations. Migration `20260831000000`
 created the fixed demo event and Kian Xiang membership; migration
-`20260831010000` adds Shu Heng and Lim Wey Cheng without rewriting the applied
-seed or deleting other members.
+`20260831010000` added Shu Heng and Lim Wey Cheng without rewriting the applied
+seed or deleting other members. Both migrations were applied to the hosted
+project and the three active mappings were catalog-verified on 31 August 2026.
 
 Local Logflare analytics and its Vector collector are intentionally disabled. On
 Windows the collector otherwise requires Docker Desktop's unauthenticated TCP API
