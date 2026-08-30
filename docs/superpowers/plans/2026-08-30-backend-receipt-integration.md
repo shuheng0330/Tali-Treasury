@@ -476,7 +476,7 @@ git add docs/superpowers/plans/2026-08-30-backend-receipt-integration.md
 git commit -m "docs: record backend integration plan"
 ```
 
-- [ ] **Step 6: Push and create the pull request**
+- [x] **Step 6: Push and create the pull request**
 
 ```powershell
 git push --set-upstream origin codex/backend-integration
