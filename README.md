@@ -28,7 +28,7 @@ Status words are intentionally precise:
 | TypeScript Sui integration | **Complete locally** | Reads, PTB builders, amount helpers, error mapping |
 | Treasurer mandate dashboard | **Live** (read-only) | Server reads the current mandate from Sui Testnet |
 | Claim, review, revoke, and Safety Test interactions | **Mocked** | Clearly labelled; no signing or state changes |
-| Gemini receipt analysis and Supabase claims | **Hosted schema ready** | 69 Vitest tests, 39 pgTAP assertions, and hosted migration verified; UI/API deployment pending |
+| Gemini receipt analysis and Supabase claims | **Hosted schema ready** | 69 Vitest tests and 42 pgTAP assertions; event and Kian Xiang hosted, two-member migration prepared |
 | Deterministic policy and backend agent signing | **Pending** | Separate payment-orchestration slice |
 | Wallet connection and live UI writes | **Pending** | Add after backend/signing boundary is agreed |
 | Hosting and submission pack | **Pending** | Final integration phase |
@@ -212,7 +212,7 @@ Backend:
 
 Immediate next vertical slice:
 
-1. Seed the hosted demo event and active member wallet addresses.
+1. Apply the prepared Shu Heng and Lim Wey Cheng membership migration.
 2. Replace the claim UI mock with the three implemented API routes.
 3. Add wallet-signature authentication and bind analysis to claim creation.
 4. Add deterministic policy routing and return uncertain claims to review.
