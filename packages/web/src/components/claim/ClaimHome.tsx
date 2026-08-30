@@ -8,6 +8,8 @@ interface Props {
   available: string;
   budget: string;
   claims: Claim[];
+  claimsLoading?: boolean;
+  captureDisabled?: boolean;
   onCapture: (file: File) => void;
 }
 
@@ -20,8 +22,16 @@ function relative(atMs: number) {
   return `${Math.round(hours / 24)} d ago`;
 }
 
-export function ClaimHome({ eventName, available, budget, claims, onCapture }: Props) {
-  const used = 100 - ratioBps(available, budget) / 100;
+export function ClaimHome({
+  eventName,
+  available,
+  budget,
+  claims,
+  claimsLoading = false,
+  captureDisabled = false,
+  onCapture,
+}: Props) {
+  const used = budget === '0' ? 0 : 100 - ratioBps(available, budget) / 100;
 
   return (
     <div className="flex flex-col gap-6">
@@ -36,7 +46,13 @@ export function ClaimHome({ eventName, available, budget, claims, onCapture }: P
         </div>
       </section>
 
-      <label className="flex h-16 cursor-pointer items-center justify-center gap-3 rounded-card bg-accent text-surface transition-colors duration-150 ease-pop hover:bg-accent/90 focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-accent">
+      <label
+        className={`flex h-16 items-center justify-center gap-3 rounded-card text-surface transition-colors duration-150 ease-pop focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-accent ${
+          captureDisabled
+            ? 'cursor-not-allowed bg-rule-strong text-ink-3'
+            : 'cursor-pointer bg-accent hover:bg-accent/90'
+        }`}
+      >
         <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
           <path d="M3 8.5A1.5 1.5 0 0 1 4.5 7h2.2l1.2-2h8.2l1.2 2h2.2A1.5 1.5 0 0 1 21 8.5v9a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 17.5z" />
           <circle cx="12" cy="13" r="3.6" />
@@ -44,8 +60,9 @@ export function ClaimHome({ eventName, available, budget, claims, onCapture }: P
         <span className="text-subhead font-semibold">Snap a receipt</span>
         <input
           type="file"
-          accept="image/*"
+          accept="image/jpeg,image/png,image/webp"
           capture="environment"
+          disabled={captureDisabled}
           className="sr-only"
           onChange={(e) => {
             const file = e.target.files?.[0];
@@ -58,7 +75,11 @@ export function ClaimHome({ eventName, available, budget, claims, onCapture }: P
       <section className="flex flex-col gap-3">
         <h2 className="text-label uppercase text-ink-3">My claims</h2>
 
-        {claims.length === 0 ? (
+        {claimsLoading ? (
+          <p className="rounded-card border border-dashed border-rule px-4 py-8 text-center text-caption text-ink-3">
+            Loading submitted claims…
+          </p>
+        ) : claims.length === 0 ? (
           <p className="rounded-card border border-dashed border-rule px-4 py-8 text-center text-caption text-ink-3">
             Nothing yet. Photograph a receipt and it lands here.
           </p>

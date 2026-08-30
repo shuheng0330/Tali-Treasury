@@ -6,7 +6,7 @@ import { EXPENSE_CATEGORIES, toBaseUnits, toDisplay } from '@tali/shared';
 
 interface Props {
   photoUrl: string;
-  analysis: ReceiptAnalysis | null;
+  analysis: ReceiptAnalysis;
   onRetake: () => void;
   onSubmit: (draft: DraftClaim) => void;
 }
@@ -36,7 +36,6 @@ function Field({
 }
 
 export function ReceiptConfirm({ photoUrl, analysis, onRetake, onSubmit }: Props) {
-  const failed = analysis === null;
   const [zoomed, setZoomed] = useState(false);
   const [merchant, setMerchant] = useState(analysis?.merchant ?? '');
   const [amount, setAmount] = useState(analysis?.amount ? toDisplay(analysis.amount) : '');
@@ -44,8 +43,14 @@ export function ReceiptConfirm({ photoUrl, analysis, onRetake, onSubmit }: Props
   const [category, setCategory] = useState<ExpenseCategory>(analysis?.category ?? 'other');
   const [description, setDescription] = useState('');
 
-  const uncertain = new Set(analysis?.uncertainFields ?? []);
-  const ready = merchant.trim() !== '' && amount.trim() !== '' && receiptDate.trim() !== '' && description.trim() !== '';
+  const uncertain = new Set(analysis.uncertainFields);
+  const normalizedAmount = amount.replace(/[,\s]/g, '');
+  const amountIsValid = /^\d+(?:\.\d{1,6})?$/.test(normalizedAmount)
+    && BigInt(toBaseUnits(normalizedAmount)) > 0n;
+  const ready = merchant.trim() !== ''
+    && amountIsValid
+    && receiptDate.trim() !== ''
+    && description.trim() !== '';
 
   return (
     <div className="flex flex-col gap-4">
@@ -75,12 +80,6 @@ export function ReceiptConfirm({ photoUrl, analysis, onRetake, onSubmit }: Props
           }`}
         />
       </button>
-
-      {failed ? (
-        <p className="text-body text-wait">
-          Couldn&rsquo;t read this receipt. Enter the details manually.
-        </p>
-      ) : null}
 
       <div className="flex flex-col gap-2">
         <Field label="Merchant" uncertain={uncertain.has('merchant')}>
@@ -147,7 +146,7 @@ export function ReceiptConfirm({ photoUrl, analysis, onRetake, onSubmit }: Props
         disabled={!ready}
         onClick={() => onSubmit({
           merchant,
-          amount: toBaseUnits(amount),
+          amount: toBaseUnits(normalizedAmount),
           receiptDate,
           category,
           description,
