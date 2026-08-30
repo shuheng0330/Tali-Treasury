@@ -14,7 +14,7 @@ whole product flow is live.
 | Sui TypeScript boundary | ✅ Ready | Reads, builders, config, USDC helpers, abort mapping | Backend signer integration |
 | Shared contracts | ✅ Ready | Claim, event, policy, audit, mandate and endpoint types | Evolve only with team agreement |
 | Web dashboard | ✅ Live read-only | Current mandate state comes from Sui Testnet | Signed actions and backend claim totals |
-| Receipt and claim backend | ✅ Hosted schema ready | Gemini validation, private storage adapter, persistence, duplicate checks, guarded API routes, 69 backend tests, 33 database assertions and verified hosted migration | Seed data, deployed API configuration and signed identity verification |
+| Receipt and claim backend | ✅ Hosted schema ready | Gemini validation, private storage adapter, persistence, duplicate checks, guarded API routes, 69 backend tests, 39 database assertions and verified hosted migration | Apply the demo seed migration, configure the deployed API and add signed identity verification |
 | Claim and review UX | 🟡 Mocked | Capture, confirmation, rule display and queue UI | Replace mock calls with the receipt/claim APIs; payment orchestration remains pending |
 | Safety Test UI | 🟡 Mocked with live evidence links | Local preview plus links to two real rejected transactions | Interactive signed attempts and revocation scenario |
 | Deployment | ⬜ Pending | Local production build | Hosted URL and fresh-browser verification |

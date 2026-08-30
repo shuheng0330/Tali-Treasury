@@ -11,7 +11,7 @@ Last updated: 30 August 2026 (MYT)
 - Supabase database and storage adapters with sanitized errors;
 - Next.js API routes for all three shared endpoint contracts;
 - 69 passing backend Vitest tests, plus 14 Sui integration tests;
-- 33 passing pgTAP database assertions on a clean disposable PostgreSQL 16
+- 39 passing pgTAP database assertions on a clean disposable PostgreSQL 16
   database;
 - web TypeScript check passing at the API checkpoint.
 
