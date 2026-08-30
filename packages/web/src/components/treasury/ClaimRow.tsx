@@ -60,7 +60,10 @@ export function ClaimRow({ item, onApprove, onReject }: Props) {
           <span className="truncate text-body">{claim.merchant}</span>
           <span className="text-caption text-ink-3">
             {claim.submitterName} · <span className="capitalize">{claim.category}</span> ·{' '}
-            {relative(claim.createdAtMs)}
+            {/* The demo timestamps are relative to module load, and the server
+                module loads before the client bundle, so the two renders
+                legitimately disagree by a minute or two. */}
+            <span suppressHydrationWarning>{relative(claim.createdAtMs)}</span>
           </span>
         </div>
 

@@ -81,17 +81,15 @@ export function Held({ amount, decision, onDone }: { amount: Amount; decision: P
         </p>
       </div>
 
-      <div className="flex flex-col gap-2">
-        <button
-          type="button"
-          className="h-12 rounded-card bg-accent text-subhead font-semibold text-surface transition-colors duration-150 hover:bg-accent/90"
-        >
-          Ask the treasurer
-        </button>
+      <div className="flex flex-col gap-3">
+        <p className="text-caption text-ink-3">
+          You do not need to chase anyone. This claim is already in the treasurer&rsquo;s
+          review queue, and they will see it the next time they open the treasury.
+        </p>
         <button
           type="button"
           onClick={onDone}
-          className="h-12 rounded-card border border-rule text-subhead font-medium transition-colors duration-150 hover:bg-raised"
+          className="h-12 rounded-card bg-accent text-subhead font-semibold text-surface transition-colors duration-150 hover:bg-accent/90"
         >
           Back to my claims
         </button>
