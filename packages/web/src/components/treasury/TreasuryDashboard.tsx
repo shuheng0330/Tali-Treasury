@@ -72,7 +72,9 @@ export function TreasuryDashboard({ initialMandate: mandate, readError }: Props)
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-card border border-ok-line bg-ok-soft px-4 py-3">
         <div>
           <p className="text-body font-medium text-ok">Live from Sui Testnet</p>
-          <p className="text-caption text-ink-2">
+          {/* The server formats this in its own timezone and the browser in the
+              viewer's, so the two renders legitimately differ. */}
+          <p className="text-caption text-ink-2" suppressHydrationWarning>
             Read at {new Date(mandate.fetchedAtMs).toLocaleTimeString('en-GB')} · Circle Testnet USDC
           </p>
         </div>

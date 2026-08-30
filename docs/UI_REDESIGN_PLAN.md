@@ -1,6 +1,13 @@
 # UI redesign plan — minimalist pass
 
-**Written 30 Aug 2026. For execution across several sessions, one phase at a time.**
+**Written 30 Aug 2026. Phases A–E completed 31 Aug 2026.**
+
+> **Status: done.** All five phases are implemented and committed. Two
+> corrections were made to this document while executing it, both marked in
+> place: the `gap-1` instruction in C2 (4px is on the scale; the acceptance grep
+> is the operative check) and the `max-w-[60ch]` instruction in D1 (`ch` is the
+> width of "0", not an average character — it measured 85 characters per line).
+> Kept as the record of what was changed and why.
 
 Read this whole file before touching anything. Each phase is self-contained, ends
 with a working app, and has acceptance criteria you must check before moving on.
