@@ -1,6 +1,6 @@
 # Project status
 
-Last updated: 30 August 2026 (MYT)
+Last updated: 31 August 2026 (MYT)
 
 ## Complete locally
 
@@ -19,6 +19,8 @@ Last updated: 30 August 2026 (MYT)
 
 - Supabase migration `20260830000000` was applied to project
   `mnoalwykrmueimmuyllw` on 30 August 2026.
+- Demo seed migration `20260831000000` was applied on 31 August 2026 with the
+  official USDC mandate, deployed treasurer and approved member.
 - Migration history, schema lint, RLS, grants and private receipt-bucket metadata
   were checked. The recorded scope and reproducible checks are in
   [`docs/HOSTED_SUPABASE_VERIFICATION.md`](docs/HOSTED_SUPABASE_VERIFICATION.md).
@@ -34,7 +36,6 @@ not needed.
 
 ## Pending integration
 
-- seed the demo event and active member wallet addresses;
 - configure server-only Gemini and Supabase credentials in the deployment;
 - point the current mock claim UI at the implemented routes;
 - add wallet-signature authentication;

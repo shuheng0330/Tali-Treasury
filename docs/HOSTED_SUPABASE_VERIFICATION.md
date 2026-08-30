@@ -7,13 +7,17 @@ application. It contains no credentials or private data.
 
 - Verified by the backend teammate on 30 August 2026.
 - Supabase project reference: `mnoalwykrmueimmuyllw`.
-- Applied migration: `20260830000000_backend_receipt_schema.sql`.
+- Applied migrations:
+  - `20260830000000_backend_receipt_schema.sql`;
+  - `20260831000000_seed_demo_event.sql`.
+- The demo seed was applied and remote migration history was synchronized on
+  31 August 2026. A linked hosted schema lint returned no errors.
 - Reported checks: synchronized migration history, clean schema lint, enabled RLS,
   restricted table grants, and private receipt-bucket metadata.
 
-This proves that the database schema is hosted. It does not prove that the web API
-is deployed, configured with production secrets, authenticated, seeded, or tested
-end to end.
+This proves that the database schema and demo event/member seed are hosted. It
+does not prove that the web API is deployed, configured with production secrets,
+authenticated, or tested end to end.
 
 ## Reproduce the non-secret checks
 
