@@ -21,6 +21,49 @@ Legend: ✅ done · 🟡 in progress · ⬜ not started · ⛔ cut
 
 ---
 
+## What is not built yet
+
+Inventory taken 30 Aug against the repo, not from memory. Ordered by how much it
+would hurt to still be true on 5 Sep.
+
+**1. There is no backend.** Zero route handlers under `packages/web/src/app`.
+`.env.example` describes an architecture — Supabase for receipts and data,
+`AGENT_PRIVATE_KEY` and `AGENT_CAP_ID` for server-side signing,
+`AUTO_PAY_CONFIDENCE_THRESHOLD` — and none of it has code behind it.
+
+**2. There is no agent.** The pitch is that an agent reads receipts and pays what the
+rules allow. `GEMINI_API_KEY` and `gemini-flash-lite-latest` are in the env file; there
+is no Gemini call, no image upload and no OCR anywhere in the repo or its history.
+Receipt analysis is mocked end to end. This is the widest gap between what the site
+says and what exists.
+
+**3. The web app never touches the chain.** `@tali/treasury-sui` builds unsigned
+transactions and is imported by the web app for exactly one thing:
+`treasuryErrorFromCode`. No wallet either — `@mysten/dapp-kit` is not installed.
+
+**4. The mock mandate and the live mandate are different objects.** On chain: 0.50 SUI
+budget, 0.10 SUI cap, mandate `0x471cc5a2…`. In the app: 2,000 budget, 200 cap,
+mandate `0x3ac91e57…`. `NEXT_PUBLIC_MANDATE_ID` is empty. Every figure on screen
+changes the day this is wired.
+
+**5. Nothing outside the contract wrapper is tested.** 11 tests, all in
+`sui-integration`. `@tali/shared` and `@tali/web` have no `test` script, so the money
+helpers, the abort ordering and the rule evaluation are unverified.
+
+**6. Phase 7 is untouched.** The README covers the contract and never mentions the web
+app or how to run it. No deck, no video, no Vercel deploy, no Devfolio submission, and
+no AI-tool declaration — which MUBA requires and which is an instant DQ if
+misrepresented.
+
+**7. Dark mode has never been looked at.** The palette is complete and its contrast is
+fixed, but every screenshot taken so far has been light.
+
+Still deliberately cut, listed at the bottom of this file: zkLogin, sponsored
+transactions, the public transparency page, duplicate-review resolution UI, Bahasa
+Malaysia, on-chain category checks.
+
+---
+
 ## Phase 0 — Repo, shared contracts, design tokens ✅
 
 Branched `Xiang-UI` from `Shuheng`, which already carries the deployed Move package.
@@ -187,6 +230,18 @@ nothing in the app touches the network yet. All of it is gone. What replaced it:
 This is a product about not having to trust us. One judge pasting an invented digest into
 SuiVision would have ended the competition.
 
+**Then the real ones went on.** Shuheng had already executed three transactions against
+the deployed package and recorded them in `contracts/tali_treasury/DEPLOYMENT.md` — one
+allowed reimbursement, one refused on abort 5, one refused on abort 7 — so no keypair and
+no new signing were needed. They now sit on the landing page directly beneath the
+illustration, each linked to two explorers, with the aftermath stated: the mandate held
+the same balance afterwards, neither refusal emitted `PaymentMade`, and the agent still
+burned gas being turned down. A refusal that costs nothing did not happen on a chain. The
+two refusals are linked from the safety panel's banner as well, since that is where the
+objection actually arises. `lib/evidence.ts` writes those amounts out as strings rather
+than passing them through `toDisplay`, because they are SUI at 9 decimals and
+`COIN_DECIMALS` is 6 — the very bug recorded below.
+
 **Rhythm.** Ten sentences on the first draft shared one metre — setup clause, then a terse
 three-word punch. That uniformity is itself the AI tell, more than any single word choice
 is. Three of them are now deliberately plain or over-long.
@@ -256,6 +311,9 @@ same constant, but the moment real chain data arrives, `toMandateView` copies ra
 straight through and the deployed mandate's 450000000 MIST renders as "450.00" instead of
 0.45. Gas in `AttackResult` has the same fault today. **Decide before wiring:** either
 switch to testnet USDC and keep 6, or keep SUI and move to a per-coin decimals lookup.
+`DEPLOYMENT.md` calls the SUI mandate a smoke test "before integrating official testnet
+USDC", and USDC is 6 decimals, so the plan of record already points at USDC — it just
+has not been carried out.
 
 ---
 

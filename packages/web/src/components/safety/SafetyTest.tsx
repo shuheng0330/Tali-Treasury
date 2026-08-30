@@ -2,9 +2,10 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import type { PaymentResult, RuleCheck, SafetyAttackId } from '@tali/shared';
-import { SAFETY_ATTACKS, subtract, toBaseUnits, toDisplay } from '@tali/shared';
+import { EXPLORER, SAFETY_ATTACKS, subtract, toBaseUnits, toDisplay } from '@tali/shared';
 import { COMMITTED, MEMBER, STRANGER, mandate } from '@/lib/mock/data';
 import { DRAINED_BUDGET, fireAttack, simulateAttack, type AttackInput } from '@/lib/mock/api';
+import { ON_CHAIN_RUNS } from '@/lib/evidence';
 import { AttackResult } from './AttackResult';
 
 type Phase = 'armed' | 'firing' | 'result';
@@ -207,12 +208,31 @@ export function SafetyTest() {
           Try to make the agent overspend. Pick any amount and any recipient — the rules that
           answer you are the ones compiled into the mandate.
         </p>
-        <p className="rounded-card border border-wait-line bg-wait-soft px-4 py-3 text-caption text-ink-2">
-          <span className="font-medium">Running on sample data.</span> The mandate contract is
-          deployed to Sui testnet and this panel mirrors its rules and abort codes exactly, but
-          the transactions below are not yet submitted to the network, so the digests are
-          placeholders. Wiring this panel to the live package is the next thing we are doing.
-        </p>
+        <div className="flex flex-col gap-2 rounded-card border border-wait-line bg-wait-soft px-4 py-3">
+          <p className="text-caption text-ink-2">
+            <span className="font-medium">Running on sample data.</span> This panel mirrors the
+            deployed contract&rsquo;s rules and abort codes exactly, but it does not yet submit to
+            the network, so the digests it shows are placeholders. Wiring it to the live package
+            is the next thing we are doing.
+          </p>
+          <p className="text-caption text-ink-2">
+            The same two attacks have already been run for real against the deployed package:
+            {ON_CHAIN_RUNS.filter((run) => run.abort !== null).map((run, i) => (
+              <span key={run.digest}>
+                {i === 0 ? ' ' : ', '}
+                <a
+                  href={EXPLORER.tx(run.digest).suivision}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="font-mono text-accent underline underline-offset-4"
+                >
+                  abort {run.abort?.code}
+                </a>
+              </span>
+            ))}
+            . Both were refused on chain and neither moved a coin.
+          </p>
+        </div>
       </header>
 
       <section className="flex flex-col gap-3">

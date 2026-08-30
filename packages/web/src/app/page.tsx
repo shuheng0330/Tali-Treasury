@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { EXPLORER } from '@tali/shared';
 import { TALI_TESTNET_PACKAGE_ID } from '@tali/treasury-sui';
+import { Evidence } from '@/components/landing/Evidence';
 import { PhoneCode } from '@/components/landing/PhoneCode';
 import { Wire } from '@/components/landing/Wire';
 
@@ -84,6 +85,18 @@ export default function Page() {
           <p className="text-caption text-ink-3">Either claim, whenever you like.</p>
         </div>
         <Wire />
+      </section>
+
+      <section className="mx-auto flex w-full max-w-5xl flex-col gap-4 px-5 pb-16">
+        <div className="flex flex-col gap-1">
+          <h2 className="text-heading">The drawing above is a drawing. These three are not.</h2>
+          <p className="text-[16px] text-ink-2">
+            Three transactions submitted to Sui testnet against the deployed package. One was
+            allowed and two were refused, and every digest below opens in an explorer that has
+            nothing to do with us.
+          </p>
+        </div>
+        <Evidence />
       </section>
 
       <section className="border-y border-rule bg-surface">
