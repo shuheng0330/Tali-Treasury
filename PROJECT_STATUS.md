@@ -11,7 +11,7 @@ Last updated: 31 August 2026 (MYT)
 - Supabase database and storage adapters with sanitized errors;
 - Next.js API routes for all three shared endpoint contracts;
 - 69 passing backend Vitest tests, plus 14 Sui integration tests;
-- 39 passing pgTAP database assertions on a clean disposable PostgreSQL 16
+- 42 passing pgTAP database assertions on a clean disposable PostgreSQL 17
   database;
 - web TypeScript check passing at the API checkpoint.
 
@@ -19,8 +19,8 @@ Last updated: 31 August 2026 (MYT)
 
 - Supabase migration `20260830000000` was applied to project
   `mnoalwykrmueimmuyllw` on 30 August 2026.
-- Demo seed migration `20260831000000` was applied on 31 August 2026 with the
-  official USDC mandate, deployed treasurer and approved member.
+- Seed migration `20260831000000` created demo event
+  `ba7e50e2-7e7b-4a67-a505-9e3a329739ae` and its Kian Xiang membership.
 - Migration history, schema lint, RLS, grants and private receipt-bucket metadata
   were checked. The recorded scope and reproducible checks are in
   [`docs/HOSTED_SUPABASE_VERIFICATION.md`](docs/HOSTED_SUPABASE_VERIFICATION.md).
@@ -36,6 +36,8 @@ not needed.
 
 ## Pending integration
 
+- apply and verify additive migration `20260831010000` for Shu Heng and Lim Wey
+  Cheng;
 - configure server-only Gemini and Supabase credentials in the deployment;
 - point the current mock claim UI at the implemented routes;
 - add wallet-signature authentication;
