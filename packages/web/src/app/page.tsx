@@ -13,9 +13,9 @@ export default function Page() {
   return (
     <main className="flex min-h-dvh flex-col">
       <header className="border-b border-rule">
-        <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-5 py-3">
+        <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-6 py-4">
           <span className="text-subhead font-semibold">Tali Treasury</span>
-          <nav className="flex items-center gap-5">
+          <nav className="flex items-center gap-6">
             <span className="hidden font-mono text-label uppercase text-ink-3 sm:inline">
               sui testnet
             </span>
@@ -29,7 +29,7 @@ export default function Page() {
         </div>
       </header>
 
-      <section className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-5 pb-12 pt-12 sm:pt-16">
+      <section className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-6 py-16 md:py-24">
         <p className="text-label uppercase text-ink-2">
           Club and event treasury · Sui testnet
         </p>
@@ -51,10 +51,10 @@ export default function Page() {
           next six weeks chasing it back in a WhatsApp group.
         </p>
 
-        <div className="flex flex-wrap items-center gap-x-5 gap-y-3 pt-1">
+        <div className="flex flex-wrap items-center gap-x-6 gap-y-4 pt-2">
           <Link
             href="/safety"
-            className="rounded-card bg-accent px-5 py-3 text-[18px] font-semibold text-surface transition-colors duration-150 hover:bg-accent/90"
+            className="rounded-card bg-accent px-6 py-4 text-[18px] font-semibold text-surface transition-colors duration-150 hover:bg-accent/90"
           >
             Try to break it
           </Link>
@@ -66,7 +66,7 @@ export default function Page() {
           </Link>
         </div>
 
-        <p className="border-t border-rule pt-5 text-[16px] text-ink-3">
+        <p className="border-t border-rule pt-6 text-[16px] text-ink-3">
           Live on Sui testnet · package{' '}
           <a
             href={PACKAGE_LINK}
@@ -80,8 +80,8 @@ export default function Page() {
         </p>
       </section>
 
-      <section className="mx-auto flex w-full max-w-5xl flex-col gap-4 px-5 pb-16">
-        <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1">
+      <section className="mx-auto flex w-full max-w-5xl flex-col gap-4 px-6 py-12 md:py-20">
+        <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-2">
           <h2 className="text-heading">
             The cap is {toDisplay(mandate.maxPerClaim)}. Watch it refuse {REFUSED_AMOUNT}.
           </h2>
@@ -90,7 +90,7 @@ export default function Page() {
         <Wire />
       </section>
 
-      <section className="mx-auto flex w-full max-w-5xl flex-col gap-4 px-5 pb-16">
+      <section className="mx-auto flex w-full max-w-5xl flex-col gap-4 px-6 py-12 md:py-20">
         <div className="flex flex-col gap-1">
           <h2 className="text-heading">The drawing above is a drawing. These three are not.</h2>
           <p className="text-[16px] text-ink-2">
@@ -103,8 +103,8 @@ export default function Page() {
       </section>
 
       <section className="bg-surface">
-        <div className="mx-auto flex w-full max-w-5xl flex-col gap-8 px-5 py-14 md:flex-row md:items-start md:gap-14">
-          <blockquote className="max-w-sm shrink-0 border-l-2 border-rule-strong pl-5 text-title text-ink-2">
+        <div className="mx-auto flex w-full max-w-5xl flex-col gap-8 px-6 py-12 md:py-20 md:flex-row md:items-start md:gap-12">
+          <blockquote className="max-w-sm shrink-0 border-l-2 border-rule-strong pl-6 text-title text-ink-2">
             &ldquo;Your app could just be pretending to block it.&rdquo;
           </blockquote>
           <div className="flex max-w-xl flex-col gap-4">
@@ -129,7 +129,7 @@ export default function Page() {
         </div>
       </section>
 
-      <section className="mx-auto flex w-full max-w-5xl flex-col gap-5 px-5 py-14">
+      <section className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-6 py-12 md:py-20">
         <h2 className="text-heading">Why this needs Move</h2>
         <div className="flex max-w-3xl flex-col gap-4">
           <p className="text-body text-ink-2">
@@ -153,7 +153,7 @@ export default function Page() {
         </div>
       </section>
 
-      <section className="mx-auto flex w-full max-w-5xl flex-col gap-5 px-5 pb-16">
+      <section className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-6 py-12 md:py-20">
         <p className="text-[16px] text-ink-2">
           Look around as a{' '}
           <Link href="/claim" className="text-accent underline underline-offset-4">
@@ -169,13 +169,13 @@ export default function Page() {
           </Link>
           .
         </p>
-        <div className="rounded-card border border-rule bg-surface p-5">
+        <div className="rounded-card border border-rule bg-surface p-6">
           <PhoneCode />
         </div>
       </section>
 
       <footer className="mt-auto border-t border-rule">
-        <div className="mx-auto flex w-full max-w-5xl flex-col gap-3 px-5 py-8 text-caption text-ink-3">
+        <div className="mx-auto flex w-full max-w-5xl flex-col gap-4 px-6 py-8 text-caption text-ink-3">
           <p className="max-w-2xl">
             The contract and its mandate are live on Sui testnet, and the treasurer view reads
             them straight off the chain rather than from a copy we keep. The claim flow and the
@@ -187,7 +187,7 @@ export default function Page() {
             <p>
               Built by Kian Xiang, Shu Heng and Wey Cheng for the MUBA Blockchain Hackathon 2026.
             </p>
-            <div className="flex flex-wrap gap-5">
+            <div className="flex flex-wrap gap-6">
               <a
                 href={PACKAGE_LINK}
                 target="_blank"

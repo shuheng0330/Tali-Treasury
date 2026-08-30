@@ -5,7 +5,7 @@ function Digest({ digest }: { digest: string }) {
   const links = EXPLORER.tx(digest);
 
   return (
-    <span className="flex flex-wrap items-center gap-x-4 gap-y-1">
+    <span className="flex flex-wrap items-center gap-x-4 gap-y-2">
       <span className="break-all font-mono text-caption text-ink-2">
         {digest.slice(0, 10)}…{digest.slice(-8)}
       </span>
@@ -37,10 +37,10 @@ export function Evidence() {
           const refused = run.kind === 'refused';
 
           return (
-            <li key={run.digest} className="flex flex-col gap-2 px-4 sm:px-5">
-              <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
+            <li key={run.digest} className="flex flex-col gap-2 px-6">
+              <span className="flex flex-wrap items-center gap-x-4 gap-y-2">
                 <span
-                  className={`rounded-badge px-1.5 py-0.5 text-label uppercase ${
+                  className={`rounded-badge px-2 py-1 text-label uppercase ${
                     refused ? 'bg-no-soft text-no' : 'bg-ok-soft text-ok'
                   }`}
                 >
@@ -61,7 +61,7 @@ export function Evidence() {
         })}
       </ul>
 
-      <div className="flex flex-col gap-1 border-t border-rule px-4 py-4 sm:px-5">
+      <div className="flex flex-col gap-1 border-t border-rule px-6 py-6">
         <p className="text-body text-ink-2">
           After both refusals the mandate still held{' '}
           <span className="tnum font-medium">{AFTERMATH.budgetRemaining}</span> and had spent{' '}

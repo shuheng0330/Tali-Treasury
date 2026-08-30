@@ -180,7 +180,7 @@ export function Wire() {
 
   return (
     <div className="flex flex-col rounded-card border border-rule bg-surface">
-      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 px-4 pb-2 pt-4 sm:px-5">
+      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 px-6 pb-2 pt-4">
         <span className="flex items-center gap-2">
           <span
             className={`h-1.5 w-1.5 rounded-full bg-ink-3 ${settled ? '' : 'animate-breathe'}`}
@@ -193,13 +193,13 @@ export function Wire() {
         </span>
       </div>
 
-      <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3 px-4 pt-5 sm:px-5">
-        <span className="flex min-w-0 flex-col gap-0.5">
+      <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-4 px-6 pt-4">
+        <span className="flex min-w-0 flex-col gap-1">
           <span className="text-label uppercase text-ink-3">Claim {run.id}</span>
           <span className="truncate text-heading">{run.merchant}</span>
           <span className="text-caption text-ink-3">submitted by {run.who}</span>
         </span>
-        <span className="flex items-baseline gap-1.5">
+        <span className="flex items-baseline gap-2">
           <span
             className={`tnum text-display leading-none ${
               blocked && settled ? 'text-ink-3 line-through' : ''
@@ -211,7 +211,7 @@ export function Wire() {
         </span>
       </div>
 
-      <div className="px-4 pb-7 pt-8 sm:px-5">
+      <div className="px-6 py-8">
         <div className="relative h-6">
           <span className="absolute inset-x-0 top-1/2 h-px -translate-y-1/2 bg-rule" aria-hidden />
           <span
@@ -290,7 +290,7 @@ export function Wire() {
           return (
             <li
               key={gate.key}
-              className={`flex items-center gap-3 px-4 py-2 transition-colors duration-300 sm:px-5 ${
+              className={`flex items-center gap-2 px-6 py-2 transition-colors duration-300 ${
                 state === 'failed' ? 'bg-no-soft' : ''
               }`}
             >
@@ -317,7 +317,7 @@ export function Wire() {
                 {gate.label}
               </span>
               <span
-                className={`shrink-0 pl-3 text-right font-mono text-caption text-ink-3 ${
+                className={`shrink-0 pl-4 text-right font-mono text-caption text-ink-3 ${
                   state === 'skipped' ? '' : 'tnum'
                 }`}
               >
@@ -328,7 +328,7 @@ export function Wire() {
         })}
       </ul>
 
-      <div className="flex flex-col gap-1 border-t border-rule px-4 py-4 sm:px-5">
+      <div className="flex flex-col gap-2 border-t border-rule px-6 py-6">
         {!settled ? (
           <span className="text-subhead text-ink-3">Checking against the mandate…</span>
         ) : (
@@ -351,7 +351,7 @@ export function Wire() {
         {settled && announce ? `${run.merchant}, ${toDisplay(base)}. ${verdict}` : ''}
       </span>
 
-      <div className="flex flex-wrap items-center gap-2 px-4 pb-3 pt-6 sm:px-5">
+      <div className="flex flex-wrap items-center gap-2 px-6 pb-4 pt-6">
         <span className="mr-1 text-label uppercase text-ink-3">Queue</span>
         {RUNS.map((item, i) => (
           <button
@@ -359,7 +359,7 @@ export function Wire() {
             type="button"
             onClick={() => select(i)}
             aria-current={i === index ? 'true' : undefined}
-            className={`tnum rounded-control border px-2.5 py-1 text-caption transition-colors duration-150 ${
+            className={`tnum rounded-control border px-4 py-2 text-caption transition-colors duration-150 ${
               i === index
                 ? 'border-accent-line bg-accent-soft text-ink'
                 : 'border-rule text-ink-3 hover:bg-raised hover:text-ink-2'
@@ -372,13 +372,13 @@ export function Wire() {
           type="button"
           onClick={() => setPlaying((current) => !current)}
           aria-label={playing ? 'Pause the demonstration' : 'Play the demonstration'}
-          className="ml-auto rounded-control border border-rule px-2.5 py-1 text-caption text-ink-3 transition-colors duration-150 hover:bg-raised hover:text-ink-2"
+          className="ml-auto rounded-control border border-rule px-4 py-2 text-caption text-ink-3 transition-colors duration-150 hover:bg-raised hover:text-ink-2"
         >
           {playing ? 'Pause' : 'Play'}
         </button>
       </div>
 
-      <p className="px-4 pb-4 pt-2 text-caption text-ink-3 sm:px-5">
+      <p className="px-6 pb-4 pt-2 text-caption text-ink-3">
         Four of the seven checks inside <span className="font-mono">spend()</span>. The other
         three cover the agent&rsquo;s key, a zero amount and the expiry date. Amounts are in the
         mandate&rsquo;s coin, Circle testnet USDC.
