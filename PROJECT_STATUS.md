@@ -1,8 +1,8 @@
 # Project status
 
-Last updated: 30 August 2026 (MYT)
+Last updated: 31 August 2026 (MYT)
 
-## Completed locally
+## Complete locally
 
 - strict Gemini receipt schema and `gemini-3.5-flash-lite` default;
 - SHA-256 hashing and event-scoped immutable storage paths;
@@ -11,9 +11,19 @@ Last updated: 30 August 2026 (MYT)
 - Supabase database and storage adapters with sanitized errors;
 - Next.js API routes for all three shared endpoint contracts;
 - 69 passing backend Vitest tests, plus 14 Sui integration tests;
-- 33 passing pgTAP database assertions on a clean disposable PostgreSQL 16
+- 42 passing pgTAP database assertions on a clean disposable PostgreSQL 17
   database;
 - web TypeScript check passing at the API checkpoint.
+
+## Hosted schema verified
+
+- Supabase migration `20260830000000` was applied to project
+  `mnoalwykrmueimmuyllw` on 30 August 2026.
+- Seed migration `20260831000000` created demo event
+  `ba7e50e2-7e7b-4a67-a505-9e3a329739ae` and its Kian Xiang membership.
+- Migration history, schema lint, RLS, grants and private receipt-bucket metadata
+  were checked. The recorded scope and reproducible checks are in
+  [`docs/HOSTED_SUPABASE_VERIFICATION.md`](docs/HOSTED_SUPABASE_VERIFICATION.md).
 
 ## Environment note
 
@@ -26,8 +36,8 @@ not needed.
 
 ## Pending integration
 
-- apply and verify the migration on the hosted Supabase project;
-- seed the demo event and active member wallet addresses;
+- apply and verify additive migration `20260831010000` for Shu Heng and Lim Wey
+  Cheng;
 - configure server-only Gemini and Supabase credentials in the deployment;
 - point the current mock claim UI at the implemented routes;
 - add wallet-signature authentication;
@@ -42,6 +52,6 @@ not needed.
   explicit local-demo opt-in until wallet/session authentication exists.
 - Analyze and create-claim are two validated calls but are not cryptographically
   bound to one another.
-- Receipt analysis and persistence are implemented locally but not yet exercised
-  through the current frontend or hosted services.
+- The hosted schema is ready, but receipt analysis and persistence have not yet
+  been exercised through the current frontend or a hosted web deployment.
 - No backend code in this increment can sign or broadcast a Sui transaction.

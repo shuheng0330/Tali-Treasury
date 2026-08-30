@@ -40,6 +40,14 @@ The current backend increment must:
 - Claim fields must match the validated receipt analysis supplied at confirmation.
 - A database unique constraint is the final race-safe same-event duplicate guard.
 
+## Hosted demo configuration
+
+- Demo event `ba7e50e2-7e7b-4a67-a505-9e3a329739ae` uses the official USDC mandate.
+- Shu Heng, Lim Wey Cheng, and Kian Xiang must each be active event members under
+  their confirmed canonical Sui wallet addresses.
+- Demo membership migrations must be idempotent and must not delete unrelated
+  event members.
+
 ## Explicitly out of scope for this increment
 
 - wallet-signature authentication;
@@ -47,6 +55,7 @@ The current backend increment must:
 - deterministic policy evaluation and review actions;
 - agent private-key use, Sui transaction construction, signing or payment;
 - frontend replacement of current mock claim data;
-- hosted migration or production readiness.
+- production readiness; the schema is hosted, but real identity, deployed API
+  configuration and end-to-end verification remain pending.
 
 These boundaries must be resolved before real-fund authorization.
