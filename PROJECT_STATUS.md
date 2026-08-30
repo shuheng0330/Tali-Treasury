@@ -2,13 +2,11 @@
 
 Last updated: 30 August 2026 (MYT)
 
-## Completed
+## Complete locally
 
 - strict Gemini receipt schema and `gemini-3.5-flash-lite` default;
 - SHA-256 hashing and event-scoped immutable storage paths;
 - secure Supabase migration for events, active members, claims and private receipts;
-- hosted Supabase migration `20260830000000` applied and verified against project
-  `mnoalwykrmueimmuyllw`;
 - application services for analyze, create claim and list claims;
 - Supabase database and storage adapters with sanitized errors;
 - Next.js API routes for all three shared endpoint contracts;
@@ -16,6 +14,14 @@ Last updated: 30 August 2026 (MYT)
 - 33 passing pgTAP database assertions on a clean disposable PostgreSQL 16
   database;
 - web TypeScript check passing at the API checkpoint.
+
+## Hosted schema verified
+
+- Supabase migration `20260830000000` was applied to project
+  `mnoalwykrmueimmuyllw` on 30 August 2026.
+- Migration history, schema lint, RLS, grants and private receipt-bucket metadata
+  were checked. The recorded scope and reproducible checks are in
+  [`docs/HOSTED_SUPABASE_VERIFICATION.md`](docs/HOSTED_SUPABASE_VERIFICATION.md).
 
 ## Environment note
 

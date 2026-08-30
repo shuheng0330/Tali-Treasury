@@ -80,6 +80,8 @@ must be recorded separately from local completion. Migration
 `mnoalwykrmueimmuyllw` on 30 August 2026 and verified through synchronized
 migration history, a clean schema lint, PostgreSQL catalog checks and storage
 bucket metadata.
+The non-secret verification scope and reproduction queries are recorded in
+[`docs/HOSTED_SUPABASE_VERIFICATION.md`](docs/HOSTED_SUPABASE_VERIFICATION.md).
 
 Local Logflare analytics and its Vector collector are intentionally disabled. On
 Windows the collector otherwise requires Docker Desktop's unauthenticated TCP API

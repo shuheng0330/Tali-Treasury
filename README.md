@@ -28,7 +28,7 @@ Status words are intentionally precise:
 | TypeScript Sui integration | **Complete locally** | Reads, PTB builders, amount helpers, error mapping |
 | Treasurer mandate dashboard | **Live** (read-only) | Server reads the current mandate from Sui Testnet |
 | Claim, review, revoke, and Safety Test interactions | **Mocked** | Clearly labelled; no signing or state changes |
-| Gemini receipt analysis and Supabase claims | **Hosted schema ready** | 58 Vitest tests, 33 pgTAP assertions, and hosted migration verified; UI/API deployment pending |
+| Gemini receipt analysis and Supabase claims | **Hosted schema ready** | 69 Vitest tests, 33 pgTAP assertions, and hosted migration verified; UI/API deployment pending |
 | Deterministic policy and backend agent signing | **Pending** | Separate payment-orchestration slice |
 | Wallet connection and live UI writes | **Pending** | Add after backend/signing boundary is agreed |
 | Hosting and submission pack | **Pending** | Final integration phase |
@@ -222,6 +222,7 @@ Immediate next vertical slice:
 ## Documentation index
 
 - [`docs/PROGRESS.md`](docs/PROGRESS.md) — authoritative team status and next work.
+- [`docs/HOSTED_SUPABASE_VERIFICATION.md`](docs/HOSTED_SUPABASE_VERIFICATION.md) — hosted schema verification scope and reproducible checks.
 - [`docs/OWNERSHIP.md`](docs/OWNERSHIP.md) — path ownership and coordination rules.
 - [`docs/DESIGN.md`](docs/DESIGN.md) — binding UI design rules.
 - [`contracts/tali_treasury/DEPLOYMENT.md`](contracts/tali_treasury/DEPLOYMENT.md) — authoritative deployed objects and transaction evidence.
