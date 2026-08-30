@@ -10,22 +10,33 @@ export function PhoneCode({ path = '/claim' }: { path?: string }) {
   const [href, setHref] = useState(path);
 
   useEffect(() => {
+    let live = true;
     const url = new URL(path, window.location.origin).toString();
     setHref(url);
 
     QRCode.toString(url, {
       type: 'svg',
-      margin: 0,
+      // The spec wants four clear modules around the symbol; without them
+      // scanners get unreliable, which is the whole point of this thing.
+      margin: 4,
       errorCorrectionLevel: 'M',
       color: { dark: '#101519', light: '#FFFFFF' },
     })
-      .then(setSvg)
-      .catch(() => setSvg(null));
+      .then((result) => {
+        if (live) setSvg(result);
+      })
+      .catch(() => {
+        if (live) setSvg(null);
+      });
+
+    return () => {
+      live = false;
+    };
   }, [path]);
 
   return (
     <div className="flex items-center gap-4">
-      <div className="h-32 w-32 shrink-0 rounded-control bg-white p-2.5">
+      <div className="h-36 w-36 shrink-0 rounded-control bg-white p-2">
         {svg ? (
           <div
             className="h-full w-full [&>svg]:h-full [&>svg]:w-full"

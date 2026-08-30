@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { Fragment, useCallback, useEffect, useState } from 'react';
 import { compare, toBaseUnits, toDisplay } from '@tali/shared';
 import { mandate } from '@/lib/mock/data';
 
@@ -121,6 +121,11 @@ export function Wire() {
   const [index, setIndex] = useState(0);
   const [stage, setStage] = useState(-1);
   const [playing, setPlaying] = useState(true);
+  const [announce, setAnnounce] = useState(false);
+
+  useEffect(() => {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) setPlaying(false);
+  }, []);
 
   const run = RUNS[index];
   const base = toBaseUnits(run.amount);
@@ -145,12 +150,13 @@ export function Wire() {
       blocked ? 4000 : 2400,
     );
     return () => clearTimeout(timer);
-  }, [stage, finalStage, playing, blocked]);
+  }, [index, stage, finalStage, playing, blocked]);
 
   const select = useCallback((next: number) => {
     setIndex(next);
     setStage(-1);
     setPlaying(true);
+    setAnnounce(true);
   }, []);
 
   function gateState(i: number): GateState {
@@ -160,8 +166,11 @@ export function Wire() {
   }
 
   const x = stage < 0 ? 1.5 : stage < GATES.length ? GATE_X[stage] : END_X;
+  const skipped = failAt === null ? [] : GATES.map((_, i) => i + 1).slice(failAt + 1);
   const verdict = blocked
-    ? `Over the ${toDisplay(CAP)} cap. Nothing moved.`
+    ? failAt === 1
+      ? `Over the ${toDisplay(CAP)} cap. Nothing moved.`
+      : `Stopped by rule ${failAt + 1}. Nothing moved.`
     : 'Allowed. All four rules passed.';
 
   return (
@@ -211,27 +220,32 @@ export function Wire() {
           {GATES.map((gate, i) => {
             const state = gateState(i);
             return (
-              <span
-                key={gate.key}
-                className="absolute top-1/2 block -translate-x-1/2 -translate-y-1/2"
-                style={{ left: `${GATE_X[i]}%` }}
-                aria-hidden
-              >
+              <Fragment key={gate.key}>
                 <span
-                  className={`block w-[3px] rounded-badge transition-all duration-300 ${
-                    state === 'failed'
-                      ? 'h-6 bg-no'
-                      : state === 'passed'
-                        ? 'h-3.5 bg-accent'
-                        : state === 'skipped'
-                          ? 'h-3.5 bg-rule'
-                          : 'h-3.5 bg-rule-strong'
-                  }`}
-                />
-                <span className="tnum absolute left-1/2 top-full mt-2 block -translate-x-1/2 text-label text-ink-3">
+                  className="absolute top-1/2 block -translate-x-1/2 -translate-y-1/2"
+                  style={{ left: `${GATE_X[i]}%` }}
+                  aria-hidden
+                >
+                  <span
+                    className={`block w-[3px] rounded-badge transition-all duration-300 ${
+                      state === 'failed'
+                        ? 'h-6 bg-no'
+                        : state === 'passed'
+                          ? 'h-3.5 bg-accent'
+                          : state === 'skipped'
+                            ? 'h-3.5 bg-rule'
+                            : 'h-3.5 bg-rule-strong'
+                    }`}
+                  />
+                </span>
+                <span
+                  className="tnum absolute top-full mt-2 block -translate-x-1/2 text-label text-ink-3"
+                  style={{ left: `${GATE_X[i]}%` }}
+                  aria-hidden
+                >
                   {i + 1}
                 </span>
-              </span>
+              </Fragment>
             );
           })}
 
@@ -277,8 +291,17 @@ export function Wire() {
             >
               <span className="tnum w-3 shrink-0 text-label text-ink-3">{i + 1}</span>
               <Mark state={state} />
+              <span className="sr-only">
+                {state === 'failed'
+                  ? 'Failed.'
+                  : state === 'passed'
+                    ? 'Passed.'
+                    : state === 'skipped'
+                      ? 'Not reached.'
+                      : 'Not checked yet.'}
+              </span>
               <span
-                className={`min-w-0 flex-1 truncate text-caption ${
+                className={`min-w-0 flex-1 text-caption ${
                   state === 'failed'
                     ? 'font-medium text-no'
                     : state === 'skipped'
@@ -308,7 +331,11 @@ export function Wire() {
             <span className={`text-title ${blocked ? 'text-no' : 'text-ok'}`}>{verdict}</span>
             <span className="text-caption text-ink-2">
               {blocked
-                ? `The contract would abort on code ${GATES[failAt].code} and roll the whole transaction back. Rules 3 and 4 never run.`
+                ? `The contract would abort on code ${GATES[failAt].code} and roll the whole transaction back.${
+                    skipped.length
+                      ? ` Rule${skipped.length > 1 ? 's' : ''} ${skipped.join(' and ')} never run.`
+                      : ''
+                  }`
                 : 'Every rule the contract checks was satisfied, so the transfer goes through in one transaction.'}
             </span>
           </>
@@ -316,7 +343,7 @@ export function Wire() {
       </div>
 
       <span className="sr-only" aria-live="polite">
-        {settled ? `${run.merchant}, ${toDisplay(base)}. ${verdict}` : ''}
+        {settled && announce ? `${run.merchant}, ${toDisplay(base)}. ${verdict}` : ''}
       </span>
 
       <div className="flex flex-wrap items-center gap-2 border-t border-rule px-4 py-3 sm:px-5">
@@ -339,6 +366,7 @@ export function Wire() {
         <button
           type="button"
           onClick={() => setPlaying((current) => !current)}
+          aria-label={playing ? 'Pause the demonstration' : 'Play the demonstration'}
           className="ml-auto rounded-control border border-rule px-2.5 py-1 text-caption text-ink-3 transition-colors duration-150 hover:bg-raised hover:text-ink-2"
         >
           {playing ? 'Pause' : 'Play'}

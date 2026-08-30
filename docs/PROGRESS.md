@@ -219,6 +219,35 @@ Found by review of the deployed contract against the UI, not by testing the happ
 - **Amounts were labelled USDC in three screens and SUI in another.** Now one unit
   everywhere.
 
+Found by a second pass over the landing code and the token set:
+
+- **`:focus-visible` set `border-radius: 2px` and was unlayered**, so it beat every
+  `rounded-*` utility in `@layer utilities`. Tabbing to any button visibly squared its
+  corners from 8px to 2px. Browsers already curve the outline to the element's own radius,
+  so the line was doing nothing but damage.
+- **`--ink-3` failed WCAG AA everywhere it was used** — 4.06:1 on white, 3.72:1 on canvas,
+  3.32:1 on a failed row. Now 96 105 116 in light and 119 129 140 in dark, which clears
+  4.5:1 against all three backgrounds in both themes.
+- **Rule pass/fail was invisible to screen readers.** Every state signal — the rail, the
+  glyphs — was `aria-hidden`, and the row text carried no state word, so the outcome
+  reached sighted users through colour and shape and reached everyone else not at all.
+  Each row now carries an `sr-only` verdict.
+- **The live region announced on every auto-advance**, roughly every five seconds, forever.
+  It now fills only when someone picks a claim themselves.
+- **`prefers-reduced-motion` was honoured by the CSS and ignored by the loop**, which left
+  those users with content still swapping every 600ms and a dot that teleported instead of
+  easing. The loop now starts paused for them.
+- **`truncate` on the rule label clipped it below ~448px** — "Inside the rem…" on every
+  phone in portrait. It wraps instead.
+- **The verdict hardcoded the cap**, so a budget failure would have read "Over the 200.00
+  cap" and claimed rules 3 and 4 were skipped when rule 3 was the one that failed. Both
+  strings derive from the failing gate now.
+- **The QR had a 2.7-module quiet zone** against the 4 the spec requires, which is exactly
+  the kind of thing that works on a desk and fails in a dark room.
+- Re-selecting the already-current claim left a stale timer, because none of the effect's
+  dependencies changed. Harmless with two runs of differing length; silently broken the
+  moment a third is added. `index` is now a dependency.
+
 ## Known issue carried into Phase 6
 
 `COIN_DECIMALS` is **6** while `mandate.coinType` is `0x2::sui::SUI`, which has **9**.
