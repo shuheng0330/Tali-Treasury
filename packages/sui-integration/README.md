@@ -10,6 +10,10 @@ Shared TypeScript integration for the Tali Treasury Move package. It provides:
 The package never reads or stores private keys. The calling frontend wallet or
 backend agent is responsible for signing.
 
+The integrated `/treasury` page uses this package server-side for a real,
+read-only Testnet mandate query. Claim processing and state-changing UI actions
+remain explicitly simulated until the backend signer is connected.
+
 ## Install and verify
 
 From the repository root:
@@ -35,20 +39,27 @@ const mandate = await readMandate(client, taliTestnetSuiConfig, mandateId);
 console.log(mandate.remainingBudget);
 ```
 
+For the product flow, use `taliTestnetUsdcConfig`. `taliTestnetSuiConfig` is
+retained only for the original SUI smoke-test mandate.
+
+The public IDs for the current funded demo are exported as `taliUsdcDemo`, so
+the frontend and backend do not need to duplicate mandate and capability IDs.
+
 ## Build an agent payment
 
 ```ts
 import {
   buildSpendTransaction,
+  parseUsdc,
   parseTreasuryError,
-  taliTestnetSuiConfig,
+  taliTestnetUsdcConfig,
 } from '@tali/treasury-sui';
 
-const transaction = buildSpendTransaction(taliTestnetSuiConfig, {
+const transaction = buildSpendTransaction(taliTestnetUsdcConfig, {
   agentCapId,
   mandateId,
   recipient,
-  amount: 5_000_000n,
+  amount: parseUsdc('5'),
 });
 
 try {
@@ -61,5 +72,5 @@ try {
 ```
 
 Amounts are always atomic coin units (`bigint`), never floating-point values.
-For SUI, `1_000_000_000n` MIST equals 1 SUI. For USDC, use the decimals from
-the official coin metadata when converting display values.
+Circle's Sui Testnet USDC has 6 decimals, so `parseUsdc('5')` produces
+`5_000_000n`. This prevents financial rounding errors from JavaScript numbers.

@@ -52,9 +52,9 @@ export function MandateHeader({ eventName, organisation, mandate, committed, onR
             type="button"
             onClick={onRevoke}
             disabled={status !== 'active'}
-            className="rounded-control border border-rule px-3 py-1.5 text-caption transition-colors duration-150 hover:border-no-line hover:bg-no-soft hover:text-no disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-rule disabled:hover:bg-transparent disabled:hover:text-ink"
+            className="rounded-control border border-rule px-3 py-1.5 text-caption transition-colors duration-150 hover:bg-raised disabled:cursor-not-allowed disabled:opacity-40"
           >
-            Revoke
+            Preview revoke
           </button>
         </div>
       </div>

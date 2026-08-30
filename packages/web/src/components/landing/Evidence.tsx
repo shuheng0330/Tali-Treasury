@@ -82,7 +82,7 @@ export function Evidence() {
           >
             {LIVE_MANDATE_ID.slice(0, 8)}…{LIVE_MANDATE_ID.slice(-6)}
           </a>
-          , which holds testnet SUI rather than the amounts drawn above.
+          , which holds Circle testnet USDC.
         </p>
       </div>
     </div>

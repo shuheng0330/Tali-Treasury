@@ -1,20 +1,51 @@
-# Build progress
+# Team build progress
 
-Frontend track (`Xiang-UI`). Updated as phases land.
+This is the authoritative implementation checklist. A UI phase marked complete
+means the UX works against its declared data source; it does not imply that the
+whole product flow is live.
 
 **Deadline:** submission 5 Sep 23:59 MYT · pitch 6 Sep at APU.
 
-## Phases
+## Current status by subsystem
+
+| Subsystem | Status | Completed | Pending |
+|---|---|---|---|
+| Sui Move | ✅ Live | Package, 17 tests, USDC mandate, valid payment, two rejected safety attempts | Live revoke/withdraw evidence only if needed for the demo |
+| Sui TypeScript boundary | ✅ Ready | Reads, builders, config, USDC helpers, abort mapping | Backend signer integration |
+| Shared contracts | ✅ Ready | Claim, event, policy, audit, mandate and endpoint types | Evolve only with team agreement |
+| Web dashboard | ✅ Live read-only | Current mandate state comes from Sui Testnet | Signed actions and backend claim totals |
+| Receipt and claim backend | ✅ Complete locally | Gemini validation, private storage adapter, persistence, duplicate checks, guarded API routes, 69 backend tests and 33 database assertions | Hosted migration, seed data and signed identity verification |
+| Claim and review UX | 🟡 Mocked | Capture, confirmation, rule display and queue UI | Replace mock calls with the receipt/claim APIs; payment orchestration remains pending |
+| Safety Test UI | 🟡 Mocked with live evidence links | Local preview plus links to two real rejected transactions | Interactive signed attempts and revocation scenario |
+| Deployment | ⬜ Pending | Local production build | Hosted URL and fresh-browser verification |
+| Submission | ⬜ Pending | — | Landing content, videos, deck, disclosure and rehearsal |
+
+## Real versus simulated
+
+- **Real:** package, USDC mandate, live read-only dashboard, one payment, overspend rejection, unauthorized-recipient rejection.
+- **Locally implemented but not hosted:** receipt analysis, private receipt storage,
+  event-scoped duplicate checks, claim persistence and claim listing.
+- **Simulated in the current UI:** receipt analysis, claim persistence, policy
+  orchestration, review actions, payment result screens, revoke preview and
+  interactive safety controls.
+- **Never simulated without a label:** digests, checkpoints, gas, finality, wallet signatures, or chain state.
+
+## Frontend phase history
+
+The sections below preserve UI design decisions made during the Xiang-UI work.
+References to signing, payment, gas, or chain outcomes describe the intended
+live experience, not current functionality. The integrated app labels those
+interactions as simulations and links separately to genuine Testnet evidence.
 
 | # | Phase | Status | Landed |
 |---|---|---|---|
 | 0 | Repo, shared contracts, design tokens | ✅ Done | 29 Aug |
 | 1 | Design system, app shell, status chips | ✅ Done | 29 Aug |
-| 2 | Mobile claim flow — capture to paid | ✅ Done | 29 Aug |
-| 3 | Treasurer dashboard and review queue | ✅ Done | 29 Aug |
-| 4 | Safety Test panel | ✅ Done | 29 Aug |
+| 2 | Mobile claim flow — capture to paid | 🟡 Mock complete | 29 Aug |
+| 3 | Treasurer dashboard and review queue | 🟡 Mixed: live mandate, mock claims | 29 Aug |
+| 4 | Safety Test panel | 🟡 Mock flow; live refusals linked | 29 Aug |
 | 5 | Landing page | ✅ Done | 30 Aug |
-| 6 | Wire to live contract and backend | ⬜ Not started | — |
+| 6 | Wire to live contract and backend | 🟡 Live reads + receipt APIs; agent writes pending | 30 Aug |
 | 7 | Submission pack | ⬜ Not started | — |
 
 Legend: ✅ done · 🟡 in progress · ⬜ not started · ⛔ cut

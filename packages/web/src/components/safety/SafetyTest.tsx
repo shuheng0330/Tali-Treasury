@@ -1,87 +1,56 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import type { PaymentResult, RuleCheck, SafetyAttackId } from '@tali/shared';
+import type { PaymentResult, RuleCheck, SafetyAttackId, SafetyPreviewInput, SafetySimulateResponse } from '@tali/shared';
 import { EXPLORER, SAFETY_ATTACKS, subtract, toBaseUnits, toDisplay } from '@tali/shared';
+import { taliUsdcDemo } from '@tali/treasury-sui';
 import { COMMITTED, MEMBER, STRANGER, mandate } from '@/lib/mock/data';
-import { DRAINED_BUDGET, fireAttack, simulateAttack, type AttackInput } from '@/lib/mock/api';
-import { ON_CHAIN_RUNS } from '@/lib/evidence';
+import { fireAttack, simulateAttack } from '@/lib/mock/api';
 import { AttackResult } from './AttackResult';
 
 type Phase = 'armed' | 'firing' | 'result';
 
-interface Prediction {
-  willFail: boolean;
-  predictedAbortKey: string | null;
-  predictedMessage: string;
-  simulatedInMs: number;
-}
+type Prediction = SafetySimulateResponse;
 
 const AVAILABLE = subtract(mandate.remainingBudget, COMMITTED);
 
-interface Preset {
-  amount: string;
-  recipient: string;
-  revoked: boolean;
-  drained: boolean;
-}
-
-function defaultsFor(attack: SafetyAttackId): Preset {
-  if (attack === 'unknown_recipient')
-    return { amount: '150.00', recipient: STRANGER, revoked: false, drained: false };
-  if (attack === 'after_revocation')
-    return { amount: '84.00', recipient: MEMBER, revoked: true, drained: false };
-  // The cap catches any large claim first, so the budget rule can only be the
-  // one that fails once the mandate holds less than the cap.
-  if (attack === 'drain_budget')
-    return { amount: toDisplay(mandate.maxPerClaim), recipient: MEMBER, revoked: false, drained: true };
-  return { amount: '9000.00', recipient: MEMBER, revoked: false, drained: false };
+function defaultsFor(attack: SafetyAttackId): { amount: string; recipient: string; revoked: boolean } {
+  if (attack === 'unknown_recipient') return { amount: '3.00', recipient: STRANGER, revoked: false };
+  if (attack === 'after_revocation') return { amount: '3.00', recipient: MEMBER, revoked: true };
+  if (attack === 'drain_budget') return { amount: toDisplay(AVAILABLE), recipient: MEMBER, revoked: false };
+  return { amount: '15.00', recipient: MEMBER, revoked: false };
 }
 
 export function SafetyTest() {
   const [attack, setAttack] = useState<SafetyAttackId>('overspend');
-  const [amount, setAmount] = useState('9000.00');
-  const [recipient, setRecipient] = useState(MEMBER);
+  const [amount, setAmount] = useState('15.00');
+  const [recipient, setRecipient] = useState<string>(MEMBER);
   const [revokedFirst, setRevokedFirst] = useState(false);
-  const [drainFirst, setDrainFirst] = useState(false);
   const [bypass, setBypass] = useState(false);
 
   const [phase, setPhase] = useState<Phase>('armed');
   const [stage, setStage] = useState(0);
-  const [digest, setDigest] = useState<string | null>(null);
   const [prediction, setPrediction] = useState<Prediction | null>(null);
   const [payment, setPayment] = useState<PaymentResult | null>(null);
   const [checks, setChecks] = useState<RuleCheck[]>([]);
   const [tally, setTally] = useState({ fired: 0, blocked: 0, attempted: '0' });
   const [appBlocked, setAppBlocked] = useState(false);
 
-  const input: AttackInput = {
-    attack,
-    amount: toBaseUnits(amount || '0'),
-    recipient,
-    revokedFirst,
-    drainFirst,
-  };
+  const input: SafetyPreviewInput = { attack, amount: toBaseUnits(amount || '0'), recipient, revokedFirst };
 
   useEffect(() => {
     if (phase !== 'armed') return;
     let live = true;
 
     setPrediction(null);
-    simulateAttack({
-      attack,
-      amount: toBaseUnits(amount || '0'),
-      recipient,
-      revokedFirst,
-      drainFirst,
-    }).then((result) => {
+    simulateAttack({ attack, amount: toBaseUnits(amount || '0'), recipient, revokedFirst }).then((result) => {
       if (live) setPrediction(result);
     });
 
     return () => {
       live = false;
     };
-  }, [attack, amount, recipient, revokedFirst, drainFirst, phase]);
+  }, [attack, amount, recipient, revokedFirst, phase]);
 
   const choose = useCallback((next: SafetyAttackId) => {
     setAttack(next);
@@ -90,10 +59,9 @@ export function SafetyTest() {
     setAmount(preset.amount);
     setRecipient(preset.recipient);
     setRevokedFirst(preset.revoked);
-    setDrainFirst(preset.drained);
   }, []);
 
-  async function fire(override?: Partial<AttackInput>) {
+  async function fire(override?: Partial<SafetyPreviewInput>) {
     const shot = { ...input, ...override };
 
     if (!bypass && override === undefined && prediction?.willFail) {
@@ -104,12 +72,10 @@ export function SafetyTest() {
     setAppBlocked(false);
     setPhase('firing');
     setStage(0);
-    setDigest(null);
 
     setTimeout(() => setStage(1), 150);
     setTimeout(() => {
       setStage(2);
-      setDigest(Math.random().toString(16).slice(2, 10) + 'qR9nK2wLpX7vB4m');
     }, 320);
 
     const { payment: result, checks: ruleChecks } = await fireAttack(shot);
@@ -134,16 +100,11 @@ export function SafetyTest() {
           checks={checks}
           onAgain={() => setPhase('armed')}
           onCounterfactual={() =>
-            fire({
-              amount: toBaseUnits('84.00'),
-              recipient: MEMBER,
-              revokedFirst: false,
-              drainFirst: false,
-            })
+            fire({ amount: toBaseUnits('3.00'), recipient: MEMBER, revokedFirst: false })
           }
         />
         <p className="tnum text-center text-caption text-ink-3">
-          This session: {tally.fired} fired · {tally.blocked} blocked ·{' '}
+          This simulation: {tally.fired} run · {tally.blocked} predicted blocked ·{' '}
           {toDisplay(tally.attempted)} attempted · 0.00 leaked
         </p>
       </div>
@@ -151,7 +112,7 @@ export function SafetyTest() {
   }
 
   if (phase === 'firing') {
-    const steps = ['Signed', 'Broadcast', 'Executing'];
+    const steps = ['Prepared', 'Evaluating', 'Rendering'];
 
     return (
       <div className="mx-auto flex w-full max-w-2xl flex-col gap-6 px-5 py-12">
@@ -178,23 +139,23 @@ export function SafetyTest() {
 
         <dl className="flex flex-col gap-1 rounded-card border border-rule bg-surface p-4 font-mono text-caption">
           <div className="flex gap-3">
-            <dt className="w-20 text-ink-3">Sender</dt>
-            <dd className="break-all">{MEMBER.slice(0, 10)}… (the agent&rsquo;s key)</dd>
+            <dt className="w-20 text-ink-3">Recipient</dt>
+            <dd className="break-all">{recipient.slice(0, 10)}…</dd>
           </div>
           <div className="flex gap-3">
-            <dt className="w-20 text-ink-3">Calling</dt>
-            <dd className="break-all">treasury::spend</dd>
+            <dt className="w-20 text-ink-3">Preview</dt>
+            <dd className="break-all">treasury::spend policy model</dd>
           </div>
           <div className="flex gap-3">
-            <dt className="w-20 text-ink-3">Digest</dt>
-            <dd className="break-all">{digest ?? '…'}</dd>
+            <dt className="w-20 text-ink-3">Network</dt>
+            <dd className="break-all">Not submitted</dd>
           </div>
         </dl>
 
         <div className="flex flex-col gap-2 rounded-card border border-rule bg-surface p-4">
-          <span className="text-label uppercase text-ink-3">Treasury, live</span>
+          <span className="text-label uppercase text-ink-3">Reference balance</span>
           <span className="tnum text-title">{toDisplay(AVAILABLE)}</span>
-          <span className="text-caption text-ink-3">unchanged · polling every 250 ms</span>
+          <span className="text-caption text-ink-3">mock safety dataset · no state change</span>
         </div>
       </div>
     );
@@ -205,33 +166,16 @@ export function SafetyTest() {
       <header className="flex flex-col gap-2">
         <h1 className="text-title">Safety test</h1>
         <p className="text-body text-ink-2">
-          Try to make the agent overspend. Pick any amount and any recipient — the rules that
-          answer you are the ones compiled into the mandate.
+          Preview how the contract rules respond to invalid payments. This page is a simulation:
+          it does not sign, broadcast, spend gas, or change the mandate.
         </p>
-        <div className="flex flex-col gap-2 rounded-card border border-wait-line bg-wait-soft px-4 py-3">
-          <p className="text-caption text-ink-2">
-            <span className="font-medium">Running on sample data.</span> This panel mirrors the
-            deployed contract&rsquo;s rules and abort codes exactly, but it does not yet submit to
-            the network, so the digests it shows are placeholders. Wiring it to the live package
-            is the next thing we are doing.
-          </p>
-          <p className="text-caption text-ink-2">
-            The same two attacks have already been run for real against the deployed package:
-            {ON_CHAIN_RUNS.filter((run) => run.abort !== null).map((run, i) => (
-              <span key={run.digest}>
-                {i === 0 ? ' ' : ', '}
-                <a
-                  href={EXPLORER.tx(run.digest).suivision}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="font-mono text-accent underline underline-offset-4"
-                >
-                  abort {run.abort?.code}
-                </a>
-              </span>
-            ))}
-            . Both were refused on chain and neither moved a coin.
-          </p>
+        <div className="flex flex-wrap gap-3 text-body">
+          <a href={EXPLORER.tx(taliUsdcDemo.safetyTest.oversizedClaimTransaction).suiscan} target="_blank" rel="noreferrer" className="text-accent underline underline-offset-4">
+            Real overspend rejection ↗
+          </a>
+          <a href={EXPLORER.tx(taliUsdcDemo.safetyTest.unapprovedRecipientTransaction).suiscan} target="_blank" rel="noreferrer" className="text-accent underline underline-offset-4">
+            Real recipient rejection ↗
+          </a>
         </div>
       </header>
 
@@ -278,7 +222,7 @@ export function SafetyTest() {
             />
           </label>
           <div className="flex flex-wrap gap-2">
-            {['201.00', '9000.00', toDisplay(mandate.maxPerClaim), '1.00'].map((preset) => (
+            {['5.01', '15.00', toDisplay(AVAILABLE), '1.00'].map((preset) => (
               <button
                 key={preset}
                 type="button"
@@ -290,10 +234,8 @@ export function SafetyTest() {
             ))}
           </div>
           <p className="tnum text-caption text-ink-3">
-            Per-claim cap is {toDisplay(mandate.maxPerClaim)}. The mandate holds{' '}
-            {toDisplay(drainFirst ? DRAINED_BUDGET : mandate.remainingBudget)}
-            {drainFirst ? ' after the earlier spending' : ''}, of which{' '}
-            {toDisplay(AVAILABLE)} is uncommitted.
+            Per-claim cap is {toDisplay(mandate.maxPerClaim)}. Budget available is{' '}
+            {toDisplay(AVAILABLE)}.
           </p>
           <label className="flex items-center gap-2 border-t border-rule pt-3">
             <input
@@ -307,24 +249,12 @@ export function SafetyTest() {
           <label className="flex items-center gap-2">
             <input
               type="checkbox"
-              checked={drainFirst}
-              onChange={(e) => setDrainFirst(e.target.checked)}
-              className="accent-accent"
-            />
-            <span className="text-caption">
-              Spend the budget down to {toDisplay(DRAINED_BUDGET)} first — below the cap, so the
-              budget rule is the one that has to catch it
-            </span>
-          </label>
-          <label className="flex items-center gap-2">
-            <input
-              type="checkbox"
               checked={bypass}
               onChange={(e) => setBypass(e.target.checked)}
               className="accent-accent"
             />
             <span className="text-caption">
-              Bypass this app&rsquo;s checks — send the transaction raw
+              Ignore the app check in this simulation
             </span>
           </label>
         </div>
@@ -335,7 +265,7 @@ export function SafetyTest() {
         <div className="rounded-card border border-rule bg-surface p-4">
           {prediction === null ? (
             <p className="text-caption text-ink-3" aria-live="polite">
-              Dry-running against the live contract…
+              Calculating the local preview…
             </p>
           ) : (
             <div className="flex flex-col gap-1">
@@ -350,8 +280,8 @@ export function SafetyTest() {
                 </p>
               ) : null}
               <p className="pt-1 text-caption text-ink-3">
-                A dry run costs no gas and changes nothing. We commit to the outcome{' '}
-                <em>before</em> firing, so the result cannot be written to fit whatever happens.
+                Dry run costs no gas and changes nothing. We show you this{' '}
+                <em>before</em> the simulated attempt so the expected rule is explicit.
               </p>
             </div>
           )}
@@ -361,12 +291,11 @@ export function SafetyTest() {
       {appBlocked ? (
         <div className="flex flex-col gap-2 rounded-card border border-wait-line bg-wait-soft p-4">
           <p className="text-body font-medium text-wait">
-            This app refused to send it. That proves nothing.
+            The simulated app check stopped this attempt.
           </p>
           <p className="text-caption text-ink-2">
-            A client-side check is a convenience, not a guarantee — we wrote it, so we could
-            remove it. Tick <span className="font-medium">bypass this app&rsquo;s checks</span>{' '}
-            and fire again to watch the contract refuse the same transaction.
+            A client-side check is only a convenience. Use the evidence links above for the
+            corresponding transactions that the deployed contract actually rejected.
           </p>
         </div>
       ) : null}
@@ -376,11 +305,11 @@ export function SafetyTest() {
         onClick={() => fire()}
         className="h-14 rounded-card bg-accent text-subhead font-semibold text-surface transition-colors duration-150 hover:bg-accent/90"
       >
-        Fire the attack — {amount || '0.00'}
+        Run simulation — {amount || '0.00'}
       </button>
 
       <p className="tnum text-center text-caption text-ink-3">
-        This session: {tally.fired} fired · {tally.blocked} blocked ·{' '}
+        This simulation: {tally.fired} run · {tally.blocked} predicted blocked ·{' '}
         {toDisplay(tally.attempted)} attempted · 0.00 leaked
         {bypass ? ' · app checks bypassed' : ''}
       </p>

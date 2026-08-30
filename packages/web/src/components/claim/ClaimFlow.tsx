@@ -1,10 +1,10 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import type { PaymentResult, PolicyDecision, ReceiptAnalysis } from '@tali/shared';
+import type { DraftClaim, PaymentResult, PolicyDecision, ReceiptAnalysis } from '@tali/shared';
 import { subtract } from '@tali/shared';
 import { COMMITTED, event, mandate } from '@/lib/mock/data';
-import { analyzeReceipt, evaluate, pay, recentClaims, type DraftClaim } from '@/lib/mock/api';
+import { analyzeReceipt, evaluate, pay, recentClaims } from '@/lib/mock/api';
 import { ClaimHome } from './ClaimHome';
 import { ReceiptConfirm } from './ReceiptConfirm';
 import { RuleCheck } from './RuleCheck';
@@ -84,6 +84,9 @@ export function ClaimFlow() {
 
   return (
     <div className="mx-auto flex w-full max-w-md flex-col px-5 py-6">
+      <p className="mb-4 rounded-control border border-wait-line bg-wait-soft p-3 text-body text-wait">
+        Simulated receipt flow — Gemini, storage, and payment signing are not connected yet.
+      </p>
       {step === 'home' ? (
         <ClaimHome
           eventName={event.name}

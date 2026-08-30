@@ -2,7 +2,8 @@ import { BudgetMeter } from '@/components/BudgetMeter';
 import { Money } from '@/components/Money';
 import { StatusChip, type ChipStatus } from '@/components/StatusChip';
 import { EXPLORER, toBaseUnits } from '@tali/shared';
-import { MANDATE_ID } from '@/lib/mock/data';
+import { taliUsdcDemo } from '@tali/treasury-sui';
+
 
 const CLAIM_STATUSES: ChipStatus[] = [
   'draft',
@@ -38,12 +39,12 @@ export default function Page() {
         <div className="mx-auto flex max-w-5xl flex-wrap items-center gap-x-4 gap-y-2 px-5 py-4">
           <span className="text-subhead font-semibold">Tali Treasury</span>
           <a
-            href={EXPLORER.object(MANDATE_ID).suiscan}
+            href={EXPLORER.object(taliUsdcDemo.mandateId).suiscan}
             target="_blank"
             rel="noreferrer"
             className="font-mono text-caption text-ink-3 underline-offset-4 hover:text-ink-2 hover:underline"
           >
-            {truncate(MANDATE_ID)}
+            {truncate(taliUsdcDemo.mandateId)}
           </a>
           <StatusChip status="active" />
           <span className="ml-auto text-caption text-ink-3">Sui testnet</span>

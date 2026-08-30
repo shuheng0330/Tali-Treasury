@@ -1,16 +1,17 @@
 import type {
   Amount,
   Claim,
-  ExpenseCategory,
+  DraftClaim,
   PaymentResult,
   PolicyDecision,
+  ReviewQueueItem,
   ReceiptAnalysis,
   RuleCheck,
+  SafetyPreviewInput,
 } from '@tali/shared';
 import { compare, isAllowedRecipient, subtract, toBaseUnits, toDisplay } from '@tali/shared';
-import type { SafetyAttackId } from '@tali/shared';
-import { TALI_TESTNET_PACKAGE_ID, treasuryErrorFromCode } from '@tali/treasury-sui';
-import { COMMITTED, MEMBER, mandate, queuedClaims, seededClaims } from './data';
+import { treasuryErrorFromCode } from '@tali/treasury-sui';
+import { COMMITTED, MEMBER, event, mandate, queuedClaims, seededClaims } from './data';
 
 function wait(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -30,7 +31,7 @@ export async function analyzeReceipt(): Promise<ReceiptAnalysis> {
 
   return {
     merchant: 'Restoran Nasi Kandar Line Clear',
-    amount: toBaseUnits('84.00'),
+    amount: toBaseUnits('3.00'),
     currency: 'MYR',
     receiptDate: '2026-08-29',
     category: 'food',
@@ -38,35 +39,51 @@ export async function analyzeReceipt(): Promise<ReceiptAnalysis> {
     uncertainFields: ['category'],
     warnings: [],
     receiptHash: hex(64),
-    fuzzyKey: 'restoran-nasi-kandar-line-clear|84.00|2026-08-29',
+    fuzzyKey: 'restoran-nasi-kandar-line-clear|3.00|2026-08-29',
   };
-}
-
-export interface DraftClaim {
-  merchant: string;
-  amount: Amount;
-  receiptDate: string;
-  category: ExpenseCategory;
-  recipient?: string;
 }
 
 export function evaluate(draft: DraftClaim): PolicyDecision {
   const available = subtract(mandate.remainingBudget, COMMITTED);
   const recipient = draft.recipient ?? MEMBER;
+  const exactDuplicate = seededClaims.some(
+    (claim) =>
+      claim.merchant.toLowerCase() === draft.merchant.toLowerCase() &&
+      claim.amount === draft.amount &&
+      claim.receiptDate === draft.receiptDate,
+  );
+  const receiptTime = Date.parse(`${draft.receiptDate}T00:00:00Z`);
+  const dateValid = Number.isFinite(receiptTime) && receiptTime <= Date.now();
 
   const checks: RuleCheck[] = [
     {
       rule: 'category_allowed',
       label: 'Category allowed',
-      passed: true,
-      detail: `${draft.category} is on the event policy`,
+      passed: event.allowedCategories.includes(draft.category),
+      detail: event.allowedCategories.includes(draft.category)
+        ? `${draft.category} is on the event policy`
+        : `${draft.category} is not allowed`,
       onChain: false,
     },
     {
       rule: 'not_duplicate',
       label: 'Not a duplicate',
-      passed: true,
-      detail: 'No matching merchant, amount and date',
+      passed: !exactDuplicate,
+      detail: exactDuplicate ? 'Merchant, amount and date match an existing claim' : 'No exact match found',
+      onChain: false,
+    },
+    {
+      rule: 'receipt_date_valid',
+      label: 'Receipt date valid',
+      passed: dateValid,
+      detail: dateValid ? draft.receiptDate : 'Date is invalid or in the future',
+      onChain: false,
+    },
+    {
+      rule: 'confidence_sufficient',
+      label: 'AI confidence threshold',
+      passed: draft.confidence >= 0.9,
+      detail: draft.confidence >= 0.9 ? 'Meets the 90% routing threshold' : 'Needs human review',
       onChain: false,
     },
     {
@@ -127,13 +144,13 @@ export async function pay(amount: Amount): Promise<PaymentResult> {
 
   return {
     ok: true,
-    digest: hex(6) + 'qR9nK2wLpX7vB4m' + hex(6),
-    checkpoint: '84,201,776',
-    gasUsed: toBaseUnits('0.00121'),
-    finalityMs: 410,
+    digest: null,
+    checkpoint: null,
+    gasUsed: null,
+    finalityMs: null,
     abortCode: null,
     abortKey: null,
-    message: 'Paid from the mandate.',
+    message: 'Simulation predicts that this claim can be paid.',
     rawError: null,
     budgetBefore: available,
     budgetAfter: subtract(available, amount),
@@ -142,21 +159,13 @@ export async function pay(amount: Amount): Promise<PaymentResult> {
 
 export const recentClaims = seededClaims;
 
-export interface QueueItem {
-  claim: Claim;
-  decision: PolicyDecision;
-  agentNote: string;
-  /** A failed rule and an uncertain agent are different reviewer tasks. */
-  reason: 'rule_failed' | 'agent_uncertain';
-}
-
 const QUEUE_NOTES: Record<string, string> = {
   'q-0148': 'Amount is 70% over the per-claim cap. The chain will refuse this if I try.',
   'q-0147': 'New recipient, never paid from this mandate before.',
   'q-0146': 'Every rule passes. The receipt photo is too dark to read the total.',
 };
 
-export function reviewQueue(): QueueItem[] {
+export function reviewQueue(): ReviewQueueItem[] {
   return queuedClaims.map((claim) => {
     const decision = evaluate({
       merchant: claim.merchant,
@@ -164,6 +173,9 @@ export function reviewQueue(): QueueItem[] {
       receiptDate: claim.receiptDate,
       category: claim.category,
       recipient: claim.submitter,
+      description: claim.description,
+      confidence: claim.id === 'q-0146' ? 0.72 : 0.99,
+      receiptHash: claim.receiptHash,
     });
 
     return {
@@ -179,21 +191,19 @@ export function settledClaims(): Claim[] {
   return seededClaims.filter((claim) => claim.state === 'paid');
 }
 
-export interface AttackInput {
-  attack: SafetyAttackId;
-  amount: Amount;
-  recipient: string;
-  revokedFirst: boolean;
-  drainFirst: boolean;
+/** The preview adds one scenario the shared type has no reason to carry. */
+export interface AttackInput extends SafetyPreviewInput {
+  /** Optional so the shared preview input still satisfies this type. */
+  drainFirst?: boolean;
 }
 
-/** What the mandate holds after the treasurer has already spent most of it. Below
- *  the per-claim cap, which is the only way the budget rule can be the first to
- *  fail — otherwise the cap always catches a large claim first. */
-export const DRAINED_BUDGET = toBaseUnits('150.00');
+/** What the mandate holds once the treasurer has already spent most of it. It
+ *  has to sit below the per-claim cap, because otherwise the cap always catches
+ *  a large claim first and the budget rule can never be the one that fails. */
+export const DRAINED_BUDGET = toBaseUnits('3.00');
 
-/** The contract checks the mandate's own balance. Claims we have committed but
- *  not settled are an app-side reserve and are deliberately not counted here. */
+/** The contract compares against the mandate's own balance. Claims we have
+ *  committed but not settled are an app-side reserve it knows nothing about. */
 export function attackBudget(input: Pick<AttackInput, 'drainFirst'>): Amount {
   return input.drainFirst ? DRAINED_BUDGET : mandate.remainingBudget;
 }
@@ -282,21 +292,20 @@ export async function fireAttack(input: AttackInput) {
   const code = firstAbort(checks);
   const error = code === null ? null : treasuryErrorFromCode(code);
   const budget = attackBudget(input);
-  const digest = hex(8) + 'qR9nK2wLpX7vB4m' + hex(8);
 
   const payment: PaymentResult = {
     ok: code === null,
-    digest,
-    checkpoint: '84,201,776',
-    gasUsed: toBaseUnits('0.00121'),
-    finalityMs: 410,
+    digest: null,
+    checkpoint: null,
+    gasUsed: null,
+    finalityMs: null,
     abortCode: code,
     abortKey: error?.key ?? null,
     message: error?.message ?? 'Paid from the mandate.',
     rawError:
       code === null
         ? null
-        : `Error from '${TALI_TESTNET_PACKAGE_ID.slice(0, 10)}…::treasury::spend', abort ${code}: "${error?.message ?? ''}"`,
+        : `Simulated treasury::spend abort ${code}: "${error?.message ?? ''}"`,
     budgetBefore: budget,
     budgetAfter: code === null ? subtract(budget, input.amount) : budget,
   };

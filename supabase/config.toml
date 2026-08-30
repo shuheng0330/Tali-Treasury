@@ -1,0 +1,13 @@
+project_id = "tali-treasury-backend-integration"
+
+[storage]
+enabled = true
+file_size_limit = "10MiB"
+
+[storage.buckets.receipts]
+public = false
+file_size_limit = "10MiB"
+allowed_mime_types = ["image/jpeg", "image/png", "image/webp"]
+
+[analytics]
+enabled = false

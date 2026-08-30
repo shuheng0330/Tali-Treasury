@@ -93,7 +93,9 @@ export type RuleId =
   | 'mandate_active'
   | 'not_expired'
   | 'not_duplicate'
-  | 'category_allowed';
+  | 'category_allowed'
+  | 'receipt_date_valid'
+  | 'confidence_sufficient';
 
 /** Rules the Move contract enforces, mapped to their abort codes. */
 export const ON_CHAIN_RULES: Partial<Record<RuleId, number>> = {

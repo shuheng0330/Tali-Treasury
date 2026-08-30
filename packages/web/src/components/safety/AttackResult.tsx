@@ -1,5 +1,5 @@
 import type { PaymentResult, RuleCheck } from '@tali/shared';
-import { EXPLORER, toDisplay } from '@tali/shared';
+import { toDisplay } from '@tali/shared';
 
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -33,7 +33,6 @@ interface Props {
 export function AttackResult({ attempted, payment, checks, onAgain, onCounterfactual }: Props) {
   const blocked = !payment.ok;
   const failed = checks.filter((check) => !check.passed);
-  const links = EXPLORER.tx(payment.digest ?? '');
 
   return (
     <div className="flex flex-col gap-5">
@@ -49,26 +48,24 @@ export function AttackResult({ attempted, payment, checks, onAgain, onCounterfac
           </svg>
         )}
 
-        <h2 className="text-title">{blocked ? 'Blocked by your rules' : 'Paid'}</h2>
+        <h2 className="text-title">{blocked ? 'Predicted to be blocked' : 'Predicted to pass'}</h2>
         <p className="max-w-md text-body text-ink-2">
           {blocked
-            ? `The mandate refused a ${toDisplay(attempted)} transfer. Nothing left your treasury.`
-            : 'Same contract, same agent, same code path. This one was inside your rules.'}
+            ? `A ${toDisplay(attempted)} transfer violates the simulated mandate rules. No transaction was submitted.`
+            : 'The local policy model predicts that this input is inside the mandate rules. No payment was submitted.'}
         </p>
       </div>
 
       <section className="flex flex-col rounded-card border border-rule bg-surface">
         <h3 className="border-b border-rule px-4 py-2 text-label uppercase text-ink-3">
-          What the chain said
+          Simulated result
         </h3>
         <div className="flex flex-col px-4 py-3">
-          <Row label="Status">{blocked ? 'FAILURE' : 'SUCCESS'}</Row>
+          <Row label="Status">{blocked ? 'WOULD FAIL' : 'WOULD PASS'}</Row>
           {blocked ? <Row label="Abort">{payment.abortKey}</Row> : null}
           {blocked ? <Row label="Message">{payment.message}</Row> : null}
-          <Row label="Digest">{payment.digest}</Row>
-          <Row label="Checkpoint">{payment.checkpoint}</Row>
-          <Row label="Gas burned">{toDisplay(payment.gasUsed ?? '0', 5)} SUI</Row>
-          <Row label="Finality">{payment.finalityMs} ms</Row>
+          <Row label="Network">Not submitted</Row>
+          <Row label="Gas">None</Row>
           {payment.rawError ? (
             <details className="pt-2">
               <summary className="cursor-pointer text-caption text-ink-3">Raw abort</summary>
@@ -77,14 +74,6 @@ export function AttackResult({ attempted, payment, checks, onAgain, onCounterfac
               </pre>
             </details>
           ) : null}
-          <div className="flex flex-wrap gap-3 pt-3">
-            <a href={links.suiscan} target="_blank" rel="noreferrer" className="text-caption text-accent underline underline-offset-4">
-              Open in Suiscan
-            </a>
-            <a href={links.suivision} target="_blank" rel="noreferrer" className="text-caption text-accent underline underline-offset-4">
-              Open in SuiVision
-            </a>
-          </div>
         </div>
       </section>
 
@@ -113,7 +102,7 @@ export function AttackResult({ attempted, payment, checks, onAgain, onCounterfac
       </section>
 
       <section className="flex flex-col gap-2 rounded-card border border-rule bg-surface p-4">
-        <h3 className="text-label uppercase text-ink-3">Treasury before → after</h3>
+        <h3 className="text-label uppercase text-ink-3">Simulated treasury before → after</h3>
         <div className="flex items-baseline justify-between gap-4">
           <span className="text-caption text-ink-3">before</span>
           <span className="tnum text-subhead">{toDisplay(payment.budgetBefore)}</span>
@@ -145,7 +134,7 @@ export function AttackResult({ attempted, payment, checks, onAgain, onCounterfac
             onClick={onCounterfactual}
             className="rounded-control bg-accent px-4 py-2 text-caption font-medium text-surface transition-colors duration-150 hover:bg-accent/90"
           >
-            Now watch a valid claim get paid →
+            Preview a valid claim →
           </button>
         ) : null}
       </div>

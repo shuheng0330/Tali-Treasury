@@ -1,5 +1,5 @@
 import { Money } from '@/components/Money';
-import type { QueueItem } from '@/lib/mock/api';
+import type { ReviewQueueItem } from '@tali/shared';
 
 function Verdict({ passed }: { passed: boolean }) {
   return passed ? (
@@ -13,7 +13,7 @@ function Verdict({ passed }: { passed: boolean }) {
   );
 }
 
-function ReasonMark({ reason }: { reason: QueueItem['reason'] }) {
+function ReasonMark({ reason }: { reason: ReviewQueueItem['reason'] }) {
   if (reason === 'rule_failed') {
     return (
       <span className="mt-1 flex h-4 w-4 items-center justify-center text-no" title="A rule failed">
@@ -42,13 +42,14 @@ function relative(atMs: number) {
 }
 
 interface Props {
-  item: QueueItem;
+  item: ReviewQueueItem;
   onApprove: (id: string) => void;
   onReject: (id: string) => void;
 }
 
 export function ClaimRow({ item, onApprove, onReject }: Props) {
   const { claim, decision, agentNote, reason } = item;
+  const immutableFailure = decision.checks.some((check) => check.onChain && !check.passed);
 
   return (
     <li className="flex flex-col gap-3 px-4 py-4">
@@ -94,16 +95,18 @@ export function ClaimRow({ item, onApprove, onReject }: Props) {
       <div className="ml-7 flex items-center gap-3">
         <button
           type="button"
+          disabled={immutableFailure}
           onClick={() => onApprove(claim.id)}
-          className="rounded-control bg-accent px-4 py-1.5 text-caption font-medium text-surface transition-colors duration-150 hover:bg-accent/90"
+          className="rounded-control bg-accent px-4 py-1.5 text-caption font-medium text-surface transition-colors duration-150 hover:bg-accent/90 disabled:cursor-not-allowed disabled:bg-rule-strong disabled:text-ink-2"
+          title={immutableFailure ? 'This claim violates an immutable on-chain rule' : undefined}
         >
-          Approve
+          {immutableFailure ? 'Cannot approve' : 'Approve demo'}
         </button>
         <span className="w-2" aria-hidden />
         <button
           type="button"
           onClick={() => onReject(claim.id)}
-          className="rounded-control border border-rule px-4 py-1.5 text-caption transition-colors duration-150 hover:border-no-line hover:bg-no-soft hover:text-no"
+          className="rounded-control border border-rule px-4 py-1.5 text-caption transition-colors duration-150 hover:bg-raised"
         >
           Reject
         </button>

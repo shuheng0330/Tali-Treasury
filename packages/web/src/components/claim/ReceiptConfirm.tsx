@@ -1,9 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import type { ExpenseCategory, ReceiptAnalysis } from '@tali/shared';
+import type { DraftClaim, ExpenseCategory, ReceiptAnalysis } from '@tali/shared';
 import { EXPENSE_CATEGORIES, toBaseUnits, toDisplay } from '@tali/shared';
-import type { DraftClaim } from '@/lib/mock/api';
 
 interface Props {
   photoUrl: string;
@@ -28,7 +27,7 @@ function Field({
       }`}
     >
       <span className="flex items-center gap-2">
-        <span className="text-label uppercase text-ink-3">{label}</span>
+        <span className="text-body font-medium text-ink-2">{label}</span>
         {uncertain ? <span className="text-caption text-wait">not sure</span> : null}
       </span>
       {children}
@@ -43,9 +42,10 @@ export function ReceiptConfirm({ photoUrl, analysis, onRetake, onSubmit }: Props
   const [amount, setAmount] = useState(analysis?.amount ? toDisplay(analysis.amount) : '');
   const [receiptDate, setReceiptDate] = useState(analysis?.receiptDate ?? '');
   const [category, setCategory] = useState<ExpenseCategory>(analysis?.category ?? 'other');
+  const [description, setDescription] = useState('');
 
   const uncertain = new Set(analysis?.uncertainFields ?? []);
-  const ready = merchant.trim() !== '' && amount.trim() !== '' && receiptDate.trim() !== '';
+  const ready = merchant.trim() !== '' && amount.trim() !== '' && receiptDate.trim() !== '' && description.trim() !== '';
 
   return (
     <div className="flex flex-col gap-4">
@@ -127,12 +127,33 @@ export function ReceiptConfirm({ photoUrl, analysis, onRetake, onSubmit }: Props
             ))}
           </select>
         </Field>
+
+        <Field label="Short description">
+          <input
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="What was this expense for?"
+            className="bg-transparent text-body outline-none placeholder:text-ink-3"
+          />
+        </Field>
       </div>
+
+      <p className="text-body text-ink-2">
+        Prototype simplification: the extracted MYR number is reimbursed as the same numeric amount in Testnet USDC; no currency conversion is performed.
+      </p>
 
       <button
         type="button"
         disabled={!ready}
-        onClick={() => onSubmit({ merchant, amount: toBaseUnits(amount), receiptDate, category })}
+        onClick={() => onSubmit({
+          merchant,
+          amount: toBaseUnits(amount),
+          receiptDate,
+          category,
+          description,
+          confidence: analysis?.confidence ?? 0,
+          receiptHash: analysis?.receiptHash ?? '',
+        })}
         className="h-12 rounded-card bg-accent text-subhead font-semibold text-surface transition-colors duration-150 hover:bg-accent/90 disabled:cursor-not-allowed disabled:bg-rule-strong disabled:text-ink-3"
       >
         Submit claim

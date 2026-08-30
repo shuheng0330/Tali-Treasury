@@ -1,5 +1,4 @@
 import type { Amount, PaymentResult, PolicyDecision } from '@tali/shared';
-import { EXPLORER } from '@tali/shared';
 import { Money } from '@/components/Money';
 
 function Stamp({ label, at }: { label: string; at: string }) {
@@ -16,9 +15,6 @@ function clock(offsetMs: number) {
 }
 
 export function Paid({ amount, payment, onDone }: { amount: Amount; payment: PaymentResult; onDone: () => void }) {
-  const digest = payment.digest ?? '';
-  const links = EXPLORER.tx(digest);
-
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col items-center gap-2 pt-4 text-center">
@@ -27,6 +23,7 @@ export function Paid({ amount, payment, onDone }: { amount: Amount; payment: Pay
         </svg>
         <Money amount={amount} size="hero" />
         <p className="text-body text-ink-2">sent to your wallet</p>
+        <p className="text-caption text-wait">Simulated result — no transaction was signed or submitted.</p>
       </div>
 
       <div className="rounded-card border border-rule bg-surface px-4 py-2">
@@ -38,19 +35,9 @@ export function Paid({ amount, payment, onDone }: { amount: Amount; payment: Pay
       <div className="flex flex-col gap-2 rounded-card border border-rule bg-surface p-4">
         <div className="flex items-baseline justify-between gap-3">
           <span className="text-label uppercase text-ink-3">Transaction</span>
-          <span className="tnum text-caption text-ink-3">
-            {payment.finalityMs} ms · checkpoint {payment.checkpoint}
-          </span>
+          <span className="tnum text-caption text-ink-3">Not submitted</span>
         </div>
-        <span className="truncate font-mono text-caption">{digest}</span>
-        <div className="flex flex-wrap gap-3 pt-1">
-          <a href={links.suiscan} target="_blank" rel="noreferrer" className="text-caption text-accent underline underline-offset-4">
-            Suiscan
-          </a>
-          <a href={links.suivision} target="_blank" rel="noreferrer" className="text-caption text-accent underline underline-offset-4">
-            SuiVision
-          </a>
-        </div>
+        <span className="text-body text-ink-2">No digest, checkpoint, gas, or finality exists for this simulated result.</span>
       </div>
 
       <button
@@ -66,6 +53,7 @@ export function Paid({ amount, payment, onDone }: { amount: Amount; payment: Pay
 
 export function Held({ amount, decision, onDone }: { amount: Amount; decision: PolicyDecision; onDone: () => void }) {
   const failed = decision.checks.filter((check) => !check.passed);
+  const immutableFailure = failed.some((check) => check.onChain);
 
   return (
     <div className="flex flex-col gap-6">
@@ -86,8 +74,10 @@ export function Held({ amount, decision, onDone }: { amount: Amount; decision: P
           </div>
         ))}
         <p className="text-caption text-ink-2">
-          Nothing was paid and nothing left the treasury. Your treasurer can approve this
-          one manually.
+          Nothing was paid and nothing left the treasury.{' '}
+          {immutableFailure
+            ? 'This violates an on-chain rule and cannot be manually overridden under the current mandate.'
+            : 'The treasurer can review this uncertain claim.'}
         </p>
       </div>
 

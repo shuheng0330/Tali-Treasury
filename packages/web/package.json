@@ -8,16 +8,19 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run src/server src/app/api"
   },
   "dependencies": {
-    "@mysten/sui": "2.27.1",
+    "@google/genai": "2.19.0",
+    "@supabase/supabase-js": "2.57.4",
     "@tali/shared": "0.1.0",
     "@tali/treasury-sui": "0.1.0",
     "next": "16.3.3",
     "qrcode": "^1.5.4",
     "react": "19.1.1",
-    "react-dom": "19.1.1"
+    "react-dom": "19.1.1",
+    "zod": "4.4.3"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "4.1.13",
@@ -26,6 +29,8 @@
     "@types/react": "19.1.9",
     "@types/react-dom": "19.1.7",
     "tailwindcss": "4.1.13",
-    "typescript": "5.9.2"
+    "typescript": "5.9.2",
+    "vite": "8.2.2",
+    "vitest": "4.1.11"
   }
 }

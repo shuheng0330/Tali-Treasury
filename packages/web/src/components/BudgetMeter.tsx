@@ -53,11 +53,7 @@ export function BudgetMeter({ settled, committed, available, budget, label = 'Bu
         <div className="h-full bg-accent" style={{ width: `${settledPct}%` }} />
         <div
           className="h-full bg-accent/45"
-          style={{
-            width: `${committedPct}%`,
-            backgroundImage:
-              'repeating-linear-gradient(45deg, rgb(var(--accent) / 0.55) 0 4px, transparent 4px 8px)',
-          }}
+          style={{ width: `${committedPct}%` }}
         />
         <span className="absolute inset-y-[-3px] right-0 w-0.5 bg-ink-2" aria-hidden />
       </div>

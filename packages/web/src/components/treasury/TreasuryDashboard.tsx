@@ -1,12 +1,13 @@
 'use client';
 
 import Link from 'next/link';
-import { useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useMemo, useState, useTransition } from 'react';
 import type { MandateView } from '@tali/shared';
 import { CLAIM_CHIP } from '@tali/shared';
 import { Money } from '@/components/Money';
 import { StatusChip } from '@/components/StatusChip';
-import { COMMITTED, event, mandate as seedMandate } from '@/lib/mock/data';
+import { event } from '@/lib/mock/data';
 import { reviewQueue, settledClaims } from '@/lib/mock/api';
 import { ClaimRow } from './ClaimRow';
 import { MandateHeader } from './MandateHeader';
@@ -20,8 +21,16 @@ const TABS: { id: Tab; label: string }[] = [
   { id: 'all', label: 'All' },
 ];
 
-export function TreasuryDashboard() {
-  const [mandate, setMandate] = useState<MandateView>(seedMandate);
+interface Props {
+  initialMandate: MandateView | null;
+  readError?: string;
+}
+
+const NO_COMMITTED_CLAIMS = '0';
+
+export function TreasuryDashboard({ initialMandate: mandate, readError }: Props) {
+  const router = useRouter();
+  const [refreshing, startRefresh] = useTransition();
   const [queue, setQueue] = useState(() => reviewQueue());
   const [tab, setTab] = useState<Tab>('review');
   const [confirming, setConfirming] = useState(false);
@@ -33,17 +42,54 @@ export function TreasuryDashboard() {
     setQueue((items) => items.filter((item) => item.claim.id !== id));
   }
 
+  if (mandate === null) {
+    return (
+      <div className="mx-auto flex w-full max-w-4xl flex-col gap-4 px-5 py-8">
+        <h1 className="text-heading">Treasury unavailable</h1>
+        <p className="text-body text-ink-2">
+          Tali could not read the USDC mandate from Sui Testnet. No mock chain balance was substituted.
+        </p>
+        <p className="break-all rounded-card border border-rule bg-surface p-4 font-mono text-caption text-ink-2">
+          {readError ?? 'Unknown Sui read error'}
+        </p>
+        <button type="button" onClick={() => router.refresh()} className="w-fit rounded-control bg-accent px-4 py-2 text-body font-medium text-surface">
+          Retry live read
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div className="mx-auto flex w-full max-w-4xl flex-col gap-6 px-5 py-8">
       <MandateHeader
         eventName={event.name}
         organisation={event.organisation}
         mandate={mandate}
-        committed={COMMITTED}
+        committed={NO_COMMITTED_CLAIMS}
         onRevoke={() => setConfirming(true)}
       />
 
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-card border border-ok-line bg-ok-soft px-4 py-3">
+        <div>
+          <p className="text-body font-medium text-ok">Live from Sui Testnet</p>
+          <p className="text-caption text-ink-2">
+            Read at {new Date(mandate.fetchedAtMs).toLocaleTimeString('en-GB')} · Circle Testnet USDC
+          </p>
+        </div>
+        <button
+          type="button"
+          disabled={refreshing}
+          onClick={() => startRefresh(() => router.refresh())}
+          className="rounded-control border border-rule bg-surface px-4 py-2 text-body transition-colors hover:bg-raised disabled:opacity-50"
+        >
+          {refreshing ? 'Refreshing…' : 'Refresh chain state'}
+        </button>
+      </div>
+
       <section className="flex flex-col rounded-card border border-rule bg-surface">
+        <div className="border-b border-wait-line bg-wait-soft px-4 py-3 text-body text-ink-2">
+          <span className="font-medium text-wait">Demo claim data:</span> the queue below is simulated until the backend is connected.
+        </div>
         <div className="flex flex-wrap items-center gap-1 border-b border-rule px-3 py-2">
           {TABS.map((entry) => (
             <button
@@ -112,8 +158,6 @@ export function TreasuryDashboard() {
           pendingCount={queue.length}
           onCancel={() => setConfirming(false)}
           onConfirm={() => {
-            setMandate((current) => ({ ...current, revoked: true }));
-            setQueue([]);
             setConfirming(false);
           }}
         />

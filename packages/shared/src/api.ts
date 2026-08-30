@@ -48,6 +48,18 @@ export interface CreateClaimResponse {
   claim: Claim;
 }
 
+/** Editable claim values used between receipt analysis and submission. */
+export interface DraftClaim {
+  merchant: string;
+  amount: Amount;
+  receiptDate: string;
+  category: ExpenseCategory;
+  description: string;
+  recipient?: Address;
+  confidence: number;
+  receiptHash: string;
+}
+
 /** POST /api/claims/:id/process — evaluates policy, pays when it clears. */
 export interface ProcessClaimResponse {
   claim: Claim;
@@ -165,6 +177,21 @@ export interface SafetySimulateResponse {
   predictedAbortKey: string | null;
   predictedMessage: string;
   simulatedInMs: number;
+}
+
+/** UI-only input for the explicitly simulated safety preview. */
+export interface SafetyPreviewInput {
+  attack: SafetyAttackId;
+  amount: Amount;
+  recipient: Address;
+  revokedFirst: boolean;
+}
+
+export interface ReviewQueueItem {
+  claim: Claim;
+  decision: PolicyDecision;
+  agentNote: string;
+  reason: 'rule_failed' | 'agent_uncertain';
 }
 
 /** POST /api/safety/attempt — signs and broadcasts for real. */

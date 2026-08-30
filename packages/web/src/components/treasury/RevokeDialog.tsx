@@ -35,13 +35,17 @@ export function RevokeDialog({ eventName, remaining, pendingCount, onCancel, onC
     >
       <div className="flex w-full max-w-md flex-col gap-4 rounded-modal border border-rule bg-surface p-6 shadow-float">
         <h2 id="revoke-title" className="text-heading">
-          Revoke &ldquo;{eventName}&rdquo;?
+          Revocation preview for &ldquo;{eventName}&rdquo;
         </h2>
+
+        <p className="rounded-control border border-wait-line bg-wait-soft p-3 text-body text-wait">
+          Simulation only. This integration does not sign or submit a revocation transaction.
+        </p>
 
         <div className="flex flex-col gap-3 text-body text-ink-2">
           <p>
             The agent immediately stops being able to pay from this mandate.{' '}
-            <span className="tnum">{toDisplay(remaining)}</span> returns to your control.
+            <span className="tnum">{toDisplay(remaining)}</span> stays locked in the mandate until the treasurer separately calls withdraw.
           </p>
           <p>
             Revocation is recorded on Sui and cannot be reversed. You would need to create a
@@ -79,9 +83,9 @@ export function RevokeDialog({ eventName, remaining, pendingCount, onCancel, onC
             type="button"
             disabled={typed !== eventName}
             onClick={onConfirm}
-            className="rounded-control bg-no px-4 py-2 text-caption font-medium text-surface transition-colors duration-150 hover:bg-no/90 disabled:cursor-not-allowed disabled:bg-rule-strong disabled:text-ink-3"
+            className="rounded-control bg-accent px-4 py-2 text-caption font-medium text-surface transition-colors duration-150 hover:bg-accent/90 disabled:cursor-not-allowed disabled:bg-rule-strong disabled:text-ink-3"
           >
-            Revoke mandate
+            Close preview
           </button>
         </div>
       </div>
