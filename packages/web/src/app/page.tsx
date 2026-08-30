@@ -39,7 +39,7 @@ export default function Page() {
           <span className="block text-ink-2">The money enforces them.</span>
         </h1>
 
-        <p className="max-w-2xl text-[16px] leading-6 text-ink-2 md:text-[19px] md:leading-7">
+        <p className="max-w-2xl text-subhead text-ink-2 md:text-[19px] md:leading-7">
           Your committee photographs receipts, an agent reads them and pays out whatever your
           rules allow, and the limits it works to are held in a Move contract instead of our
           backend — which means the agent cannot spend past them, and neither can we, even by

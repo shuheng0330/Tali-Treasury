@@ -146,25 +146,25 @@
   --font-sans: var(--font-instrument-sans), system-ui, sans-serif;
   --font-mono: var(--font-plex-mono), ui-monospace, monospace;
 
-  --text-label: 18px;
-  --text-label--line-height: 24px;
-  --text-label--letter-spacing: 0.12em;
+  --text-label: 12px;
+  --text-label--line-height: 16px;
+  --text-label--letter-spacing: 0.08em;
   --text-label--font-weight: 500;
 
-  --text-caption: 18px;
-  --text-caption--line-height: 24px;
+  --text-caption: 14px;
+  --text-caption--line-height: 20px;
 
-  --text-body: 18px;
+  --text-body: 16px;
   --text-body--line-height: 26px;
   --text-body--letter-spacing: -0.003em;
 
-  --text-subhead: 20px;
-  --text-subhead--line-height: 28px;
+  --text-subhead: 18px;
+  --text-subhead--line-height: 26px;
   --text-subhead--letter-spacing: -0.008em;
   --text-subhead--font-weight: 500;
 
-  --text-heading: 20px;
-  --text-heading--line-height: 26px;
+  --text-heading: 24px;
+  --text-heading--line-height: 30px;
   --text-heading--letter-spacing: -0.018em;
   --text-heading--font-weight: 600;
 
