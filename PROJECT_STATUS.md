@@ -17,11 +17,12 @@ Last updated: 30 August 2026 (MYT)
 
 ## Environment note
 
-Docker Desktop 4.66.1 could not start because its Windows runtime sockets were
-left as inaccessible reparse points. The database suite was therefore run
-unchanged against a clean disposable PostgreSQL 16 cluster with Supabase roles and
-the `storage.buckets` table bootstrapped. Standard Supabase reset, database test
-and lint commands still need to be rerun once Docker Desktop is healthy.
+Docker Desktop 4.66.1 is operational after resetting its inaccessible Windows
+runtime sockets and data disk. The full local Supabase stack now starts with its
+optional analytics services disabled, avoiding Docker's unauthenticated TCP port
+2375 while retaining Database, Auth, Storage, REST, Realtime, Edge Runtime,
+Mailpit and Studio. Keep at least 20 GB free on C: and stop the stack when it is
+not needed.
 
 ## Pending integration
 

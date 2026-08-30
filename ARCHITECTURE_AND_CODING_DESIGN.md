@@ -76,3 +76,9 @@ Local Supabase is the normal development target. Hosted deployment uses
 `supabase login`, `supabase link` and `supabase db push`, followed by direct checks
 that RLS, grants and the private bucket match the migration. Hosted verification
 must be recorded separately from local completion.
+
+Local Logflare analytics and its Vector collector are intentionally disabled. On
+Windows the collector otherwise requires Docker Desktop's unauthenticated TCP API
+on port 2375, which this project does not enable. Database, Auth, Storage, REST,
+Realtime, Edge Runtime, Mailpit and Studio remain available; developers inspect
+local service output with `docker logs` when needed.
