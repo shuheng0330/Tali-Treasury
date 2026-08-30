@@ -17,21 +17,26 @@ interface Run {
   amount: string;
 }
 
-/** The refused claim runs first: it is the only one that demonstrates anything. */
+/** The refused claim runs first: it is the only one that demonstrates anything.
+ *  Both amounts match the transactions actually executed on testnet — 15 USDC
+ *  refused on abort 5, 3 USDC paid — so the drawing and the receipts below it
+ *  describe the same two events. */
+export const REFUSED_AMOUNT = '15.00';
+
 const RUNS: Run[] = [
   {
     id: 'q-0148',
     merchant: 'Campus Print Shop',
     short: 'Print Shop',
     who: 'Wey Cheng',
-    amount: '340.00',
+    amount: REFUSED_AMOUNT,
   },
   {
     id: 'c-0142',
     merchant: 'Restoran Nasi Kandar Line Clear',
     short: 'Line Clear',
     who: 'Kian Xiang',
-    amount: '84.00',
+    amount: '3.00',
   },
 ];
 
@@ -202,7 +207,7 @@ export function Wire() {
           >
             {toDisplay(base)}
           </span>
-          <span className="text-caption text-ink-3">SUI</span>
+          <span className="text-caption text-ink-3">USDC</span>
         </span>
       </div>
 
@@ -376,7 +381,7 @@ export function Wire() {
       <p className="border-t border-rule px-4 py-3 text-caption text-ink-3 sm:px-5">
         Four of the seven checks inside <span className="font-mono">spend()</span>. The other
         three cover the agent&rsquo;s key, a zero amount and the expiry date. Amounts are in the
-        mandate&rsquo;s coin — SUI on testnet, standing in for a ringgit stablecoin.
+        mandate&rsquo;s coin, Circle testnet USDC.
       </p>
     </div>
   );

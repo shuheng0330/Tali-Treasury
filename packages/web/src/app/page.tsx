@@ -1,9 +1,10 @@
 import Link from 'next/link';
-import { EXPLORER } from '@tali/shared';
+import { EXPLORER, toDisplay } from '@tali/shared';
+import { mandate } from '@/lib/mock/data';
 import { TALI_TESTNET_PACKAGE_ID } from '@tali/treasury-sui';
 import { Evidence } from '@/components/landing/Evidence';
 import { PhoneCode } from '@/components/landing/PhoneCode';
-import { Wire } from '@/components/landing/Wire';
+import { REFUSED_AMOUNT, Wire } from '@/components/landing/Wire';
 
 const PACKAGE_SHORT = `${TALI_TESTNET_PACKAGE_ID.slice(0, 6)}…${TALI_TESTNET_PACKAGE_ID.slice(-4)}`;
 const PACKAGE_LINK = EXPLORER.object(TALI_TESTNET_PACKAGE_ID).suivision;
@@ -81,7 +82,9 @@ export default function Page() {
 
       <section className="mx-auto flex w-full max-w-5xl flex-col gap-4 px-5 pb-16">
         <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1">
-          <h2 className="text-heading">The cap is 200. Watch it refuse 340.</h2>
+          <h2 className="text-heading">
+            The cap is {toDisplay(mandate.maxPerClaim)}. Watch it refuse {REFUSED_AMOUNT}.
+          </h2>
           <p className="text-caption text-ink-3">Either claim, whenever you like.</p>
         </div>
         <Wire />
@@ -174,9 +177,11 @@ export default function Page() {
       <footer className="mt-auto border-t border-rule">
         <div className="mx-auto flex w-full max-w-5xl flex-col gap-3 px-5 py-8 text-caption text-ink-3">
           <p className="max-w-2xl">
-            The contract is live on Sui testnet. The web app runs on sample data — wiring it to
-            the deployed package is the next thing on our list, and the safety test is where that
-            lands first. No mainnet, no real funds, and nothing here is a custody service.
+            The contract and its mandate are live on Sui testnet, and the treasurer view reads
+            them straight off the chain rather than from a copy we keep. The claim flow and the
+            safety test still run on sample data, and the agent does not yet sign its own
+            transactions — that is the piece we are building next. No mainnet, no real funds,
+            and nothing here is a custody service.
           </p>
           <div className="flex flex-wrap items-center justify-between gap-x-8 gap-y-2">
             <p>
