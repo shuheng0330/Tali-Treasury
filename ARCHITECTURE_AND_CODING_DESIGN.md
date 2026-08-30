@@ -83,6 +83,11 @@ bucket metadata.
 The non-secret verification scope and reproduction queries are recorded in
 [`docs/HOSTED_SUPABASE_VERIFICATION.md`](docs/HOSTED_SUPABASE_VERIFICATION.md).
 
+Hosted demo data uses immutable additive migrations. Migration `20260831000000`
+created the fixed demo event and Kian Xiang membership; migration
+`20260831010000` adds Shu Heng and Lim Wey Cheng without rewriting the applied
+seed or deleting other members.
+
 Local Logflare analytics and its Vector collector are intentionally disabled. On
 Windows the collector otherwise requires Docker Desktop's unauthenticated TCP API
 on port 2375, which this project does not enable. Database, Auth, Storage, REST,
