@@ -1,4 +1,4 @@
-import type { Amount, PaymentResult, PolicyDecision } from '@tali/shared';
+import type { Amount, Claim, PaymentResult, PolicyDecision } from '@tali/shared';
 import { Money } from '@/components/Money';
 
 function Stamp({ label, at }: { label: string; at: string }) {
@@ -12,6 +12,48 @@ function Stamp({ label, at }: { label: string; at: string }) {
 
 function clock(offsetMs: number) {
   return new Date(Date.now() + offsetMs).toLocaleTimeString('en-GB', { hour12: false });
+}
+
+export function Submitted({ claim, onDone }: { claim: Claim; onDone: () => void }) {
+  return (
+    <div className="flex flex-col gap-6">
+      <div className="flex flex-col items-center gap-2 pt-4 text-center">
+        <svg
+          viewBox="0 0 24 24"
+          width="34"
+          height="34"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.8"
+          className="text-ok"
+          aria-hidden
+        >
+          <path d="M4 12.5 9.2 18 20 6" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+        <Money amount={claim.amount} size="hero" />
+        <p className="text-heading">Claim submitted</p>
+        <p className="text-body text-ink-2">Receipt stored and claim recorded.</p>
+      </div>
+
+      <div className="rounded-card border border-rule bg-surface px-4 py-2">
+        <Stamp label="Submitted" at={clock(0)} />
+        <Stamp label="Claim ID" at={claim.id.slice(0, 12)} />
+      </div>
+
+      <p className="rounded-card border border-wait-line bg-wait-soft p-4 text-body text-wait">
+        Policy processing and payment are not connected yet. No Sui transaction was signed and
+        no treasury funds moved.
+      </p>
+
+      <button
+        type="button"
+        onClick={onDone}
+        className="h-12 rounded-card border border-rule text-subhead font-medium transition-colors duration-150 hover:bg-raised"
+      >
+        Back to my claims
+      </button>
+    </div>
+  );
 }
 
 export function Paid({ amount, payment, onDone }: { amount: Amount; payment: PaymentResult; onDone: () => void }) {

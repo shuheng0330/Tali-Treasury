@@ -9,7 +9,7 @@
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run src/server src/app/api"
+    "test": "vitest run src/server src/app/api src/lib/api"
   },
   "dependencies": {
     "@google/genai": "2.19.0",

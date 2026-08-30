@@ -10,7 +10,8 @@ Last updated: 31 August 2026 (MYT)
 - application services for analyze, create claim and list claims;
 - Supabase database and storage adapters with sanitized errors;
 - Next.js API routes for all three shared endpoint contracts;
-- 69 passing backend Vitest tests, plus 14 Sui integration tests;
+- API-backed `/claim` receipt analysis, confirmation, claim creation and claim list;
+- 72 passing web Vitest tests, plus 14 Sui integration tests;
 - 42 passing pgTAP database assertions on a clean disposable PostgreSQL 17
   database;
 - web TypeScript check passing at the API checkpoint.
@@ -38,12 +39,10 @@ not needed.
 
 - apply and verify additive migration `20260831010000` for Shu Heng and Lim Wey
   Cheng;
-- configure server-only Gemini and Supabase credentials in the deployment;
-- point the current mock claim UI at the implemented routes;
 - add wallet-signature authentication;
 - bind analysis to claim confirmation through a signed token or persisted draft;
 - implement deterministic policy, review actions and backend Sui signing;
-- deploy and run fresh-browser end-to-end verification.
+- run the hosted receipt flow end to end after authenticated identity is available.
 
 ## Known limitations
 
@@ -52,6 +51,6 @@ not needed.
   explicit local-demo opt-in until wallet/session authentication exists.
 - Analyze and create-claim are two validated calls but are not cryptographically
   bound to one another.
-- The hosted schema is ready, but receipt analysis and persistence have not yet
-  been exercised through the current frontend or a hosted web deployment.
+- The frontend is wired to the hosted receipt APIs, but Production intentionally
+  disables them until authenticated identity replaces the demo address.
 - No backend code in this increment can sign or broadcast a Sui transaction.

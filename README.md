@@ -27,11 +27,13 @@ Status words are intentionally precise:
 | Overspend and recipient protections | **Live** | Both invalid transactions rejected on-chain |
 | TypeScript Sui integration | **Complete locally** | Reads, PTB builders, amount helpers, error mapping |
 | Treasurer mandate dashboard | **Live** (read-only) | Server reads the current mandate from Sui Testnet |
-| Claim, review, revoke, and Safety Test interactions | **Mocked** | Clearly labelled; no signing or state changes |
-| Gemini receipt analysis and Supabase claims | **Hosted schema ready** | 69 Vitest tests and 42 pgTAP assertions; event and Kian Xiang hosted, two-member migration prepared |
+| Claim receipt submission UI | **Complete locally** | Real analyze, create, and list API calls; Production remains fail-closed pending wallet auth |
+| Review, revoke, payment, and Safety Test interactions | **Mocked** | Clearly labelled; no signing or state changes |
+| Gemini receipt analysis and Supabase claims | **Hosted schema ready** | 72 web tests and 42 pgTAP assertions; API-backed UI integration complete |
 | Deterministic policy and backend agent signing | **Pending** | Separate payment-orchestration slice |
 | Wallet connection and live UI writes | **Pending** | Add after backend/signing boundary is agreed |
-| Hosting and submission pack | **Pending** | Final integration phase |
+| Web hosting | **Live** | [`tali-treasury.vercel.app`](https://tali-treasury.vercel.app) |
+| Submission pack | **Pending** | Final hackathon phase |
 
 The detailed team checklist lives in [`docs/PROGRESS.md`](docs/PROGRESS.md).
 
@@ -51,10 +53,10 @@ has paid `3 USDC`, and has `17 USDC` remaining.
 ## How the pieces fit
 
 ```text
-Member UI (still wired to mock claim data)
+Member receipt UI (real analyze, create, and list API calls)
              |
              v
-Gemini receipt + private Supabase claims (complete locally)
+Gemini receipt + private Supabase claims (hosted; auth-gated)
              |
              v
 Deterministic policy + signer (pending)
@@ -113,8 +115,9 @@ npm run dev
 ```
 
 Then open `http://localhost:3000/treasury`. The page should say **Live from Sui
-Testnet** and display the current mandate state. Other product flows are marked
-as simulations until their backend or signing integration exists.
+Testnet** and display the current mandate state. `/claim` uses the real receipt
+and claim APIs when demo identity is explicitly enabled; policy, review, payment,
+revoke, and Safety Test writes remain clearly marked simulations or previews.
 
 Run Move tests separately:
 
@@ -205,7 +208,7 @@ Frontend:
 
 Backend:
 
-- Deploy and verify the implemented receipt and claim endpoint contracts.
+- Verify the API-backed claim flow after authenticated identity is available.
 - Keep the agent private key server-side.
 - Re-run deterministic policy checks before building and signing a payment.
 - Store receipt hashes and private receipt objects outside the chain.
@@ -213,11 +216,10 @@ Backend:
 Immediate next vertical slice:
 
 1. Apply the prepared Shu Heng and Lim Wey Cheng membership migration.
-2. Replace the claim UI mock with the three implemented API routes.
-3. Add wallet-signature authentication and bind analysis to claim creation.
-4. Add deterministic policy routing and return uncertain claims to review.
-5. Sign one valid `buildSpendTransaction` call from the backend agent.
-6. Refresh the live mandate dashboard after finality.
+2. Add wallet-signature authentication and bind analysis to claim creation.
+3. Add deterministic policy routing and return uncertain claims to review.
+4. Sign one valid `buildSpendTransaction` call from the backend agent.
+5. Refresh the live mandate dashboard after finality.
 
 ## Documentation index
 
