@@ -8,3 +8,6 @@ file_size_limit = "10MiB"
 public = false
 file_size_limit = "10MiB"
 allowed_mime_types = ["image/jpeg", "image/png", "image/webp"]
+
+[analytics]
+enabled = false
