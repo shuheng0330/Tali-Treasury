@@ -32,12 +32,12 @@ function Digest({ digest }: { digest: string }) {
 export function Evidence() {
   return (
     <div className="flex flex-col rounded-card border border-rule bg-surface">
-      <ul className="flex flex-col divide-y divide-rule">
+      <ul className="flex flex-col gap-6 py-2">
         {ON_CHAIN_RUNS.map((run) => {
           const refused = run.kind === 'refused';
 
           return (
-            <li key={run.digest} className="flex flex-col gap-2 px-4 py-4 sm:px-5">
+            <li key={run.digest} className="flex flex-col gap-2 px-4 sm:px-5">
               <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
                 <span
                   className={`rounded-badge px-1.5 py-0.5 text-label uppercase ${

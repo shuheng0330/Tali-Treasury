@@ -102,7 +102,7 @@ export default function Page() {
         <Evidence />
       </section>
 
-      <section className="border-y border-rule bg-surface">
+      <section className="bg-surface">
         <div className="mx-auto flex w-full max-w-5xl flex-col gap-8 px-5 py-14 md:flex-row md:items-start md:gap-14">
           <blockquote className="max-w-sm shrink-0 border-l-2 border-rule-strong pl-5 text-title text-ink-2">
             &ldquo;Your app could just be pretending to block it.&rdquo;

@@ -180,7 +180,7 @@ export function Wire() {
 
   return (
     <div className="flex flex-col rounded-card border border-rule bg-surface">
-      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-b border-rule px-4 py-3 sm:px-5">
+      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 px-4 pb-2 pt-4 sm:px-5">
         <span className="flex items-center gap-2">
           <span
             className={`h-1.5 w-1.5 rounded-full bg-ink-3 ${settled ? '' : 'animate-breathe'}`}
@@ -284,7 +284,7 @@ export function Wire() {
         </div>
       </div>
 
-      <ul className="flex flex-col divide-y divide-rule border-t border-rule">
+      <ul className="flex flex-col">
         {GATES.map((gate, i) => {
           const state = gateState(i);
           return (
@@ -351,7 +351,7 @@ export function Wire() {
         {settled && announce ? `${run.merchant}, ${toDisplay(base)}. ${verdict}` : ''}
       </span>
 
-      <div className="flex flex-wrap items-center gap-2 border-t border-rule px-4 py-3 sm:px-5">
+      <div className="flex flex-wrap items-center gap-2 px-4 pb-3 pt-6 sm:px-5">
         <span className="mr-1 text-label uppercase text-ink-3">Queue</span>
         {RUNS.map((item, i) => (
           <button
@@ -378,7 +378,7 @@ export function Wire() {
         </button>
       </div>
 
-      <p className="border-t border-rule px-4 py-3 text-caption text-ink-3 sm:px-5">
+      <p className="px-4 pb-4 pt-2 text-caption text-ink-3 sm:px-5">
         Four of the seven checks inside <span className="font-mono">spend()</span>. The other
         three cover the agent&rsquo;s key, a zero amount and the expiry date. Amounts are in the
         mandate&rsquo;s coin, Circle testnet USDC.
