@@ -2,11 +2,13 @@
 
 Last updated: 30 August 2026 (MYT)
 
-## Completed locally
+## Completed
 
 - strict Gemini receipt schema and `gemini-3.5-flash-lite` default;
 - SHA-256 hashing and event-scoped immutable storage paths;
 - secure Supabase migration for events, active members, claims and private receipts;
+- hosted Supabase migration `20260830000000` applied and verified against project
+  `mnoalwykrmueimmuyllw`;
 - application services for analyze, create claim and list claims;
 - Supabase database and storage adapters with sanitized errors;
 - Next.js API routes for all three shared endpoint contracts;
@@ -26,7 +28,6 @@ not needed.
 
 ## Pending integration
 
-- apply and verify the migration on the hosted Supabase project;
 - seed the demo event and active member wallet addresses;
 - configure server-only Gemini and Supabase credentials in the deployment;
 - point the current mock claim UI at the implemented routes;
@@ -42,6 +43,6 @@ not needed.
   explicit local-demo opt-in until wallet/session authentication exists.
 - Analyze and create-claim are two validated calls but are not cryptographically
   bound to one another.
-- Receipt analysis and persistence are implemented locally but not yet exercised
-  through the current frontend or hosted services.
+- The hosted schema is ready, but receipt analysis and persistence have not yet
+  been exercised through the current frontend or a hosted web deployment.
 - No backend code in this increment can sign or broadcast a Sui transaction.

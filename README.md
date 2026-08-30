@@ -12,6 +12,8 @@ per-claim limits, expiry, revocation, and approved recipients.
 Status words are intentionally precise:
 
 - **Live** — verified against Sui Testnet.
+- **Hosted schema ready** — the hosted database is verified, but the web flow is
+  not deployed end to end.
 - **Complete locally** — implemented and testable, but not a hosted live flow.
 - **Mocked** — useful UX or integration scaffolding that performs no external action.
 - **Pending** — not present in the integrated repository yet.
@@ -26,7 +28,7 @@ Status words are intentionally precise:
 | TypeScript Sui integration | **Complete locally** | Reads, PTB builders, amount helpers, error mapping |
 | Treasurer mandate dashboard | **Live** (read-only) | Server reads the current mandate from Sui Testnet |
 | Claim, review, revoke, and Safety Test interactions | **Mocked** | Clearly labelled; no signing or state changes |
-| Gemini receipt analysis and Supabase claims | **Complete locally** | 58 Vitest tests and 33 pgTAP assertions; hosted migration pending |
+| Gemini receipt analysis and Supabase claims | **Hosted schema ready** | 58 Vitest tests, 33 pgTAP assertions, and hosted migration verified; UI/API deployment pending |
 | Deterministic policy and backend agent signing | **Pending** | Separate payment-orchestration slice |
 | Wallet connection and live UI writes | **Pending** | Add after backend/signing boundary is agreed |
 | Hosting and submission pack | **Pending** | Final integration phase |
@@ -210,7 +212,7 @@ Backend:
 
 Immediate next vertical slice:
 
-1. Apply the migration to hosted Supabase and seed the demo event and members.
+1. Seed the hosted demo event and active member wallet addresses.
 2. Replace the claim UI mock with the three implemented API routes.
 3. Add wallet-signature authentication and bind analysis to claim creation.
 4. Add deterministic policy routing and return uncertain claims to review.

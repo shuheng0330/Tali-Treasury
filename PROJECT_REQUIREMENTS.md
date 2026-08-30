@@ -47,6 +47,7 @@ The current backend increment must:
 - deterministic policy evaluation and review actions;
 - agent private-key use, Sui transaction construction, signing or payment;
 - frontend replacement of current mock claim data;
-- hosted migration or production readiness.
+- production readiness; the schema is hosted, but real identity, deployed API
+  configuration and end-to-end verification remain pending.
 
 These boundaries must be resolved before real-fund authorization.
