@@ -10,7 +10,7 @@ interface StorageBucket {
   upload(
     path: string,
     bytes: Uint8Array,
-    options: { contentType: string; upsert: false; cacheControl: string },
+    options: { contentType: string; upsert: true; cacheControl: string },
   ): Promise<{ error: StorageError | null }>;
   createSignedUrl(
     path: string,
@@ -41,7 +41,7 @@ export function createSupabaseReceiptStore(
       );
       const { error } = await client.storage.from(bucket).upload(path, input.bytes, {
         contentType: input.mimeType,
-        upsert: false,
+        upsert: true,
         cacheControl: '3600',
       });
       if (error) {

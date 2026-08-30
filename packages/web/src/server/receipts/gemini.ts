@@ -1,7 +1,11 @@
 import { GoogleGenAI, type GenerateContentParameters } from '@google/genai';
 import { EXPENSE_CATEGORIES } from '@tali/shared';
 
-import type { ReceiptMimeType } from './hash';
+import {
+  isReceiptMimeType,
+  MAX_RECEIPT_IMAGE_BYTES,
+  type ReceiptMimeType,
+} from './hash';
 import { parseGeminiReceiptFields, type ParsedReceiptFields } from './schema';
 
 export interface ReceiptImage {
@@ -87,18 +91,11 @@ receipt date, or category and include each such field in uncertainFields. Use th
 displayed grand total, preserve the original currency, classify only into an
 allowed category, and lower confidence when the image or a field is ambiguous.`;
 
-const MAX_RECEIPT_IMAGE_BYTES = 10 * 1024 * 1024;
-const supportedReceiptImageTypes = new Set<ReceiptMimeType>([
-  'image/jpeg',
-  'image/png',
-  'image/webp',
-]);
-
 function validateReceiptImage(image: ReceiptImage): asserts image is {
   bytes: Uint8Array;
   mimeType: ReceiptMimeType;
 } {
-  if (!supportedReceiptImageTypes.has(image.mimeType as ReceiptMimeType)) {
+  if (!isReceiptMimeType(image.mimeType)) {
     throw new Error(`unsupported receipt image type: ${image.mimeType}`);
   }
   if (image.bytes.byteLength === 0) {

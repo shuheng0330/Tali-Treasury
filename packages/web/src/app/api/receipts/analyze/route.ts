@@ -1,18 +1,19 @@
 import type { AnalyzeReceiptResponse } from '@tali/shared';
 
 import type { AnalyzeReceiptInput } from '../../../../server/claims/services';
+import { requireDemoIdentityEnabled } from '../../../../server/demo-auth';
 import { getBackendServices } from '../../../../server/dependencies';
 import { ServerError, toApiError } from '../../../../server/errors';
-import type { ReceiptMimeType } from '../../../../server/receipts/hash';
+import {
+  hasExpectedImageSignature,
+  isReceiptMimeType,
+  MAX_RECEIPT_IMAGE_BYTES,
+  type ReceiptMimeType,
+} from '../../../../server/receipts/hash';
 
 export const runtime = 'nodejs';
 
-const MAX_RECEIPT_BYTES = 10 * 1024 * 1024;
-const supportedMimeTypes = new Set<ReceiptMimeType>([
-  'image/jpeg',
-  'image/png',
-  'image/webp',
-]);
+const MAX_MULTIPART_BYTES = MAX_RECEIPT_IMAGE_BYTES + 1024 * 1024;
 
 type AnalyzeReceiptService = (
   input: AnalyzeReceiptInput,
@@ -26,6 +27,15 @@ function errorResponse(error: unknown): Response {
 export function createAnalyzeReceiptHandler(service: AnalyzeReceiptService) {
   return async (request: Request): Promise<Response> => {
     try {
+      const contentLength = Number(request.headers.get('content-length'));
+      if (Number.isFinite(contentLength) && contentLength > MAX_MULTIPART_BYTES) {
+        throw new ServerError(
+          'unsupported_receipt',
+          413,
+          'Receipt request must not exceed 11 MiB',
+        );
+      }
+
       let form: FormData;
       try {
         form = await request.formData();
@@ -51,7 +61,7 @@ export function createAnalyzeReceiptHandler(service: AnalyzeReceiptService) {
           'receipt, eventId, and submitter are required',
         );
       }
-      if (!supportedMimeTypes.has(receipt.type as ReceiptMimeType)) {
+      if (!isReceiptMimeType(receipt.type)) {
         throw new ServerError(
           'unsupported_receipt',
           415,
@@ -61,7 +71,7 @@ export function createAnalyzeReceiptHandler(service: AnalyzeReceiptService) {
       if (receipt.size === 0) {
         throw new ServerError('unsupported_receipt', 415, 'Receipt image is empty');
       }
-      if (receipt.size > MAX_RECEIPT_BYTES) {
+      if (receipt.size > MAX_RECEIPT_IMAGE_BYTES) {
         throw new ServerError(
           'unsupported_receipt',
           413,
@@ -70,6 +80,13 @@ export function createAnalyzeReceiptHandler(service: AnalyzeReceiptService) {
       }
 
       const bytes = new Uint8Array(await receipt.arrayBuffer());
+      if (!hasExpectedImageSignature(bytes, receipt.type)) {
+        throw new ServerError(
+          'unsupported_receipt',
+          415,
+          'Receipt bytes do not match the declared image type',
+        );
+      }
       const response = await service({
         eventId,
         submitter,
@@ -84,7 +101,12 @@ export function createAnalyzeReceiptHandler(service: AnalyzeReceiptService) {
 }
 
 export async function POST(request: Request): Promise<Response> {
-  return createAnalyzeReceiptHandler((input) =>
-    getBackendServices().analyzeReceipt(input),
-  )(request);
+  try {
+    requireDemoIdentityEnabled();
+    return createAnalyzeReceiptHandler((input) =>
+      getBackendServices().analyzeReceipt(input),
+    )(request);
+  } catch (error) {
+    return errorResponse(error);
+  }
 }

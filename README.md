@@ -149,11 +149,16 @@ SUPABASE_SECRET_KEY=
 SUPABASE_RECEIPT_BUCKET=receipts
 GEMINI_API_KEY=
 GEMINI_MODEL=gemini-3.5-flash-lite
+TALI_ALLOW_INSECURE_DEMO_IDENTITY=false
 ```
 
 `SUPABASE_SERVICE_ROLE_KEY` remains a temporary fallback for an existing project,
 but `SUPABASE_SECRET_KEY` is preferred. Never add either value to a
 `NEXT_PUBLIC_` variable.
+
+The receipt APIs fail closed unless `TALI_ALLOW_INSECURE_DEMO_IDENTITY=true`.
+Enable it only for a controlled local hackathon demo. Leave it `false` on a
+hosted deployment until wallet-signature or session authentication is added.
 
 Run the local database checks:
 
@@ -178,10 +183,11 @@ accepts only JPEG, PNG, and WebP. The server exposes:
 - `POST /api/receipts/analyze` — multipart fields `receipt`, `eventId`, and
   `submitter`;
 - `POST /api/claims` — the shared `CreateClaimRequest` JSON body;
-- `GET /api/events/:id/claims` — persisted claims with 300-second receipt URLs.
+- `GET /api/events/:id/claims?viewer=0x...` — persisted claims with 300-second
+  receipt URLs after active event-membership checking.
 
-This hackathon slice treats the submitted wallet address as demo identity and
-checks event membership, but it does not verify a wallet signature. The analyze
+When explicitly enabled, this hackathon slice treats the submitted wallet address
+as demo identity and checks event membership, but it does not verify a wallet signature. The analyze
 response is also not yet signed or persisted as a one-time draft before claim
 creation. Add wallet authentication and a signed analysis token or server-side
 draft before production use or real-fund authorization.

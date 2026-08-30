@@ -49,6 +49,11 @@ adapter repository store
 The private `receipts` bucket has a 10 MiB limit and accepts only JPEG, PNG and
 WebP. Public URLs are never stored; list operations create 300-second signed URLs.
 
+Because wallet authentication is not part of this increment, all privileged
+receipt routes fail closed by default. Controlled local demos must explicitly
+enable insecure demo identity mode; claim listing also requires an active member
+viewer address. This is not production authentication.
+
 ## Error handling
 
 `ServerError` carries a stable code, safe message and HTTP status. Provider errors

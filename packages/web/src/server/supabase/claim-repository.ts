@@ -130,6 +130,22 @@ export function createSupabaseClaimRepository(
   client: SupabaseDataClient,
 ): ClaimRepository {
   return {
+    async assertEventExists(eventId) {
+      const { data, error } = await query(client, 'events')
+        .select('id')
+        .eq('id', eventId)
+        .maybeSingle();
+
+      if (error && error.code !== 'PGRST116') {
+        throw databaseFailure(error);
+      }
+      if (!data) {
+        throw new ServerError('event_not_found', 404, 'Event not found', {
+          cause: error ?? undefined,
+        });
+      }
+    },
+
     async assertActiveMember(eventId, submitter) {
       const { data, error } = await query(client, 'event_members')
         .select('event_id')
@@ -201,6 +217,17 @@ export function createSupabaseClaimRepository(
         });
       }
       if (error?.code === '23503') {
+        throw new ServerError(
+          'member_not_found',
+          403,
+          'Active event membership is required',
+          { cause: error },
+        );
+      }
+      if (
+        error?.code === '23514' &&
+        error.message?.includes('active event member')
+      ) {
         throw new ServerError(
           'member_not_found',
           403,

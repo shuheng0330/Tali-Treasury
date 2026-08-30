@@ -10,7 +10,7 @@ Last updated: 30 August 2026 (MYT)
 - application services for analyze, create claim and list claims;
 - Supabase database and storage adapters with sanitized errors;
 - Next.js API routes for all three shared endpoint contracts;
-- 58 passing Vitest tests;
+- 69 passing backend Vitest tests, plus 14 Sui integration tests;
 - 33 passing pgTAP database assertions on a clean disposable PostgreSQL 16
   database;
 - web TypeScript check passing at the API checkpoint.
@@ -37,6 +37,8 @@ and lint commands still need to be rerun once Docker Desktop is healthy.
 ## Known limitations
 
 - A submitted wallet address is demo identity, not authenticated identity.
+- The service-role-backed receipt APIs are disabled by default and require an
+  explicit local-demo opt-in until wallet/session authentication exists.
 - Analyze and create-claim are two validated calls but are not cryptographically
   bound to one another.
 - Receipt analysis and persistence are implemented locally but not yet exercised

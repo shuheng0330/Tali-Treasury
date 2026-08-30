@@ -7,6 +7,7 @@ import { createAnalyzeReceiptHandler } from './route';
 const eventId = 'ba7e50e2-7e7b-4a67-a505-9e3a329739ae';
 const submitter = `0x${'a'.repeat(64)}`;
 const receiptHash = 'a'.repeat(64);
+const pngBytes = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
 const response: AnalyzeReceiptResponse = {
   analysis: {
     merchant: 'Campus Print Shop',
@@ -33,7 +34,7 @@ function multipartRequest(options?: {
   form.set('eventId', eventId);
   form.set('submitter', submitter);
   if (options?.includeReceipt !== false) {
-    const sourceBytes = options?.bytes ?? new Uint8Array([1, 2, 3]);
+    const sourceBytes = options?.bytes ?? pngBytes;
     const fileBuffer = new ArrayBuffer(sourceBytes.byteLength);
     new Uint8Array(fileBuffer).set(sourceBytes);
     form.set(
@@ -61,7 +62,7 @@ describe('POST /api/receipts/analyze', () => {
     expect(service).toHaveBeenCalledWith({
       eventId,
       submitter,
-      bytes: new Uint8Array([1, 2, 3]),
+      bytes: pngBytes,
       mimeType: 'image/png',
     });
   });
@@ -90,6 +91,32 @@ describe('POST /api/receipts/analyze', () => {
 
     expect(result.status).toBe(413);
     await expect(result.json()).resolves.toMatchObject({ error: 'unsupported_receipt' });
+  });
+
+  it('rejects image metadata that does not match the uploaded bytes', async () => {
+    const service = vi.fn();
+    const handler = createAnalyzeReceiptHandler(service);
+    const result = await handler(
+      multipartRequest({ bytes: new Uint8Array([1, 2, 3]), mimeType: 'image/png' }),
+    );
+
+    expect(result.status).toBe(415);
+    await expect(result.json()).resolves.toMatchObject({ error: 'unsupported_receipt' });
+    expect(service).not.toHaveBeenCalled();
+  });
+
+  it('rejects an oversized declared request before multipart parsing', async () => {
+    const service = vi.fn();
+    const handler = createAnalyzeReceiptHandler(service);
+    const result = await handler(
+      new Request('http://localhost/api/receipts/analyze', {
+        method: 'POST',
+        headers: { 'content-length': String(12 * 1024 * 1024) },
+      }),
+    );
+
+    expect(result.status).toBe(413);
+    expect(service).not.toHaveBeenCalled();
   });
 
   it('maps known errors and sanitizes unexpected errors', async () => {

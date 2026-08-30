@@ -52,6 +52,7 @@ export function createAnalyzeReceiptService(deps: {
     }
 
     try {
+      await deps.claims.assertEventExists(eventId);
       await deps.claims.assertActiveMember(eventId, submitter);
     } catch (error) {
       throw databaseError(error);
@@ -131,6 +132,8 @@ export function createClaimService(deps: {
     }
 
     try {
+      await deps.claims.assertEventExists(request.eventId);
+      await deps.claims.assertActiveMember(request.eventId, request.submitter);
       return { claim: await deps.claims.create(request) };
     } catch (error) {
       throw databaseError(error);
@@ -141,19 +144,23 @@ export function createClaimService(deps: {
 export function createListClaimsService(deps: {
   claims: ClaimRepository;
   receipts: ReceiptStore;
-}): (eventId: string) => Promise<ListClaimsResponse> {
-  return async (inputEventId) => {
+}): (input: { eventId: string; viewer: string }) => Promise<ListClaimsResponse> {
+  return async (input) => {
     let eventId: string;
+    let viewer: string;
     try {
-      eventId = eventIdSchema.parse(inputEventId);
+      eventId = eventIdSchema.parse(input.eventId);
+      viewer = suiAddressSchema.parse(input.viewer);
     } catch (error) {
-      throw new ServerError('invalid_request', 400, 'Invalid event ID', {
+      throw new ServerError('invalid_request', 400, 'Invalid event or viewer', {
         cause: error,
       });
     }
 
     let storedClaims;
     try {
+      await deps.claims.assertEventExists(eventId);
+      await deps.claims.assertActiveMember(eventId, viewer);
       storedClaims = await deps.claims.listByEvent(eventId);
     } catch (error) {
       throw databaseError(error);

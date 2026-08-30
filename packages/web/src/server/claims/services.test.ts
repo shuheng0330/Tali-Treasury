@@ -68,6 +68,7 @@ function createRequest(): CreateClaimRequest {
 
 function createRepository(overrides: Partial<ClaimRepository> = {}): ClaimRepository {
   return {
+    assertEventExists: vi.fn(async () => undefined),
     assertActiveMember: vi.fn(async () => undefined),
     findDuplicateReceipt: vi.fn(async () => null),
     create: vi.fn(async () => claim),
@@ -88,6 +89,9 @@ describe('createAnalyzeReceiptService', () => {
   it('checks active membership before duplicate lookup, Gemini, or upload', async () => {
     const calls: string[] = [];
     const claims = createRepository({
+      assertEventExists: vi.fn(async () => {
+        calls.push('event');
+      }),
       assertActiveMember: vi.fn(async () => {
         calls.push('member');
         throw new ServerError('member_not_found', 403, 'Active event membership is required');
@@ -119,7 +123,7 @@ describe('createAnalyzeReceiptService', () => {
         mimeType: 'image/png',
       }),
     ).rejects.toMatchObject({ code: 'member_not_found', status: 403 });
-    expect(calls).toEqual(['member']);
+    expect(calls).toEqual(['event', 'member']);
   });
 
   it('returns an event-scoped duplicate without another Gemini call or upload', async () => {
@@ -149,6 +153,9 @@ describe('createAnalyzeReceiptService', () => {
   it('hashes, analyzes, and uploads a new private receipt in order', async () => {
     const calls: string[] = [];
     const claims = createRepository({
+      assertEventExists: vi.fn(async () => {
+        calls.push('event');
+      }),
       assertActiveMember: vi.fn(async () => {
         calls.push('member');
       }),
@@ -189,6 +196,7 @@ describe('createAnalyzeReceiptService', () => {
       }),
     ).resolves.toEqual({ analysis, storagePath, duplicateOf: null });
     expect(calls).toEqual([
+      'event',
       'member',
       `duplicate:${receiptHash}`,
       'analyze',
@@ -213,7 +221,40 @@ describe('createClaimService', () => {
     const createClaim = createClaimService({ claims });
 
     await expect(createClaim(createRequest())).resolves.toEqual({ claim });
+    expect(claims.assertEventExists).toHaveBeenCalledWith(eventId);
+    expect(claims.assertActiveMember).toHaveBeenCalledWith(eventId, submitter);
     expect(claims.create).toHaveBeenCalledWith(createRequest());
+  });
+
+  it('rejects an inactive member before claim insertion', async () => {
+    const claims = createRepository({
+      assertActiveMember: vi.fn(async () => {
+        throw new ServerError('member_not_found', 403, 'Active event membership is required');
+      }),
+    });
+    const createClaim = createClaimService({ claims });
+
+    await expect(createClaim(createRequest())).rejects.toMatchObject({
+      code: 'member_not_found',
+      status: 403,
+    });
+    expect(claims.create).not.toHaveBeenCalled();
+  });
+
+  it('returns event_not_found before membership or insertion', async () => {
+    const claims = createRepository({
+      assertEventExists: vi.fn(async () => {
+        throw new ServerError('event_not_found', 404, 'Event not found');
+      }),
+    });
+    const createClaim = createClaimService({ claims });
+
+    await expect(createClaim(createRequest())).rejects.toMatchObject({
+      code: 'event_not_found',
+      status: 404,
+    });
+    expect(claims.assertActiveMember).not.toHaveBeenCalled();
+    expect(claims.create).not.toHaveBeenCalled();
   });
 
   it('preserves a race-safe duplicate repository error', async () => {
@@ -239,10 +280,12 @@ describe('createListClaimsService', () => {
     const receipts = createReceiptStore();
     const listClaims = createListClaimsService({ claims, receipts });
 
-    await expect(listClaims(eventId)).resolves.toEqual({
+    await expect(listClaims({ eventId, viewer: submitter })).resolves.toEqual({
       claims: [{ ...claim, receiptUrl: 'https://signed.example/receipt' }],
       cursor: null,
     });
+    expect(claims.assertEventExists).toHaveBeenCalledWith(eventId);
+    expect(claims.assertActiveMember).toHaveBeenCalledWith(eventId, submitter);
     expect(receipts.createSignedUrl).toHaveBeenCalledWith(storagePath, 300);
   });
 });

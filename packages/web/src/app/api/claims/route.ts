@@ -1,6 +1,7 @@
 import type { CreateClaimResponse } from '@tali/shared';
 
 import { getBackendServices } from '../../../server/dependencies';
+import { requireDemoIdentityEnabled } from '../../../server/demo-auth';
 import { ServerError, toApiError } from '../../../server/errors';
 
 export const runtime = 'nodejs';
@@ -28,5 +29,11 @@ export function createClaimHandler(service: CreateClaimService) {
 }
 
 export async function POST(request: Request): Promise<Response> {
-  return createClaimHandler((input) => getBackendServices().createClaim(input))(request);
+  try {
+    requireDemoIdentityEnabled();
+    return createClaimHandler((input) => getBackendServices().createClaim(input))(request);
+  } catch (error) {
+    const { body, status } = toApiError(error);
+    return Response.json(body, { status });
+  }
 }

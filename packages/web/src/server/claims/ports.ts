@@ -19,6 +19,7 @@ export interface StoredClaim {
 }
 
 export interface ClaimRepository {
+  assertEventExists(eventId: string): Promise<void>;
   assertActiveMember(eventId: string, submitter: Address): Promise<void>;
   findDuplicateReceipt(
     eventId: string,

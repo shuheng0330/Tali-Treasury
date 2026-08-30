@@ -1,6 +1,7 @@
 import type { ApiError } from '@tali/shared';
 
 export type ServerErrorCode =
+  | 'authentication_required'
   | 'invalid_request'
   | 'unsupported_receipt'
   | 'event_not_found'

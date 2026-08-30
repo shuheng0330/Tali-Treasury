@@ -11,13 +11,16 @@ describe('GET /api/events/:id/claims', () => {
     const handler = createListClaimsHandler(service);
 
     const result = await handler(
-      new Request('http://localhost/api/events/event-id/claims'),
+      new Request(`http://localhost/api/events/event-id/claims?viewer=${`0x${'a'.repeat(64)}`}`),
       { params: Promise.resolve({ id: 'event-id' }) },
     );
 
     expect(result.status).toBe(200);
     await expect(result.json()).resolves.toEqual(serviceResponse);
-    expect(service).toHaveBeenCalledWith('event-id');
+    expect(service).toHaveBeenCalledWith({
+      eventId: 'event-id',
+      viewer: `0x${'a'.repeat(64)}`,
+    });
   });
 
   it('maps service errors to the shared API error shape', async () => {
@@ -28,7 +31,7 @@ describe('GET /api/events/:id/claims', () => {
     );
 
     const result = await handler(
-      new Request('http://localhost/api/events/bad/claims'),
+      new Request(`http://localhost/api/events/bad/claims?viewer=${`0x${'a'.repeat(64)}`}`),
       { params: Promise.resolve({ id: 'bad' }) },
     );
 
@@ -37,5 +40,17 @@ describe('GET /api/events/:id/claims', () => {
       error: 'invalid_request',
       message: 'Invalid event ID',
     });
+  });
+
+  it('requires an explicit demo viewer identity', async () => {
+    const service = vi.fn();
+    const handler = createListClaimsHandler(service);
+    const result = await handler(
+      new Request('http://localhost/api/events/event-id/claims'),
+      { params: Promise.resolve({ id: 'event-id' }) },
+    );
+
+    expect(result.status).toBe(400);
+    expect(service).not.toHaveBeenCalled();
   });
 });

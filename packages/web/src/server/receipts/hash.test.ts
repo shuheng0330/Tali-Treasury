@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { buildReceiptObjectPath, hashReceipt } from './hash';
+import { buildReceiptObjectPath, hasExpectedImageSignature, hashReceipt } from './hash';
 
 describe('hashReceipt', () => {
   it('returns the lowercase SHA-256 digest of the exact bytes', () => {
@@ -55,5 +55,27 @@ describe('buildReceiptObjectPath', () => {
         'application/pdf',
       ),
     ).toThrow();
+  });
+});
+
+describe('hasExpectedImageSignature', () => {
+  it('accepts matching JPEG, PNG, and WebP signatures', () => {
+    expect(hasExpectedImageSignature(new Uint8Array([0xff, 0xd8, 0xff]), 'image/jpeg')).toBe(true);
+    expect(
+      hasExpectedImageSignature(
+        new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+        'image/png',
+      ),
+    ).toBe(true);
+    expect(
+      hasExpectedImageSignature(
+        new Uint8Array([0x52, 0x49, 0x46, 0x46, 0, 0, 0, 0, 0x57, 0x45, 0x42, 0x50]),
+        'image/webp',
+      ),
+    ).toBe(true);
+  });
+
+  it('rejects bytes that do not match the declared MIME type', () => {
+    expect(hasExpectedImageSignature(new Uint8Array([1, 2, 3]), 'image/png')).toBe(false);
   });
 });

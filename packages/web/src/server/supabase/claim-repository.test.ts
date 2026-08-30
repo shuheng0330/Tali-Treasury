@@ -147,6 +147,25 @@ describe('createSupabaseClaimRepository', () => {
     await expect(result).rejects.not.toThrow('raw duplicate detail');
   });
 
+  it('maps the inactive-member trigger violation to member_not_found', async () => {
+    const repository = createSupabaseClaimRepository(
+      scriptedClient({
+        single: {
+          data: null,
+          error: {
+            code: '23514',
+            message: 'claim submitter must be an active event member',
+          },
+        },
+      }),
+    );
+
+    await expect(repository.create(request)).rejects.toMatchObject({
+      code: 'member_not_found',
+      status: 403,
+    });
+  });
+
   it('requires an active member and sanitizes missing membership', async () => {
     const repository = createSupabaseClaimRepository(
       scriptedClient({ maybeSingle: { data: null, error: null } }),
@@ -155,6 +174,17 @@ describe('createSupabaseClaimRepository', () => {
     await expect(repository.assertActiveMember(eventId, submitter)).rejects.toMatchObject({
       code: 'member_not_found',
       status: 403,
+    });
+  });
+
+  it('distinguishes an unknown event from missing membership', async () => {
+    const repository = createSupabaseClaimRepository(
+      scriptedClient({ maybeSingle: { data: null, error: null } }),
+    );
+
+    await expect(repository.assertEventExists(eventId)).rejects.toMatchObject({
+      code: 'event_not_found',
+      status: 404,
     });
   });
 

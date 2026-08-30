@@ -21,7 +21,8 @@ The current backend increment must:
 - store receipt objects in a private Supabase bucket;
 - persist claims using the categories, states and response types from
   `@tali/shared`;
-- return only short-lived signed receipt URLs when listing claims;
+- return short-lived signed receipt URLs only after checking the explicit demo
+  viewer is an active event member;
 - expose analyze, create-claim and list-claims API routes;
 - return stable, sanitized API errors without credentials or provider details.
 
@@ -32,6 +33,8 @@ The current backend increment must:
 - Application tables use Row Level Security with no browser policies and no
   `anon` or `authenticated` table privileges.
 - Only the server role may access application tables and private receipt objects.
+- Service-role-backed APIs fail closed unless controlled demo identity mode is
+  explicitly enabled; hosted use requires real wallet/session authentication.
 - Amounts must be positive integers below 10^30 base units.
 - Sui addresses and object IDs must be canonical lowercase 32-byte hex values.
 - Claim fields must match the validated receipt analysis supplied at confirmation.

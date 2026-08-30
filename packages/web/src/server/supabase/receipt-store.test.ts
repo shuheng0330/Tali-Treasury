@@ -6,7 +6,7 @@ const eventId = 'ba7e50e2-7e7b-4a67-a505-9e3a329739ae';
 const receiptHash = 'a'.repeat(64);
 
 describe('createSupabaseReceiptStore', () => {
-  it('uploads immutable private bytes with safe storage options', async () => {
+  it('idempotently uploads content-addressed private bytes with safe storage options', async () => {
     const upload = vi.fn(async () => ({ error: null }));
     const from = vi.fn(() => ({ upload, createSignedUrl: vi.fn() }));
     const store = createSupabaseReceiptStore({ storage: { from } }, 'receipts');
@@ -23,7 +23,7 @@ describe('createSupabaseReceiptStore', () => {
     expect(upload).toHaveBeenCalledWith(
       `${eventId}/${receiptHash}.png`,
       expect.any(Uint8Array),
-      { contentType: 'image/png', upsert: false, cacheControl: '3600' },
+      { contentType: 'image/png', upsert: true, cacheControl: '3600' },
     );
   });
 
