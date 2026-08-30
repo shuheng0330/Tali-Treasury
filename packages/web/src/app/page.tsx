@@ -29,8 +29,8 @@ export default function Page() {
         </div>
       </header>
 
-      <section className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-6 py-16 md:py-24">
-        <p className="text-label uppercase text-ink-2">
+      <section className="mx-auto flex w-full max-w-5xl flex-col gap-8 px-6 py-24 md:py-32">
+        <p className="text-label uppercase text-ink-3">
           Club and event treasury · Sui testnet
         </p>
 
@@ -39,19 +39,13 @@ export default function Page() {
           <span className="block text-ink-2">The money enforces them.</span>
         </h1>
 
-        <p className="max-w-2xl text-subhead text-ink-2 md:text-[19px] md:leading-7">
-          Your committee photographs receipts, an agent reads them and pays out whatever your
-          rules allow, and the limits it works to are held in a Move contract instead of our
-          backend — which means the agent cannot spend past them, and neither can we, even by
-          accident.
+        <p className="max-w-2xl text-subhead text-ink-2 md:text-[22px] md:leading-8">
+          One student shouldn&rsquo;t have to front the club&rsquo;s money for six weeks. An
+          agent reimburses your members in seconds, and a Move contract — not our backend —
+          holds the limits.
         </p>
 
-        <p className="max-w-2xl text-[16px] leading-6 text-ink-3">
-          Today one student holds the club card, fronts everyone&rsquo;s money, and spends the
-          next six weeks chasing it back in a WhatsApp group.
-        </p>
-
-        <div className="flex flex-wrap items-center gap-x-6 gap-y-4 pt-2">
+        <div className="flex flex-wrap items-center gap-x-6 gap-y-4">
           <Link
             href="/safety"
             className="rounded-card bg-accent px-6 py-4 text-[18px] font-semibold text-surface transition-colors duration-150 hover:bg-accent/90"
@@ -65,19 +59,6 @@ export default function Page() {
             or submit a claim
           </Link>
         </div>
-
-        <p className="border-t border-rule pt-6 text-[16px] text-ink-3">
-          Live on Sui testnet · package{' '}
-          <a
-            href={PACKAGE_LINK}
-            target="_blank"
-            rel="noreferrer"
-            className="font-mono text-ink-2 underline underline-offset-4"
-          >
-            {PACKAGE_SHORT}
-          </a>{' '}
-          · seven checks inside <span className="font-mono">spend()</span> · no real funds
-        </p>
       </section>
 
       <section className="mx-auto flex w-full max-w-5xl flex-col gap-4 px-6 py-12 md:py-20">
@@ -185,6 +166,16 @@ export default function Page() {
           </p>
           <div className="flex flex-wrap items-center justify-between gap-x-8 gap-y-2">
             <p>
+              Live on Sui testnet · package{' '}
+              <a
+                href={PACKAGE_LINK}
+                target="_blank"
+                rel="noreferrer"
+                className="font-mono underline underline-offset-4 transition-colors duration-150 hover:text-ink-2"
+              >
+                {PACKAGE_SHORT}
+              </a>{' '}
+              · seven checks inside <span className="font-mono">spend()</span> · no real funds.
               Built by Kian Xiang, Shu Heng and Wey Cheng for the MUBA Blockchain Hackathon 2026.
             </p>
             <div className="flex flex-wrap gap-6">

@@ -188,7 +188,7 @@ export function Wire() {
           />
           <span className="text-label uppercase text-ink-3">Orientation Week mandate</span>
         </span>
-        <span className="text-caption font-medium text-wait">
+        <span className="text-caption font-medium text-ink-3">
           Illustration — not a live transaction
         </span>
       </div>

@@ -355,10 +355,16 @@ problem paragraph, CTAs, and a fact line. Reduce to:
 
 1. **Eyebrow** — `text-label`, uppercase, `text-ink-3`.
 2. **H1** — `text-display md:text-hero`, unchanged wording, `max-w-4xl`.
-3. **One sentence**, `text-subhead md:text-[22px]`, `max-w-[60ch]`. Merge the
-   current subhead and problem paragraph into a single sentence of at most 30
-   words. Keep the meaning: an agent reimburses members, and the limits live in a
-   contract rather than in our backend.
+3. **One short paragraph**, `text-subhead md:text-[22px]`, `max-w-2xl`. Merge the
+   current subhead and problem paragraph into at most 30 words and at most two
+   sentences. Keep the meaning: an agent reimburses members, and the limits live
+   in a contract rather than in our backend.
+
+   **Do not use `max-w-[60ch]` for this.** The `ch` unit is the width of the
+   digit "0", not an average character. In this typeface at 22px it measured
+   886px and **85 characters per line** — well past the readable band. `max-w-2xl`
+   (672px) measures 57 characters per line. Always measure rather than trusting
+   the unit.
 4. **One primary CTA** ("Try to break it") plus one text link ("or submit a
    claim"). Already correct — do not add a third.
 
@@ -392,7 +398,8 @@ single strong left margin is what makes editorial layouts feel composed.
 ### Acceptance criteria
 
 - [ ] Hero contains exactly four blocks.
-- [ ] Hero paragraph is one sentence, ≤30 words, ≤60 characters per line.
+- [ ] Hero paragraph is ≤30 words, ≤2 sentences, and **measures** ≤65 characters
+      per line (measure it in the browser; do not infer it from a `ch` value).
 - [ ] At 1440×900 with the browser at default zoom, the H1, the sentence and both
       CTAs are all above the fold.
 - [ ] The only non-greyscale colours on the landing page are `accent`, the red
