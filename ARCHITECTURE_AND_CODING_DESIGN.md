@@ -25,6 +25,8 @@ adapter repository store
   displayed decimals to six-decimal base units with `BigInt` arithmetic.
 - `src/server/claims` defines injected ports, validates claim confirmation input
   and coordinates analyze, persist and list use cases.
+- `src/server/policy` deterministically evaluates trusted claim, event, mandate,
+  duplicate and time snapshots without performing I/O.
 - `src/server/supabase` owns privileged client construction, database row mapping,
   private uploads and signed URLs.
 - `src/server/dependencies.ts` composes production adapters lazily so importing a
@@ -54,6 +56,27 @@ receipt routes fail closed by default. Controlled local demos must explicitly
 enable insecure demo identity mode; claim listing also requires an active member
 viewer address. This is not production authentication.
 
+## Deterministic policy design
+
+`evaluatePolicy` is a pure server function. It returns all nine shared rule checks
+in stable order and uses the existing `PolicyDecision` outcome contract. Monetary
+snapshots are strict decimal base-unit strings compared with `BigInt`; malformed or
+non-positive claim amounts fail closed. Receipt dates use strict `YYYY-MM-DD`
+calendar parsing and must fall within the event window and no later than the
+evaluation's UTC day.
+
+The evaluator injects `nowMs` for deterministic tests and uses a single selected
+timestamp for date and mandate-expiry checks. A mandate is expired when
+`nowMs >= expiryMs`, matching the Move boundary. Exact duplicates, mandate-limit
+failures, revoked or expired mandates, and non-allowlisted recipients produce
+`reject`. Category, date and extraction-certainty failures produce `review` unless
+a hard failure also exists. Only nine passing checks produce `auto_pay`.
+
+This module neither fetches the on-chain mandate nor persists the decision. A later
+claim-processing service will provide current snapshots, store the result and send
+eligible claims to the Sui transaction adapter. The Move contract remains the final
+authority and rechecks its rules at execution time.
+
 ## Error handling
 
 `ServerError` carries a stable code, safe message and HTTP status. Provider errors
@@ -65,6 +88,9 @@ are retained only as an internal cause. Unknown failures become a generic
 - Vitest tests use injected Gemini, repository, storage and service boundaries.
 - Receipt hashing uses real bytes and a known SHA-256 vector.
 - Route tests use real `Request`, `FormData`, `File` and `Response` objects.
+- Policy tests exercise every reject and review rule, hard-failure precedence,
+  exact monetary and confidence limits, malformed snapshots, strict calendar
+  dates, and the exclusive mandate-expiry boundary.
 - pgTAP applies the migration to a clean database and checks constraints,
   privileges, RLS, storage configuration and duplicate behavior.
 - Repository completion requires build, typecheck, tests, audit, secret scan and

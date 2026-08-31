@@ -26,6 +26,30 @@ The current backend increment must:
 - expose analyze, create-claim and list-claims API routes;
 - return stable, sanitized API errors without credentials or provider details.
 
+## Implemented deterministic-policy scope
+
+The server policy evaluator must:
+
+- return the shared `PolicyDecision` contract without performing database, network,
+  wallet or filesystem I/O;
+- evaluate the per-claim cap, remaining mandate budget, recipient allowlist,
+  revocation, mandate expiry, exact duplicate status, allowed category, receipt
+  date and receipt-extraction certainty;
+- use integer USDC base-unit comparisons, accepting an amount equal to the cap or
+  remaining budget;
+- require at least 90% Gemini confidence with no uncertain fields or warnings;
+- validate canonical receipt dates within the event window and no later than the
+  current UTC date;
+- reject exact duplicates and claims that cannot satisfy the current Sui mandate;
+- send correctable category, date and extraction exceptions to treasurer review;
+- make hard rejection take precedence when review and rejection failures coexist;
+  and
+- explain every check without exposing receipt contents, credentials or provider
+  errors.
+
+The evaluator mirrors on-chain rules for early routing. The Sui Move contract is
+still the final payment authority.
+
 ## Security and business rules
 
 - Gemini and Supabase credentials are server-only and must never use a
@@ -52,9 +76,10 @@ The current backend increment must:
 
 - wallet-signature authentication;
 - cryptographic or one-time binding between analysis and claim creation;
-- deterministic policy evaluation and review actions;
+- loading live event and Sui mandate snapshots into claim processing;
+- policy-decision persistence, review actions and claim-state transitions;
 - agent private-key use, Sui transaction construction, signing or payment;
-- frontend replacement of current mock claim data;
+- frontend replacement of remaining mock policy and payment data;
 - production readiness; the schema is hosted, but real identity, deployed API
   configuration and end-to-end verification remain pending.
 
