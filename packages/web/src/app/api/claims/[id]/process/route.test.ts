@@ -84,4 +84,33 @@ describe('POST /api/claims/:id/process', () => {
       message: 'Only the event treasurer may process claims',
     });
   });
+
+  it.each([
+    [
+      'payment_configuration_failed',
+      503,
+      'Backend payment configuration is unavailable',
+    ],
+    [
+      'payment_submission_uncertain',
+      502,
+      'Payment submission requires reconciliation before retrying',
+    ],
+  ] as const)('maps %s without exposing its cause', async (code, status, message) => {
+    const handler = createProcessClaimHandler(async () => {
+      throw new ServerError(code, status, message, {
+        cause: new Error('private provider detail'),
+      });
+    });
+
+    const result = await handler(
+      request(JSON.stringify({ processor })),
+      context,
+    );
+    const responseText = await result.text();
+
+    expect(result.status).toBe(status);
+    expect(JSON.parse(responseText)).toEqual({ error: code, message });
+    expect(responseText).not.toContain('private provider detail');
+  });
 });

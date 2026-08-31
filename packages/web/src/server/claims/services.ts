@@ -1,7 +1,9 @@
 import type {
   AnalyzeReceiptResponse,
+  Claim,
   CreateClaimResponse,
   ListClaimsResponse,
+  PaymentResult,
   PolicyOutcome,
   ProcessClaimResponse,
 } from '@tali/shared';
@@ -12,9 +14,12 @@ import { evaluatePolicy } from '../policy/evaluate';
 import type { ReceiptAnalyzer } from '../receipts/gemini';
 import { hashReceipt, type ReceiptMimeType } from '../receipts/hash';
 import { toReceiptAnalysis } from '../receipts/schema';
+import { PaymentSubmissionUncertainError } from '../sui/payment-executor';
 import type {
   ClaimRepository,
+  ClaimProcessContext,
   MandateReader,
+  PaymentExecutor,
   ProcessedClaimState,
   ReceiptStore,
 } from './ports';
@@ -197,6 +202,7 @@ export function createListClaimsService(deps: {
 export function createProcessClaimService(deps: {
   claims: ClaimRepository;
   mandates: MandateReader;
+  payments: PaymentExecutor;
   now?: () => number;
 }): (input: unknown) => Promise<ProcessClaimResponse> {
   return async (input) => {
@@ -212,7 +218,7 @@ export function createProcessClaimService(deps: {
       throw error;
     }
 
-    let context;
+    let context: ClaimProcessContext;
     try {
       context = await deps.claims.getProcessContext(request.claimId);
     } catch (error) {
@@ -227,71 +233,195 @@ export function createProcessClaimService(deps: {
       );
     }
 
-    if (context.claim.decision) {
+    const conflict = (message = 'Claim is not available for processing') =>
+      new ServerError('processing_conflict', 409, message);
+
+    function completedPaymentResponse(storedClaim: Claim): ProcessClaimResponse {
+      if (!storedClaim.decision || !storedClaim.payment) {
+        throw conflict('Claim payment state is inconsistent');
+      }
       return {
-        claim: context.claim,
-        decision: context.claim.decision,
-        payment: null,
+        claim: storedClaim,
+        decision: storedClaim.decision,
+        payment: storedClaim.payment,
       };
     }
-    if (context.claim.state !== 'submitted') {
-      throw new ServerError(
-        'processing_conflict',
-        409,
-        'Claim is not available for processing',
-      );
+
+    function inspectAutoPayState(storedClaim: Claim): ProcessClaimResponse | null {
+      if (!storedClaim.decision) throw conflict();
+      if (storedClaim.decision.outcome !== 'auto_pay') {
+        return {
+          claim: storedClaim,
+          decision: storedClaim.decision,
+          payment: null,
+        };
+      }
+      if (storedClaim.state === 'paid' || storedClaim.state === 'payment_failed') {
+        return completedPaymentResponse(storedClaim);
+      }
+      if (storedClaim.state === 'paying') {
+        throw conflict('Payment requires reconciliation before retrying');
+      }
+      if (storedClaim.state !== 'approved') throw conflict();
+      return null;
     }
 
-    let mandate;
-    try {
-      mandate = await deps.mandates.read(context.event.mandateId);
-      if (mandate.id.toLowerCase() !== context.event.mandateId.toLowerCase()) {
-        throw new Error('Mandate object ID does not match the event');
+    async function readCurrentMandate() {
+      try {
+        const mandate = await deps.mandates.read(context.event.mandateId);
+        if (mandate.id.toLowerCase() !== context.event.mandateId.toLowerCase()) {
+          throw new Error('Mandate object ID does not match the event');
+        }
+        return mandate;
+      } catch (error) {
+        throw new ServerError(
+          'mandate_read_failed',
+          502,
+          'The current Sui mandate could not be read',
+          { cause: error },
+        );
       }
+    }
+
+    let approvedClaim = context.claim;
+    if (context.claim.decision) {
+      const response = inspectAutoPayState(context.claim);
+      if (response) return response;
+    } else {
+      if (context.claim.state !== 'submitted') throw conflict();
+
+      const mandate = await readCurrentMandate();
+      const decision = evaluatePolicy({
+        claim: context.claim,
+        event: context.event,
+        mandate,
+        exactDuplicate: false,
+        nowMs: deps.now?.() ?? Date.now(),
+      });
+      const stateByOutcome: Record<PolicyOutcome, ProcessedClaimState> = {
+        auto_pay: 'approved',
+        review: 'awaiting_review',
+        reject: 'rejected',
+      };
+
+      let saved;
+      try {
+        saved = await deps.claims.saveDecision({
+          claimId: request.claimId,
+          decision,
+          state: stateByOutcome[decision.outcome],
+        });
+      } catch (error) {
+        throw databaseError(error);
+      }
+      const response = inspectAutoPayState(saved.claim);
+      if (response) return response;
+      approvedClaim = saved.claim;
+    }
+
+    try {
+      deps.payments.assertReady();
     } catch (error) {
       throw new ServerError(
-        'mandate_read_failed',
-        502,
-        'The current Sui mandate could not be read',
+        'payment_configuration_failed',
+        503,
+        'Backend payment configuration is unavailable',
         { cause: error },
       );
     }
 
-    const decision = evaluatePolicy({
-      claim: context.claim,
+    const currentMandate = await readCurrentMandate();
+    const currentDecision = evaluatePolicy({
+      claim: approvedClaim,
       event: context.event,
-      mandate,
+      mandate: currentMandate,
       exactDuplicate: false,
       nowMs: deps.now?.() ?? Date.now(),
     });
-    const stateByOutcome: Record<PolicyOutcome, ProcessedClaimState> = {
-      auto_pay: 'approved',
-      review: 'awaiting_review',
-      reject: 'rejected',
-    };
+    if (currentDecision.outcome !== 'auto_pay') {
+      const payment: PaymentResult = {
+        ok: false,
+        digest: null,
+        checkpoint: null,
+        gasUsed: null,
+        finalityMs: null,
+        abortCode: null,
+        abortKey: 'POLICY_CHANGED',
+        message: 'The live mandate no longer permits automatic payment.',
+        rawError: null,
+        budgetBefore: currentMandate.remainingBudget,
+        budgetAfter: currentMandate.remainingBudget,
+      };
+      let failed;
+      try {
+        failed = await deps.claims.failApprovedPayment({
+          claimId: approvedClaim.id,
+          payment,
+        });
+      } catch (error) {
+        throw databaseError(error);
+      }
+      if (failed.claim.state === 'paid' || failed.claim.state === 'payment_failed') {
+        return completedPaymentResponse(failed.claim);
+      }
+      if (failed.claim.state === 'paying') {
+        throw conflict('Payment requires reconciliation before retrying');
+      }
+      throw conflict('Claim payment state is inconsistent');
+    }
 
-    let saved;
+    let reserved;
     try {
-      saved = await deps.claims.saveDecision({
-        claimId: request.claimId,
-        decision,
-        state: stateByOutcome[decision.outcome],
+      reserved = await deps.claims.reservePayment(approvedClaim.id);
+    } catch (error) {
+      throw databaseError(error);
+    }
+    if (reserved.status === 'lost_race') {
+      if (reserved.claim.state === 'paid' || reserved.claim.state === 'payment_failed') {
+        return completedPaymentResponse(reserved.claim);
+      }
+      throw conflict('Payment requires reconciliation before retrying');
+    }
+
+    let execution;
+    try {
+      execution = await deps.payments.execute({
+        claimId: approvedClaim.id,
+        mandateId: context.event.mandateId,
+        recipient: approvedClaim.submitter,
+        amount: approvedClaim.amount,
+        budgetBefore: currentMandate.remainingBudget,
+      });
+    } catch (error) {
+      if (error instanceof PaymentSubmissionUncertainError) {
+        throw new ServerError(
+          'payment_submission_uncertain',
+          502,
+          'Payment submission requires reconciliation before retrying',
+          { cause: error },
+        );
+      }
+      throw new ServerError(
+        'payment_submission_uncertain',
+        502,
+        'Payment submission requires reconciliation before retrying',
+        { cause: error },
+      );
+    }
+
+    let finished;
+    try {
+      finished = await deps.claims.finishPayment({
+        claimId: approvedClaim.id,
+        state: execution.status === 'paid' ? 'paid' : 'payment_failed',
+        payment: execution.payment,
       });
     } catch (error) {
       throw databaseError(error);
     }
-    if (!saved.claim.decision) {
-      throw new ServerError(
-        'processing_conflict',
-        409,
-        'Claim processing did not store a decision',
-      );
+    if (finished.claim.state === 'paid' || finished.claim.state === 'payment_failed') {
+      return completedPaymentResponse(finished.claim);
     }
-
-    return {
-      claim: saved.claim,
-      decision: saved.claim.decision,
-      payment: null,
-    };
+    throw conflict('Payment requires reconciliation before retrying');
   };
 }

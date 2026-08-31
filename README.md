@@ -29,9 +29,9 @@ Status words are intentionally precise:
 | Treasurer mandate dashboard | **Live** (read-only) | Server reads the current mandate from Sui Testnet |
 | Claim receipt submission UI | **Complete locally** | Real analyze, create, and list API calls; Production remains fail-closed pending wallet auth |
 | Claim policy processing | **Complete locally** | Treasurer action invokes the server evaluator and persists the decision |
-| Review, revoke, payment, and Safety Test interactions | **Mocked** | Clearly labelled; no signing or state changes |
-| Gemini receipt analysis and Supabase claims | **Hosted schema ready** | 135 web tests, 42 pgTAP assertions, API-backed UI integration, and all three active team members verified |
-| Backend agent signing | **Pending** | Separate payment-orchestration slice |
+| Review, revoke, payment UI, and Safety Test interactions | **Mocked** | Clearly labelled; no browser signing or state changes |
+| Gemini receipt analysis and Supabase claims | **Hosted schema ready** | API-backed UI integration, 42 pgTAP assertions, and all three active team members verified |
+| Deterministic policy and backend agent signing | **Complete locally** | Testnet-only, treasurer-triggered, race-safe and fake-operation verified; no transaction broadcast in this increment |
 | Wallet connection and live UI writes | **Pending** | Add after backend/signing boundary is agreed |
 | Web hosting | **Live** | [`tali-treasury.vercel.app`](https://tali-treasury.vercel.app) |
 | Submission pack | **Pending** | Final hackathon phase |
@@ -61,20 +61,22 @@ Gemini receipt + private Supabase claims (hosted; auth-gated; team verified)
              |
              v
 Deterministic policy + persisted decision (complete locally)
-             |
+             | USDC auto_pay
              v
-USDC conversion quote for non-USDC receipts (pending)
+Server-only testnet signer (complete locally)
              |
              v
 @tali/treasury-sui (readers and unsigned transaction builders)
              |
              v
 Sui Testnet Mandate<USDC> (live enforcement and audit events)
+
+Non-USDC receipts stay in review pending a trusted conversion quote.
 ```
 
-The web application reads public mandate state without a key. State-changing
-operations must be signed by the correct wallet or server agent and are outside
-the current UI integration.
+The web application reads public mandate state without a key. The process API can
+sign an eligible `auto_pay` claim with a server-only testnet agent after an atomic
+reservation; browser payment interactions remain outside the current UI integration.
 
 ## Repository structure
 
@@ -120,9 +122,11 @@ npm run dev
 
 Then open `http://localhost:3000/treasury`. The page should say **Live from Sui
 Testnet** and display the current mandate state. `/claim` uses the real receipt
-and claim APIs when demo identity is explicitly enabled. The treasury can persist
-a server policy decision; review, payment, revoke, and Safety Test writes remain
-clearly marked simulations or previews.
+and claim APIs when demo identity is explicitly enabled. The process API has real
+and claim APIs when demo identity is explicitly enabled. The treasury process API
+persists real policy decisions and can run the server-only testnet signer for USDC
+`auto_pay` claims. Review actions, browser payment presentation, revoke, and Safety
+Test writes remain clearly marked simulations or previews.
 
 Run Move tests separately:
 
@@ -159,6 +163,9 @@ SUPABASE_SECRET_KEY=
 SUPABASE_RECEIPT_BUCKET=receipts
 GEMINI_API_KEY=
 GEMINI_MODEL=gemini-3.5-flash-lite
+AGENT_PRIVATE_KEY=
+AGENT_CAP_ID=
+SUI_NETWORK=testnet
 TALI_ALLOW_INSECURE_DEMO_IDENTITY=false
 ```
 
@@ -194,7 +201,9 @@ accepts only JPEG, PNG, and WebP. The server exposes:
   `submitter`;
 - `POST /api/claims` — the shared `CreateClaimRequest` JSON body;
 - `GET /api/events/:id/claims?viewer=0x...` — persisted claims with 300-second
-  receipt URLs after active event-membership checking.
+  receipt URLs after active event-membership checking;
+- `POST /api/claims/:id/process` — treasurer-triggered deterministic policy and,
+  for `auto_pay` only, an atomic server-agent payment attempt.
 
 When explicitly enabled, this hackathon slice treats the submitted wallet address
 as demo identity and checks event membership, but it does not verify a wallet signature. The analyze
@@ -222,9 +231,11 @@ Immediate next vertical slice:
 
 1. Configure server-only Gemini and Supabase credentials in the deployment.
 2. Add wallet-signature authentication and bind analysis to claim creation.
-3. Add deterministic policy routing and return uncertain claims to review.
-4. Sign one valid `buildSpendTransaction` call from the backend agent.
-5. Refresh the live mandate dashboard after finality.
+3. Configure the testnet agent key and owned `AgentCap` server-side.
+4. With separate authorization, run one small funded smoke claim and record its
+   real digest; automated tests intentionally never broadcast.
+5. Add reconciliation for uncertain submissions and refresh the live mandate
+   dashboard after finality.
 
 ## Documentation index
 

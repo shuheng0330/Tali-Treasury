@@ -1,5 +1,6 @@
 import type {
   CreateClaimRequest,
+  PaymentResult,
   PolicyDecision,
   ReceiptAnalysis,
 } from '@tali/shared';
@@ -73,6 +74,32 @@ const decision: PolicyDecision = {
   checks: [],
   reason: 'Every policy rule passed.',
   evaluatedAtMs: 1_788_156_000_000,
+};
+
+const payment: PaymentResult = {
+  ok: true,
+  digest: '7LhYxDemoDigest',
+  checkpoint: '123',
+  gasUsed: '1200',
+  finalityMs: 900,
+  abortCode: null,
+  abortKey: null,
+  message: 'Payment confirmed on Sui testnet.',
+  rawError: null,
+  budgetBefore: '20000000',
+  budgetAfter: '15500000',
+};
+const failedPayment: PaymentResult = {
+  ...payment,
+  ok: false,
+  digest: null,
+  checkpoint: null,
+  gasUsed: null,
+  finalityMs: null,
+  abortCode: 7,
+  abortKey: 'RECIPIENT_NOT_APPROVED',
+  message: 'This recipient is not approved by the mandate.',
+  budgetAfter: payment.budgetBefore,
 };
 
 interface ScriptedResult {
@@ -173,6 +200,140 @@ describe('createSupabaseClaimRepository', () => {
     expect(filters).toContainEqual(['eq', 'id', row.id]);
     expect(filters).toContainEqual(['eq', 'state', 'submitted']);
     expect(filters).toContainEqual(['is', 'decision', null]);
+  });
+
+  it('reserves only an unpaid approved claim', async () => {
+    let updated: unknown;
+    const filters: Array<[string, string, unknown]> = [];
+    const repository = createSupabaseClaimRepository(
+      scriptedClient({
+        maybeSingle: {
+          data: { ...row, state: 'paying', decision },
+          error: null,
+        },
+        captureUpdate: (value) => {
+          updated = value;
+        },
+        captureFilter: (kind, column, value) => {
+          filters.push([kind, column, value]);
+        },
+      }),
+    );
+
+    await expect(repository.reservePayment(row.id)).resolves.toEqual({
+      status: 'saved',
+      claim: expect.objectContaining({ state: 'paying', payment: null }),
+    });
+    expect(updated).toEqual({ state: 'paying' });
+    expect(filters).toContainEqual(['eq', 'id', row.id]);
+    expect(filters).toContainEqual(['eq', 'state', 'approved']);
+    expect(filters).toContainEqual(['is', 'payment', null]);
+  });
+
+  it('records preflight failure only from an unpaid approved claim', async () => {
+    let updated: unknown;
+    const filters: Array<[string, string, unknown]> = [];
+    const repository = createSupabaseClaimRepository(
+      scriptedClient({
+        maybeSingle: {
+          data: {
+            ...row,
+            state: 'payment_failed',
+            decision,
+            payment: failedPayment,
+          },
+          error: null,
+        },
+        captureUpdate: (value) => {
+          updated = value;
+        },
+        captureFilter: (kind, column, value) => {
+          filters.push([kind, column, value]);
+        },
+      }),
+    );
+
+    await expect(
+      repository.failApprovedPayment({ claimId: row.id, payment: failedPayment }),
+    ).resolves.toEqual({
+      status: 'saved',
+      claim: expect.objectContaining({
+        state: 'payment_failed',
+        payment: failedPayment,
+      }),
+    });
+    expect(updated).toEqual({ state: 'payment_failed', payment: failedPayment });
+    expect(filters).toContainEqual(['eq', 'state', 'approved']);
+    expect(filters).toContainEqual(['is', 'payment', null]);
+  });
+
+  it('finishes payment only from an unpaid paying claim', async () => {
+    let updated: unknown;
+    const filters: Array<[string, string, unknown]> = [];
+    const repository = createSupabaseClaimRepository(
+      scriptedClient({
+        maybeSingle: {
+          data: { ...row, state: 'paid', decision, payment },
+          error: null,
+        },
+        captureUpdate: (value) => {
+          updated = value;
+        },
+        captureFilter: (kind, column, value) => {
+          filters.push([kind, column, value]);
+        },
+      }),
+    );
+
+    await expect(
+      repository.finishPayment({ claimId: row.id, state: 'paid', payment }),
+    ).resolves.toEqual({
+      status: 'saved',
+      claim: expect.objectContaining({ state: 'paid', payment }),
+    });
+    expect(updated).toEqual({ state: 'paid', payment });
+    expect(filters).toContainEqual(['eq', 'state', 'paying']);
+    expect(filters).toContainEqual(['is', 'payment', null]);
+  });
+
+  it('reloads the winner when another request reserves payment first', async () => {
+    const repository = createSupabaseClaimRepository(
+      scriptedClient({
+        maybeSingles: [
+          { data: null, error: null },
+          {
+            data: { ...processRow, state: 'paying', decision },
+            error: null,
+          },
+        ],
+      }),
+    );
+
+    await expect(repository.reservePayment(row.id)).resolves.toEqual({
+      status: 'lost_race',
+      claim: expect.objectContaining({ state: 'paying' }),
+    });
+  });
+
+  it('reloads the terminal winner when another request finishes first', async () => {
+    const repository = createSupabaseClaimRepository(
+      scriptedClient({
+        maybeSingles: [
+          { data: null, error: null },
+          {
+            data: { ...processRow, state: 'paid', decision, payment },
+            error: null,
+          },
+        ],
+      }),
+    );
+
+    await expect(
+      repository.finishPayment({ claimId: row.id, state: 'paid', payment }),
+    ).resolves.toEqual({
+      status: 'lost_race',
+      claim: expect.objectContaining({ state: 'paid', payment }),
+    });
   });
 
   it('returns a stored decision when another processor wins the race', async () => {

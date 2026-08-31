@@ -12,6 +12,7 @@ import type {
 import type {
   ClaimRepository,
   DuplicateReceipt,
+  PaymentMutationResult,
   StoredClaim,
 } from '../claims/ports';
 import { ServerError } from '../errors';
@@ -207,6 +208,34 @@ export function createSupabaseClaimRepository(
     return mapProcessRow(data);
   }
 
+  async function mutatePayment(input: {
+    claimId: string;
+    expectedState: 'approved' | 'paying';
+    nextState: 'paying' | 'paid' | 'payment_failed';
+    payment?: PaymentResult;
+  }): Promise<PaymentMutationResult> {
+    const update = input.payment
+      ? { state: input.nextState, payment: input.payment }
+      : { state: input.nextState };
+    const { data, error } = await query(client, 'claims')
+      .update(update)
+      .eq('id', input.claimId)
+      .eq('state', input.expectedState)
+      .is('payment', null)
+      .select(CLAIM_COLUMNS)
+      .maybeSingle();
+
+    if (error && error.code !== 'PGRST116') {
+      throw databaseFailure(error);
+    }
+    if (data) {
+      return { status: 'saved', claim: mapClaimRow(data).claim };
+    }
+
+    const current = await getProcessContext(input.claimId);
+    return { status: 'lost_race', claim: current.claim };
+  }
+
   return {
     async assertEventExists(eventId) {
       const { data, error } = await query(client, 'events')
@@ -338,6 +367,32 @@ export function createSupabaseClaimRepository(
     },
 
     getProcessContext,
+
+    async reservePayment(claimId) {
+      return mutatePayment({
+        claimId,
+        expectedState: 'approved',
+        nextState: 'paying',
+      });
+    },
+
+    async failApprovedPayment(input) {
+      return mutatePayment({
+        claimId: input.claimId,
+        expectedState: 'approved',
+        nextState: 'payment_failed',
+        payment: input.payment,
+      });
+    },
+
+    async finishPayment(input) {
+      return mutatePayment({
+        claimId: input.claimId,
+        expectedState: 'paying',
+        nextState: input.state,
+        payment: input.payment,
+      });
+    },
 
     async saveDecision(input) {
       const { data, error } = await query(client, 'claims')

@@ -2,19 +2,19 @@
 
 ## System boundary
 
-The receipt backend is a server-only vertical slice inside the Next.js web
-workspace. It reuses `@tali/shared` for domain and API contracts and does not
-construct Sui transactions.
+The receipt and payment backend is a server-only vertical slice inside the Next.js
+web workspace. It reuses `@tali/shared` for domain and API contracts and delegates
+all Sui transaction construction to `@tali/treasury-sui`.
 
 ```text
 Next.js API route
       |
       v
 Application service
-  |       |       |
-  v       v       v
-Gemini  Claim    Receipt
-adapter repository store
+  |       |       |          |
+  v       v       v          v
+Gemini  Claim    Receipt   PaymentExecutor
+adapter repository store    (Sui Testnet)
           |        |
           +--- Supabase
 ```
@@ -27,6 +27,9 @@ adapter repository store
   and coordinates analyze, persist and list use cases.
 - `src/server/policy` deterministically evaluates trusted claim, event, mandate,
   duplicate and time snapshots without performing I/O.
+- `src/server/sui` reads live mandates and implements the testnet-only
+  `PaymentExecutor`, with transaction preparation separated from submission for
+  safe failure classification and fake-only tests.
 - `src/server/supabase` owns privileged client construction, database row mapping,
   private uploads and signed URLs.
 - `src/server/dependencies.ts` composes production adapters lazily so importing a
@@ -79,10 +82,9 @@ failures, revoked or expired mandates, and non-allowlisted recipients produce
 a hard failure also exists. Only nine passing checks produce `auto_pay`.
 
 This module itself neither fetches the on-chain mandate nor persists the decision.
-The claim-processing service provides current snapshots and stores the result; a
-later payment service will send eligible claims to the Sui transaction adapter.
-The Move contract remains the final authority and rechecks its rules at execution
-time.
+The claim-processing service provides current snapshots, stores the result and
+sends only `auto_pay` claims through the injected payment port. The Move contract
+remains the final authority and rechecks its rules at execution time.
 
 ## Claim-processing design
 
@@ -95,20 +97,39 @@ For a new submitted claim, a read-only Sui adapter composes `createTestnetClient
 `readMandate` and `toMandateView`. The adapter rejects a mandate with a different
 coin type, and the service verifies the returned object ID before it runs
 `evaluatePolicy` and maps the outcome to `approved`, `awaiting_review` or
-`rejected`. It never imports transaction builders, keypairs or signing APIs.
+`rejected`.
 
 Supabase persists the state and decision with a compare-and-set update filtered by
 claim ID, `state = submitted` and `decision IS NULL`. A zero-row update reloads the
 claim: a stored decision is returned as the concurrent winner, while an undecided
-row becomes a conflict. Repeated requests return an existing decision without
-another Sui read. Every response has `payment: null`; `approved` means ready for a
-future payment step, not paid.
+row becomes a conflict.
+
+For an `auto_pay` result, the service validates the signer configuration, reads and
+re-evaluates the mandate again, then atomically reserves payment with
+`approved -> paying` and `payment IS NULL`. Only the reservation winner may invoke
+`PaymentExecutor.execute`. Confirmed outcomes are stored with another guarded
+transition to `paid` or `payment_failed`. Terminal results are returned
+idempotently. A transport or finality uncertainty leaves the row in `paying`; later
+requests return a reconciliation conflict and never sign a replacement payment.
+
+`createSuiPaymentExecutor` is lazy: factory creation and route import do not read
+`AGENT_PRIVATE_KEY`. `assertReady` accepts only testnet, parses the server-only
+Ed25519 key and canonical `AgentCap`, and caches the validated runtime. Its internal
+operations boundary separates build/sign (`prepare`) from submission/finality
+(`submit`) and the final mandate-budget read. Tests inject all three operations, so
+they cannot access a real RPC endpoint or broadcast.
 
 ## Error handling
 
 `ServerError` carries a stable code, safe message and HTTP status. Provider errors
 are retained only as an internal cause. Unknown failures become a generic
 `database_failed` response and never return raw provider text.
+
+Pre-submit construction failures become sanitized terminal payment failures.
+Confirmed Move aborts use the shared abort-code mapping and persist no raw error.
+Submission or post-submission uncertainty returns
+`payment_submission_uncertain` without persisting provider text, signatures or
+private-key material.
 
 ## Testing strategy
 
@@ -120,7 +141,12 @@ are retained only as an internal cause. Unknown failures become a generic
   dates, and the exclusive mandate-expiry boundary.
 - Claim-processing tests cover treasurer authorization, stored-decision
   idempotency, outcome-to-state mapping, atomic persistence races, live mandate
-  mapping, route validation and sanitized adapter failures.
+  mapping, payment readiness, preflight policy changes, single-winner signing,
+  terminal idempotency, uncertainty handling, route validation and sanitized
+  adapter failures.
+- Payment-adapter tests use generated credentials and injected operations to cover
+  lazy configuration, success, Move rejection and failure classification without
+  a network request or transaction broadcast.
 - pgTAP applies the migration to a clean database and checks constraints,
   privileges, RLS, storage configuration and duplicate behavior.
 - Repository completion requires build, typecheck, tests, audit, secret scan and

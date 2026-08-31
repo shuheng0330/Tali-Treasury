@@ -4,6 +4,7 @@ import type {
   CreateClaimRequest,
   MandateView,
   ObjectId,
+  PaymentResult,
   PolicyDecision,
   ReceiptAnalysis,
 } from '@tali/shared';
@@ -36,8 +37,29 @@ export type SaveDecisionResult =
   | { status: 'saved'; claim: Claim }
   | { status: 'lost_race'; claim: Claim };
 
+export type TerminalPaymentState = 'paid' | 'payment_failed';
+
+export type PaymentMutationResult =
+  | { status: 'saved'; claim: Claim }
+  | { status: 'lost_race'; claim: Claim };
+
+export type PaymentExecutionResult =
+  | { status: 'paid'; payment: PaymentResult }
+  | { status: 'rejected'; payment: PaymentResult };
+
 export interface MandateReader {
   read(mandateId: ObjectId): Promise<MandateView>;
+}
+
+export interface PaymentExecutor {
+  assertReady(): void;
+  execute(input: {
+    claimId: string;
+    mandateId: string;
+    recipient: string;
+    amount: string;
+    budgetBefore: string;
+  }): Promise<PaymentExecutionResult>;
 }
 
 export interface ClaimRepository {
@@ -55,6 +77,16 @@ export interface ClaimRepository {
     decision: PolicyDecision;
     state: ProcessedClaimState;
   }): Promise<SaveDecisionResult>;
+  reservePayment(claimId: string): Promise<PaymentMutationResult>;
+  failApprovedPayment(input: {
+    claimId: string;
+    payment: PaymentResult;
+  }): Promise<PaymentMutationResult>;
+  finishPayment(input: {
+    claimId: string;
+    state: TerminalPaymentState;
+    payment: PaymentResult;
+  }): Promise<PaymentMutationResult>;
 }
 
 export interface ReceiptStore {

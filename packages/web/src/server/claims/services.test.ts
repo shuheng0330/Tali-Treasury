@@ -2,13 +2,18 @@ import type {
   Claim,
   CreateClaimRequest,
   MandateView,
+  PaymentResult,
   PolicyDecision,
   ReceiptAnalysis,
 } from '@tali/shared';
 import { describe, expect, it, vi } from 'vitest';
 
 import { ServerError } from '../errors';
-import type { ClaimRepository, ReceiptStore } from './ports';
+import {
+  PaymentConfigurationError,
+  PaymentSubmissionUncertainError,
+} from '../sui/payment-executor';
+import type { ClaimRepository, PaymentExecutor, ReceiptStore } from './ports';
 import {
   createAnalyzeReceiptService,
   createClaimService,
@@ -85,6 +90,31 @@ const processContext = {
   },
 };
 
+const approvedDecision: PolicyDecision = {
+  outcome: 'auto_pay',
+  checks: [],
+  reason: 'Every policy rule passed.',
+  evaluatedAtMs: nowMs,
+};
+const approvedClaim: Claim = {
+  ...processContext.claim,
+  state: 'approved',
+  decision: approvedDecision,
+};
+const payment: PaymentResult = {
+  ok: true,
+  digest: '7LhYxDemoDigest',
+  checkpoint: '123',
+  gasUsed: '1200',
+  finalityMs: 900,
+  abortCode: null,
+  abortKey: null,
+  message: 'Payment confirmed on Sui testnet.',
+  rawError: null,
+  budgetBefore: '80000000',
+  budgetAfter: '75500000',
+};
+
 function createRequest(): CreateClaimRequest {
   return {
     eventId,
@@ -108,6 +138,9 @@ function createRepository(overrides: Partial<ClaimRepository> = {}): ClaimReposi
     listByEvent: vi.fn(async () => []),
     getProcessContext: vi.fn(),
     saveDecision: vi.fn(),
+    reservePayment: vi.fn(),
+    failApprovedPayment: vi.fn(),
+    finishPayment: vi.fn(),
     ...overrides,
   };
 }
@@ -116,6 +149,16 @@ function createReceiptStore(overrides: Partial<ReceiptStore> = {}): ReceiptStore
   return {
     upload: vi.fn(async () => storagePath),
     createSignedUrl: vi.fn(async () => 'https://signed.example/receipt'),
+    ...overrides,
+  };
+}
+
+function createPaymentExecutor(
+  overrides: Partial<PaymentExecutor> = {},
+): PaymentExecutor {
+  return {
+    assertReady: vi.fn(),
+    execute: vi.fn(async () => ({ status: 'paid' as const, payment })),
     ...overrides,
   };
 }
@@ -347,6 +390,7 @@ describe('createProcessClaimService', () => {
     const processClaim = createProcessClaimService({
       claims,
       mandates,
+      payments: createPaymentExecutor(),
       now: () => 1_788_156_000_000,
     });
 
@@ -362,7 +406,11 @@ describe('createProcessClaimService', () => {
       getProcessContext: vi.fn(async () => processContext),
     });
     const mandates = { read: vi.fn() };
-    const processClaim = createProcessClaimService({ claims, mandates });
+    const processClaim = createProcessClaimService({
+      claims,
+      mandates,
+      payments: createPaymentExecutor(),
+    });
 
     await expect(
       processClaim({ claimId: claim.id, processor: submitter }),
@@ -390,7 +438,11 @@ describe('createProcessClaimService', () => {
       })),
     });
     const mandates = { read: vi.fn() };
-    const processClaim = createProcessClaimService({ claims, mandates });
+    const processClaim = createProcessClaimService({
+      claims,
+      mandates,
+      payments: createPaymentExecutor(),
+    });
 
     await expect(
       processClaim({ claimId: claim.id, processor: treasurer }),
@@ -411,7 +463,11 @@ describe('createProcessClaimService', () => {
       })),
     });
     const mandates = { read: vi.fn() };
-    const processClaim = createProcessClaimService({ claims, mandates });
+    const processClaim = createProcessClaimService({
+      claims,
+      mandates,
+      payments: createPaymentExecutor(),
+    });
 
     await expect(
       processClaim({ claimId: claim.id, processor: treasurer }),
@@ -419,8 +475,243 @@ describe('createProcessClaimService', () => {
     expect(mandates.read).not.toHaveBeenCalled();
   });
 
+  it('pays an auto-pay claim only after readiness, preflight and reservation', async () => {
+    const calls: string[] = [];
+    const paidClaim: Claim = { ...approvedClaim, state: 'paid', payment };
+    const claims = createRepository({
+      getProcessContext: vi.fn(async () => processContext),
+      saveDecision: vi.fn(async () => ({
+        status: 'saved' as const,
+        claim: approvedClaim,
+      })),
+      reservePayment: vi.fn(async () => {
+        calls.push('reserve');
+        return {
+          status: 'saved' as const,
+          claim: { ...approvedClaim, state: 'paying' as const },
+        };
+      }),
+      finishPayment: vi.fn(async () => ({
+        status: 'saved' as const,
+        claim: paidClaim,
+      })),
+    });
+    const mandates = {
+      read: vi.fn(async () => {
+        calls.push('read');
+        return mandate;
+      }),
+    };
+    const payments = createPaymentExecutor({
+      assertReady: vi.fn(() => {
+        calls.push('ready');
+      }),
+      execute: vi.fn(async () => {
+        calls.push('execute');
+        return { status: 'paid' as const, payment };
+      }),
+    });
+    const processClaim = createProcessClaimService({
+      claims,
+      mandates,
+      payments,
+      now: () => nowMs,
+    });
+
+    await expect(
+      processClaim({ claimId: claim.id, processor: treasurer }),
+    ).resolves.toEqual({
+      claim: paidClaim,
+      decision: approvedDecision,
+      payment,
+    });
+    expect(calls).toEqual(['read', 'ready', 'read', 'reserve', 'execute']);
+    expect(payments.execute).toHaveBeenCalledWith({
+      claimId: claim.id,
+      mandateId,
+      recipient: submitter,
+      amount: claim.amount,
+      budgetBefore: mandate.remainingBudget,
+    });
+    expect(claims.finishPayment).toHaveBeenCalledWith({
+      claimId: claim.id,
+      state: 'paid',
+      payment,
+    });
+  });
+
+  it('returns a stored paid result without reading Sui or signing again', async () => {
+    const paidClaim: Claim = { ...approvedClaim, state: 'paid', payment };
+    const claims = createRepository({
+      getProcessContext: vi.fn(async () => ({ ...processContext, claim: paidClaim })),
+    });
+    const mandates = { read: vi.fn() };
+    const payments = createPaymentExecutor();
+    const processClaim = createProcessClaimService({ claims, mandates, payments });
+
+    await expect(
+      processClaim({ claimId: claim.id, processor: treasurer }),
+    ).resolves.toEqual({ claim: paidClaim, decision: approvedDecision, payment });
+    expect(mandates.read).not.toHaveBeenCalled();
+    expect(payments.assertReady).not.toHaveBeenCalled();
+    expect(payments.execute).not.toHaveBeenCalled();
+  });
+
+  it('blocks retries while reconciliation is required', async () => {
+    const claims = createRepository({
+      getProcessContext: vi.fn(async () => ({
+        ...processContext,
+        claim: { ...approvedClaim, state: 'paying' as const },
+      })),
+    });
+    const payments = createPaymentExecutor();
+    const processClaim = createProcessClaimService({
+      claims,
+      mandates: { read: vi.fn() },
+      payments,
+    });
+
+    await expect(
+      processClaim({ claimId: claim.id, processor: treasurer }),
+    ).rejects.toMatchObject({ code: 'processing_conflict', status: 409 });
+    expect(payments.execute).not.toHaveBeenCalled();
+  });
+
+  it('leaves an approved claim untouched when payment configuration is missing', async () => {
+    const claims = createRepository({
+      getProcessContext: vi.fn(async () => ({
+        ...processContext,
+        claim: approvedClaim,
+      })),
+    });
+    const payments = createPaymentExecutor({
+      assertReady: vi.fn(() => {
+        throw new PaymentConfigurationError();
+      }),
+    });
+    const processClaim = createProcessClaimService({
+      claims,
+      mandates: { read: vi.fn() },
+      payments,
+    });
+
+    await expect(
+      processClaim({ claimId: claim.id, processor: treasurer }),
+    ).rejects.toMatchObject({
+      code: 'payment_configuration_failed',
+      status: 503,
+    });
+    expect(claims.reservePayment).not.toHaveBeenCalled();
+  });
+
+  it('does not sign when another request wins payment reservation', async () => {
+    const claims = createRepository({
+      getProcessContext: vi.fn(async () => ({
+        ...processContext,
+        claim: approvedClaim,
+      })),
+      reservePayment: vi.fn(async () => ({
+        status: 'lost_race' as const,
+        claim: { ...approvedClaim, state: 'paying' as const },
+      })),
+    });
+    const payments = createPaymentExecutor();
+    const processClaim = createProcessClaimService({
+      claims,
+      mandates: { read: vi.fn(async () => mandate) },
+      payments,
+      now: () => nowMs,
+    });
+
+    await expect(
+      processClaim({ claimId: claim.id, processor: treasurer }),
+    ).rejects.toMatchObject({ code: 'processing_conflict', status: 409 });
+    expect(payments.execute).not.toHaveBeenCalled();
+  });
+
+  it('leaves the claim paying when submission status is uncertain', async () => {
+    const claims = createRepository({
+      getProcessContext: vi.fn(async () => ({
+        ...processContext,
+        claim: approvedClaim,
+      })),
+      reservePayment: vi.fn(async () => ({
+        status: 'saved' as const,
+        claim: { ...approvedClaim, state: 'paying' as const },
+      })),
+    });
+    const payments = createPaymentExecutor({
+      execute: vi.fn(async () => {
+        throw new PaymentSubmissionUncertainError();
+      }),
+    });
+    const processClaim = createProcessClaimService({
+      claims,
+      mandates: { read: vi.fn(async () => mandate) },
+      payments,
+      now: () => nowMs,
+    });
+
+    await expect(
+      processClaim({ claimId: claim.id, processor: treasurer }),
+    ).rejects.toMatchObject({
+      code: 'payment_submission_uncertain',
+      status: 502,
+    });
+    expect(claims.finishPayment).not.toHaveBeenCalled();
+  });
+
+  it('records a sanitized failure when the live mandate changes before reservation', async () => {
+    const policyFailure: PaymentResult = {
+      ...payment,
+      ok: false,
+      digest: null,
+      checkpoint: null,
+      gasUsed: null,
+      finalityMs: null,
+      abortKey: 'POLICY_CHANGED',
+      message: 'The live mandate no longer permits automatic payment.',
+      budgetAfter: payment.budgetBefore,
+    };
+    const failedClaim: Claim = {
+      ...approvedClaim,
+      state: 'payment_failed',
+      payment: policyFailure,
+    };
+    const claims = createRepository({
+      getProcessContext: vi.fn(async () => ({
+        ...processContext,
+        claim: approvedClaim,
+      })),
+      failApprovedPayment: vi.fn(async () => ({
+        status: 'saved' as const,
+        claim: failedClaim,
+      })),
+    });
+    const payments = createPaymentExecutor();
+    const processClaim = createProcessClaimService({
+      claims,
+      mandates: { read: vi.fn(async () => ({ ...mandate, revoked: true })) },
+      payments,
+      now: () => nowMs,
+    });
+
+    await expect(
+      processClaim({ claimId: claim.id, processor: treasurer }),
+    ).resolves.toEqual({
+      claim: failedClaim,
+      decision: approvedDecision,
+      payment: policyFailure,
+    });
+    expect(claims.failApprovedPayment).toHaveBeenCalledWith({
+      claimId: claim.id,
+      payment: policyFailure,
+    });
+    expect(claims.reservePayment).not.toHaveBeenCalled();
+    expect(payments.execute).not.toHaveBeenCalled();
+  });
+
   it.each([
-    ['auto_pay', processContext, mandate, 'approved'],
     [
       'review',
       {
@@ -450,6 +741,7 @@ describe('createProcessClaimService', () => {
       const processClaim = createProcessClaimService({
         claims,
         mandates,
+        payments: createPaymentExecutor(),
         now: () => nowMs,
       });
 
@@ -491,6 +783,7 @@ describe('createProcessClaimService', () => {
     const processClaim = createProcessClaimService({
       claims,
       mandates: { read: vi.fn(async () => mandate) },
+      payments: createPaymentExecutor(),
       now: () => nowMs,
     });
 
@@ -511,6 +804,7 @@ describe('createProcessClaimService', () => {
     const failing = createProcessClaimService({
       claims,
       mandates: { read: vi.fn(async () => Promise.reject(rawFailure)) },
+      payments: createPaymentExecutor(),
     });
 
     const failure = failing({ claimId: claim.id, processor: treasurer });
@@ -525,6 +819,7 @@ describe('createProcessClaimService', () => {
       mandates: {
         read: vi.fn(async () => ({ ...mandate, id: `0x${'2'.repeat(64)}` })),
       },
+      payments: createPaymentExecutor(),
     });
     await expect(
       mismatched({ claimId: claim.id, processor: treasurer }),
@@ -539,6 +834,7 @@ describe('createProcessClaimService', () => {
         }),
       }),
       mandates: { read: vi.fn() },
+      payments: createPaymentExecutor(),
     });
     const loading = loadFailure({ claimId: claim.id, processor: treasurer });
     await expect(loading).rejects.toMatchObject({
@@ -555,6 +851,7 @@ describe('createProcessClaimService', () => {
         }),
       }),
       mandates: { read: vi.fn(async () => mandate) },
+      payments: createPaymentExecutor(),
       now: () => nowMs,
     });
     const saving = saveFailure({ claimId: claim.id, processor: treasurer });

@@ -9,6 +9,7 @@ import { createSupabaseClaimRepository } from './supabase/claim-repository';
 import { createServerSupabaseClient } from './supabase/client';
 import { createSupabaseReceiptStore } from './supabase/receipt-store';
 import { createSuiMandateReader } from './sui/mandate-reader';
+import { createSuiPaymentExecutor } from './sui/payment-executor';
 
 export interface BackendServices {
   analyzeReceipt: ReturnType<typeof createAnalyzeReceiptService>;
@@ -33,12 +34,13 @@ export function getBackendServices(): BackendServices {
     model: process.env.GEMINI_MODEL?.trim() || 'gemini-3.5-flash-lite',
   });
   const mandates = createSuiMandateReader();
+  const payments = createSuiPaymentExecutor();
 
   services = {
     analyzeReceipt: createAnalyzeReceiptService({ analyzer, claims, receipts }),
     createClaim: createClaimService({ claims }),
     listClaims: createListClaimsService({ claims, receipts }),
-    processClaim: createProcessClaimService({ claims, mandates }),
+    processClaim: createProcessClaimService({ claims, mandates, payments }),
   };
   return services;
 }

@@ -1,6 +1,6 @@
 # Project status
 
-Last updated: 31 August 2026 (MYT)
+Last updated: 1 September 2026 (MYT)
 
 ## Complete locally
 
@@ -18,8 +18,13 @@ Last updated: 31 August 2026 (MYT)
 - live treasury queue action for invoking the server policy endpoint and rendering
   its persisted decision instead of a browser-side duplicate;
 - non-USDC receipts fail closed to review until an explicit USDC quote exists;
-- 135 passing web Vitest tests, including currency and malformed-input coverage, plus 14 Sui
-  integration tests;
+- testnet-only backend-agent payment execution for `auto_pay` claims, including a
+  fresh policy preflight, atomic `approved -> paying` reservation, confirmed
+  terminal persistence and reconciliation-safe uncertain submissions;
+- lazy server-only Ed25519 and `AgentCap` configuration with preparation separated
+  from submission and fake-operation verification that never broadcasts;
+- 155 web Vitest tests and 14 Sui integration tests passing, including currency,
+  malformed-input, payment concurrency, sanitization and idempotency coverage;
 - 42 passing pgTAP database assertions on a clean disposable PostgreSQL 17
   database;
 - web TypeScript check passing at the API checkpoint.
@@ -48,10 +53,13 @@ not needed.
 ## Pending integration
 
 - configure server-only Gemini and Supabase credentials in the deployment;
+- configure a funded testnet backend signer and its owned `AgentCap`, then run one
+  separately authorized small live smoke payment;
 - add wallet-signature authentication;
 - bind analysis to claim confirmation through a signed token or persisted draft;
 - add trusted MYR-to-USDC quote capture, expiry and converted payout storage;
-- implement treasurer review actions and backend Sui signing;
+- implement treasurer review actions and automatic reconciliation for uncertain
+  payment submissions;
 - run the hosted receipt flow end to end after authenticated identity is available.
 
 ## Known limitations
@@ -63,8 +71,12 @@ not needed.
   bound to one another.
 - The frontend is wired to the hosted receipt APIs, but Production intentionally
   disables them until authenticated identity replaces the demo address.
-- Claim processing stores decisions and states but intentionally returns
-  `payment: null`; approved claims are not yet paid.
+- Review and reject decisions still return `payment: null`; only `auto_pay` enters
+  the backend payment path.
 - MYR and other non-USDC receipts are preserved but cannot auto-pay until the
   conversion-quote increment is implemented.
-- No backend code in this increment can sign or broadcast a Sui transaction.
+- Payment code can prepare and submit on Sui Testnet when valid server credentials
+  are supplied, but no real transaction was broadcast during this increment.
+- A claim left in `paying` requires manual reconciliation before retry; automatic
+  digest recovery is not implemented.
+- Mainnet signing and real-value payments remain out of scope.
