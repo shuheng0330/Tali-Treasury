@@ -76,4 +76,31 @@ describe('createSuiMandateReader', () => {
       'Invalid approved recipient list returned by Sui',
     );
   });
+
+  it('rejects a Tali mandate whose coin type is not the configured USDC type', async () => {
+    const reader = createSuiMandateReader({
+      client: fakeClient(
+        vi.fn(async () => ({
+          object: {
+            objectId: mandateId,
+            type: `${taliTestnetUsdcConfig.packageId}::treasury::Mandate<0x2::sui::SUI>`,
+            json: {
+              initial_budget: '100000000',
+              budget: { value: '80000000' },
+              amount_spent: '20000000',
+              max_per_claim: '5000000',
+              expiry_ms: '1788623999000',
+              revoked: false,
+              approved_recipients: [recipient],
+            },
+          },
+        })),
+      ),
+      config: taliTestnetUsdcConfig,
+    });
+
+    await expect(reader.read(mandateId)).rejects.toThrow(
+      'Mandate coin type does not match the configured treasury coin',
+    );
+  });
 });

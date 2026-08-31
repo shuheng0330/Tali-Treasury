@@ -86,8 +86,9 @@ claim plus event policy, and permits only the configured treasurer. The processo
 address remains an insecure demo identity until wallet authentication exists.
 
 For a new submitted claim, a read-only Sui adapter composes `createTestnetClient`,
-`readMandate` and `toMandateView`. The service verifies the returned object ID,
-runs `evaluatePolicy`, and maps its outcome to `approved`, `awaiting_review` or
+`readMandate` and `toMandateView`. The adapter rejects a mandate with a different
+coin type, and the service verifies the returned object ID before it runs
+`evaluatePolicy` and maps the outcome to `approved`, `awaiting_review` or
 `rejected`. It never imports transaction builders, keypairs or signing APIs.
 
 Supabase persists the state and decision with a compare-and-set update filtered by

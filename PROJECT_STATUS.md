@@ -15,7 +15,7 @@ Last updated: 31 August 2026 (MYT)
   explainable `auto_pay`, `review` and `reject` outcomes;
 - treasurer-only `POST /api/claims/:id/process` integration with live read-only Sui
   mandate snapshots, idempotent decisions and atomic Supabase state transitions;
-- 125 passing web Vitest tests, including 32 focused policy tests, plus 14 Sui
+- 126 passing web Vitest tests, including 32 focused policy tests, plus 14 Sui
   integration tests;
 - 42 passing pgTAP database assertions on a clean disposable PostgreSQL 17
   database;

@@ -23,6 +23,11 @@ export function createSuiMandateReader(options?: {
   return {
     async read(mandateId) {
       const state = await readMandate(client, config, mandateId);
+      if (state.coinType !== config.coinType) {
+        throw new Error(
+          'Mandate coin type does not match the configured treasury coin',
+        );
+      }
       return toMandateView(state, now());
     },
   };

@@ -59,6 +59,8 @@ The claim-processing endpoint must:
 - allow only the event's configured treasurer to trigger processing;
 - return a stored decision idempotently without rereading Sui;
 - load the current read-only mandate snapshot for a new submitted claim;
+- reject a mandate whose object ID or coin type differs from the event and
+  configured official testnet USDC treasury;
 - persist exactly one decision through a compare-and-set update;
 - map `auto_pay` to `approved`, `review` to `awaiting_review`, and `reject` to
   `rejected`;
