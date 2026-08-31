@@ -1,7 +1,7 @@
 # Deterministic Policy Engine Design
 
-**Date:** 31 August 2026  
-**Status:** Approved for implementation  
+**Date:** 31 August 2026
+**Status:** Approved for implementation
 **Owner:** Lim Wey Cheng (AI/backend)
 
 ## Goal
