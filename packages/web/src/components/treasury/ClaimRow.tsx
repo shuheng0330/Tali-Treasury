@@ -70,7 +70,7 @@ export function ClaimRow({ item, onApprove, onReject }: Props) {
         <Money amount={claim.amount} size="row" className="shrink-0" />
       </div>
 
-      <div className="ml-7 flex flex-col gap-2 rounded-control border border-rule bg-canvas p-3">
+      <div className="ml-7 flex flex-col gap-2 rounded-card border border-rule bg-canvas p-4">
         <ul className="grid gap-x-6 gap-y-1 sm:grid-cols-2">
           {decision.checks.map((check) => (
             <li key={check.rule} className="flex items-baseline gap-2">
@@ -95,21 +95,20 @@ export function ClaimRow({ item, onApprove, onReject }: Props) {
         </p>
       ) : null}
 
-      <div className="ml-7 flex items-center gap-3">
+      <div className="ml-7 flex flex-wrap items-center gap-3">
         <button
           type="button"
           disabled={immutableFailure}
           onClick={() => onApprove(claim.id)}
-          className="rounded-control bg-accent px-4 py-1.5 text-caption font-medium text-surface transition-colors duration-150 hover:bg-accent/90 disabled:cursor-not-allowed disabled:bg-rule-strong disabled:text-ink-2"
+          className="btn btn--primary h-9 px-5 text-label"
           title={immutableFailure ? 'This claim violates an immutable on-chain rule' : undefined}
         >
           {immutableFailure ? 'Cannot approve' : 'Approve demo'}
         </button>
-        <span className="w-2" aria-hidden />
         <button
           type="button"
           onClick={() => onReject(claim.id)}
-          className="rounded-control border border-rule px-4 py-1.5 text-caption transition-colors duration-150 hover:bg-raised"
+          className="btn btn--ghost h-9 px-5 text-label"
         >
           Reject
         </button>

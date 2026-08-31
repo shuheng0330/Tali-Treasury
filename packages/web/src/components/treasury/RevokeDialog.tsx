@@ -38,7 +38,7 @@ export function RevokeDialog({ eventName, remaining, pendingCount, onCancel, onC
           Revocation preview for &ldquo;{eventName}&rdquo;
         </h2>
 
-        <p className="rounded-control border border-wait-line bg-wait-soft p-3 text-body text-wait">
+        <p className="rounded-card border border-wait-line bg-wait-soft p-4 text-caption text-wait">
           Simulation only. This integration does not sign or submit a revocation transaction.
         </p>
 
@@ -67,7 +67,7 @@ export function RevokeDialog({ eventName, remaining, pendingCount, onCancel, onC
             ref={inputRef}
             value={typed}
             onChange={(e) => setTyped(e.target.value)}
-            className="rounded-control border border-rule bg-canvas px-3 py-2 text-body outline-none focus-visible:border-accent"
+            className="rounded-control border border-rule bg-canvas px-3 py-2.5 text-body outline-none focus-visible:border-accent-ink"
           />
         </label>
 
@@ -75,7 +75,7 @@ export function RevokeDialog({ eventName, remaining, pendingCount, onCancel, onC
           <button
             type="button"
             onClick={onCancel}
-            className="rounded-control border border-rule px-4 py-2 text-caption transition-colors duration-150 hover:bg-raised"
+            className="btn btn--ghost h-10 px-5 text-label"
           >
             Cancel
           </button>
@@ -83,7 +83,7 @@ export function RevokeDialog({ eventName, remaining, pendingCount, onCancel, onC
             type="button"
             disabled={typed !== eventName}
             onClick={onConfirm}
-            className="rounded-control bg-accent px-4 py-2 text-caption font-medium text-surface transition-colors duration-150 hover:bg-accent/90 disabled:cursor-not-allowed disabled:bg-rule-strong disabled:text-ink-3"
+            className="btn btn--primary h-10 px-5 text-label"
           >
             Close preview
           </button>

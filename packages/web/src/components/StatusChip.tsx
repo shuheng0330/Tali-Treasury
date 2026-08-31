@@ -20,8 +20,8 @@ const MANDATE_LABEL: Record<MandateStatus, string> = {
 
 const STYLES: Record<ChipStatus, Style> = {
   draft: { label: CLAIM_CHIP_LABEL.draft, glyph: 'ring', className: 'bg-dead-soft text-dead border-dead-line', dashed: false },
-  analysing: { label: CLAIM_CHIP_LABEL.analysing, glyph: 'pulse', className: 'bg-accent-soft text-accent border-accent-line', dashed: false },
-  submitted: { label: CLAIM_CHIP_LABEL.submitted, glyph: 'ring', className: 'bg-accent-soft text-accent border-accent-line', dashed: false },
+  analysing: { label: CLAIM_CHIP_LABEL.analysing, glyph: 'pulse', className: 'bg-accent-soft text-accent-ink border-accent-line', dashed: false },
+  submitted: { label: CLAIM_CHIP_LABEL.submitted, glyph: 'ring', className: 'bg-accent-soft text-accent-ink border-accent-line', dashed: false },
   needs_correction: { label: CLAIM_CHIP_LABEL.needs_correction, glyph: 'wedge', className: 'bg-wait-soft text-wait border-wait-line', dashed: false },
   needs_review: { label: CLAIM_CHIP_LABEL.needs_review, glyph: 'wedge', className: 'bg-wait-soft text-wait border-wait-line', dashed: false },
   approved: { label: CLAIM_CHIP_LABEL.approved, glyph: 'ring', className: 'bg-ok-soft text-ok border-ok-line', dashed: false },

@@ -84,7 +84,7 @@ export function ClaimFlow() {
 
   return (
     <div className="mx-auto flex w-full max-w-md flex-col px-5 py-6">
-      <p className="mb-4 rounded-control border border-wait-line bg-wait-soft p-3 text-body text-wait">
+      <p className="mb-6 rounded-card border border-wait-line bg-wait-soft p-4 text-caption text-wait">
         Simulated receipt flow — Gemini, storage, and payment signing are not connected yet.
       </p>
       {step === 'home' ? (

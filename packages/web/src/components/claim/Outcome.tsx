@@ -34,7 +34,7 @@ export function Paid({ amount, payment, onDone }: { amount: Amount; payment: Pay
 
       <div className="flex flex-col gap-2 rounded-card border border-rule bg-surface p-4">
         <div className="flex items-baseline justify-between gap-3">
-          <span className="text-label uppercase text-ink-3">Transaction</span>
+          <span className="eyebrow">Transaction</span>
           <span className="tnum text-caption text-ink-3">Not submitted</span>
         </div>
         <span className="text-body text-ink-2">No digest, checkpoint, gas, or finality exists for this simulated result.</span>
@@ -43,7 +43,7 @@ export function Paid({ amount, payment, onDone }: { amount: Amount; payment: Pay
       <button
         type="button"
         onClick={onDone}
-        className="h-12 rounded-card border border-rule text-subhead font-medium transition-colors duration-150 hover:bg-raised"
+        className="btn btn--ghost btn--block btn--lg"
       >
         Snap another
       </button>
@@ -89,7 +89,7 @@ export function Held({ amount, decision, onDone }: { amount: Amount; decision: P
         <button
           type="button"
           onClick={onDone}
-          className="h-12 rounded-card bg-accent text-subhead font-semibold text-surface transition-colors duration-150 hover:bg-accent/90"
+          className="btn btn--primary btn--block btn--lg"
         >
           Back to my claims
         </button>

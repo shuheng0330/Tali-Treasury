@@ -4,7 +4,7 @@ import { toDisplay } from '@tali/shared';
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5 py-1">
-      <span className="w-24 shrink-0 text-label uppercase text-ink-3">{label}</span>
+      <span className="eyebrow w-24 shrink-0">{label}</span>
       <span className="min-w-0 flex-1 break-all font-mono text-caption">{children}</span>
     </div>
   );
@@ -36,9 +36,9 @@ export function AttackResult({ attempted, payment, checks, onAgain, onCounterfac
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="flex flex-col items-center gap-3 rounded-card border border-rule bg-surface px-6 py-8 text-center">
+      <div className="flex flex-col items-center gap-3 rounded-panel border border-rule bg-surface px-6 py-10 text-center">
         {blocked ? (
-          <svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="currentColor" strokeWidth="1.6" className="text-accent" aria-hidden>
+          <svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="currentColor" strokeWidth="1.6" className="text-accent-ink" aria-hidden>
             <path d="M12 2.5 4.5 5.5v6c0 4.6 3.1 8.5 7.5 10 4.4-1.5 7.5-5.4 7.5-10v-6z" strokeLinejoin="round" />
             <path d="M8.8 12.2 11 14.4l4.2-4.4" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
@@ -56,10 +56,8 @@ export function AttackResult({ attempted, payment, checks, onAgain, onCounterfac
         </p>
       </div>
 
-      <section className="flex flex-col rounded-card border border-rule bg-surface">
-        <h3 className="border-b border-rule px-4 py-2 text-label uppercase text-ink-3">
-          Simulated result
-        </h3>
+      <section className="flex flex-col overflow-hidden rounded-card border border-rule bg-surface">
+        <h3 className="eyebrow border-b border-rule px-5 py-3.5">Simulated result</h3>
         <div className="flex flex-col px-4 py-3">
           <Row label="Status">{blocked ? 'WOULD FAIL' : 'WOULD PASS'}</Row>
           {blocked ? <Row label="Abort">{payment.abortKey}</Row> : null}
@@ -77,10 +75,8 @@ export function AttackResult({ attempted, payment, checks, onAgain, onCounterfac
         </div>
       </section>
 
-      <section className="flex flex-col rounded-card border border-rule bg-surface">
-        <h3 className="border-b border-rule px-4 py-2 text-label uppercase text-ink-3">
-          Rule by rule
-        </h3>
+      <section className="flex flex-col overflow-hidden rounded-card border border-rule bg-surface">
+        <h3 className="eyebrow border-b border-rule px-5 py-3.5">Rule by rule</h3>
         <ul className="flex flex-col divide-y divide-rule">
           {checks.map((check) => (
             <li key={check.rule} className="flex items-baseline gap-3 px-4 py-2">
@@ -102,7 +98,7 @@ export function AttackResult({ attempted, payment, checks, onAgain, onCounterfac
       </section>
 
       <section className="flex flex-col gap-2 rounded-card border border-rule bg-surface p-4">
-        <h3 className="text-label uppercase text-ink-3">Simulated treasury before → after</h3>
+        <h3 className="eyebrow">Simulated treasury before → after</h3>
         <div className="flex items-baseline justify-between gap-4">
           <span className="text-caption text-ink-3">before</span>
           <span className="tnum text-subhead">{toDisplay(payment.budgetBefore)}</span>
@@ -124,7 +120,7 @@ export function AttackResult({ attempted, payment, checks, onAgain, onCounterfac
         <button
           type="button"
           onClick={onAgain}
-          className="rounded-control border border-rule px-4 py-2 text-caption transition-colors duration-150 hover:bg-raised"
+          className="btn btn--ghost h-10 px-5 text-label"
         >
           Try another attack
         </button>
@@ -132,7 +128,7 @@ export function AttackResult({ attempted, payment, checks, onAgain, onCounterfac
           <button
             type="button"
             onClick={onCounterfactual}
-            className="rounded-control bg-accent px-4 py-2 text-caption font-medium text-surface transition-colors duration-150 hover:bg-accent/90"
+            className="btn btn--primary h-10 px-5 text-label"
           >
             Preview a valid claim →
           </button>

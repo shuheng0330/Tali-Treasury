@@ -54,7 +54,7 @@ export function ReceiptConfirm({ photoUrl, analysis, onRetake, onSubmit }: Props
         <button
           type="button"
           onClick={onRetake}
-          className="rounded-control border border-rule px-3 py-1.5 text-caption transition-colors duration-150 hover:bg-raised"
+          className="btn btn--ghost h-9 px-4 text-label"
         >
           Retake
         </button>
@@ -154,7 +154,7 @@ export function ReceiptConfirm({ photoUrl, analysis, onRetake, onSubmit }: Props
           confidence: analysis?.confidence ?? 0,
           receiptHash: analysis?.receiptHash ?? '',
         })}
-        className="h-12 rounded-card bg-accent text-subhead font-semibold text-surface transition-colors duration-150 hover:bg-accent/90 disabled:cursor-not-allowed disabled:bg-rule-strong disabled:text-ink-3"
+        className="btn btn--primary btn--block btn--lg mt-2"
       >
         Submit claim
       </button>

@@ -36,7 +36,7 @@ export function PhoneCode({ path = '/claim' }: { path?: string }) {
 
   return (
     <div className="flex items-center gap-4">
-      <div className="h-36 w-36 shrink-0 rounded-control bg-white p-2">
+      <div className="h-36 w-36 shrink-0 rounded-card bg-white p-3">
         {svg ? (
           <div
             className="h-full w-full [&>svg]:h-full [&>svg]:w-full"
@@ -48,14 +48,14 @@ export function PhoneCode({ path = '/claim' }: { path?: string }) {
         )}
       </div>
       <div className="flex min-w-0 flex-col gap-1">
-        <span className="text-subhead">Try it on your own phone</span>
+        <span className="font-display text-subhead">Try it on your own phone</span>
         <span className="text-caption text-ink-3">
           Scan to open the member flow. Photograph any receipt — no wallet needed to look
           around.
         </span>
         <a
           href={href}
-          className="w-fit break-all font-mono text-caption text-accent underline underline-offset-4"
+          className="link w-fit break-all font-mono text-caption"
         >
           {href}
         </a>

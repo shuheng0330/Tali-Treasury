@@ -13,7 +13,10 @@ export function AppNav() {
   const pathname = usePathname();
 
   return (
-    <nav className="flex items-center gap-1" aria-label="Sections">
+    <nav
+      className="flex shrink-0 items-center gap-1 rounded-badge border border-rule bg-surface p-1"
+      aria-label="Sections"
+    >
       {TABS.map((tab) => {
         const active = pathname === tab.href;
         return (
@@ -22,10 +25,10 @@ export function AppNav() {
             href={tab.href}
             aria-current={active ? 'page' : undefined}
             title={tab.full}
-            className={`rounded-control px-2 py-1 text-caption transition-colors duration-150 sm:px-4 sm:py-2 ${
+            className={`rounded-badge px-2.5 py-2 font-display text-label uppercase transition-colors duration-150 sm:px-4 ${
               active
-                ? 'bg-raised font-medium text-ink'
-                : 'text-ink-3 hover:bg-raised hover:text-ink-2'
+                ? 'bg-ink text-canvas'
+                : 'text-ink-3 hover:bg-raised hover:text-ink'
             }`}
           >
             {tab.label}

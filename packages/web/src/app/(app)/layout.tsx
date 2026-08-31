@@ -9,19 +9,18 @@ import { AppNav } from '@/components/AppNav';
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex min-h-dvh flex-col">
-      <header className="sticky top-0 z-20 border-b border-rule bg-canvas">
-        <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-4 py-3 sm:px-6 sm:py-4">
+      <header className="sticky top-0 z-30 border-b border-rule bg-canvas/85 backdrop-blur-md">
+        <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-x-4 gap-y-2 px-4 py-3 sm:px-6 sm:py-4">
           <Link
             href="/"
-            className="group flex items-center gap-2 text-subhead font-semibold transition-colors duration-150 hover:text-ink-2"
+            className="group flex items-center gap-2.5 font-display text-subhead font-semibold transition-colors duration-150 hover:text-accent-ink"
           >
             <span
               aria-hidden
-              className="text-ink-3 transition-transform duration-150 ease-pop group-hover:-translate-x-0.5"
-            >
-              ←
-            </span>
-            Tali Treasury
+              className="h-2.5 w-2.5 shrink-0 rounded-badge bg-accent transition-transform duration-200 ease-pop group-hover:scale-125"
+            />
+            <span className="hidden sm:inline">Tali Treasury</span>
+            <span className="sm:hidden">Tali</span>
           </Link>
           <AppNav />
         </div>
@@ -30,13 +29,13 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <main className="flex-1">{children}</main>
 
       <footer className="mt-auto border-t border-rule">
-        <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-x-6 gap-y-2 px-4 py-6 text-caption text-ink-3 sm:px-6">
-          <p>Sui testnet · no real funds</p>
+        <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-x-6 gap-y-3 px-4 py-8 text-caption text-ink-3 sm:px-6">
+          <p className="eyebrow">Sui testnet · no real funds</p>
           <div className="flex flex-wrap gap-6">
-            <Link href="/" className="underline underline-offset-4 hover:text-ink-2">
+            <Link href="/" className="link">
               Back to the overview
             </Link>
-            <Link href="/system" className="underline underline-offset-4 hover:text-ink-2">
+            <Link href="/system" className="link">
               Design system
             </Link>
           </div>

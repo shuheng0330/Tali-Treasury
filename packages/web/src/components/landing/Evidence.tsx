@@ -13,7 +13,7 @@ function Digest({ digest }: { digest: string }) {
         href={links.suivision}
         target="_blank"
         rel="noreferrer"
-        className="text-caption text-accent underline underline-offset-4"
+        className="link text-caption"
       >
         SuiVision
       </a>
@@ -21,7 +21,7 @@ function Digest({ digest }: { digest: string }) {
         href={links.suiscan}
         target="_blank"
         rel="noreferrer"
-        className="text-caption text-accent underline underline-offset-4"
+        className="link text-caption"
       >
         Suiscan
       </a>
@@ -31,17 +31,17 @@ function Digest({ digest }: { digest: string }) {
 
 export function Evidence() {
   return (
-    <div className="flex flex-col rounded-card border border-rule bg-surface">
-      <ul className="flex flex-col gap-6 py-2">
+    <div className="flex flex-col overflow-hidden rounded-panel border border-rule bg-surface">
+      <ul className="flex flex-col gap-8 py-6">
         {ON_CHAIN_RUNS.map((run) => {
           const refused = run.kind === 'refused';
 
           return (
-            <li key={run.digest} className="flex flex-col gap-2 px-6">
+            <li key={run.digest} className="flex flex-col gap-2 px-6 sm:px-8">
               <span className="flex flex-wrap items-center gap-x-4 gap-y-2">
                 <span
-                  className={`rounded-badge px-2 py-1 text-label uppercase ${
-                    refused ? 'bg-no-soft text-no' : 'bg-ok-soft text-ok'
+                  className={`rounded-badge border px-3 py-1.5 text-label uppercase ${
+                    refused ? 'border-no-line bg-no-soft text-no' : 'border-ok-line bg-ok-soft text-ok'
                   }`}
                 >
                   {refused ? 'Refused' : 'Allowed'}
@@ -53,7 +53,7 @@ export function Evidence() {
                 ) : null}
               </span>
 
-              <span className="text-subhead">{run.headline}</span>
+              <span className="font-display text-subhead">{run.headline}</span>
               <span className="text-caption text-ink-2">{run.detail}</span>
               <Digest digest={run.digest} />
             </li>
@@ -61,7 +61,7 @@ export function Evidence() {
         })}
       </ul>
 
-      <div className="flex flex-col gap-1 border-t border-rule px-6 py-6">
+      <div className="flex flex-col gap-2 border-t border-rule px-6 py-6 sm:px-8">
         <p className="text-body text-ink-2">
           After both refusals the mandate still held{' '}
           <span className="tnum font-medium">{AFTERMATH.budgetRemaining}</span> and had spent{' '}
@@ -78,7 +78,7 @@ export function Evidence() {
             href={EXPLORER.object(LIVE_MANDATE_ID).suivision}
             target="_blank"
             rel="noreferrer"
-            className="font-mono text-accent underline underline-offset-4"
+            className="link font-mono"
           >
             {LIVE_MANDATE_ID.slice(0, 8)}…{LIVE_MANDATE_ID.slice(-6)}
           </a>

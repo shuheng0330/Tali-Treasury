@@ -52,7 +52,7 @@ export function TreasuryDashboard({ initialMandate: mandate, readError }: Props)
         <p className="break-all rounded-card border border-rule bg-surface p-4 font-mono text-caption text-ink-2">
           {readError ?? 'Unknown Sui read error'}
         </p>
-        <button type="button" onClick={() => router.refresh()} className="w-fit rounded-control bg-accent px-4 py-2 text-body font-medium text-surface">
+        <button type="button" onClick={() => router.refresh()} className="btn btn--primary w-fit">
           Retry live read
         </button>
       </div>
@@ -69,7 +69,7 @@ export function TreasuryDashboard({ initialMandate: mandate, readError }: Props)
         onRevoke={() => setConfirming(true)}
       />
 
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-card border border-ok-line bg-ok-soft px-4 py-3">
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-card border border-ok-line bg-ok-soft px-4 py-3 sm:px-6">
         <div>
           <p className="text-body font-medium text-ok">Live from Sui Testnet</p>
           {/* The server formats this in its own timezone and the browser in the
@@ -82,13 +82,13 @@ export function TreasuryDashboard({ initialMandate: mandate, readError }: Props)
           type="button"
           disabled={refreshing}
           onClick={() => startRefresh(() => router.refresh())}
-          className="rounded-control border border-rule bg-surface px-4 py-2 text-body transition-colors hover:bg-raised disabled:opacity-50"
+          className="btn btn--ghost h-10 px-5 text-label"
         >
           {refreshing ? 'Refreshing…' : 'Refresh chain state'}
         </button>
       </div>
 
-      <section className="flex flex-col rounded-card border border-rule bg-surface">
+      <section className="flex flex-col overflow-hidden rounded-panel border border-rule bg-surface">
         <div className="border-b border-wait-line bg-wait-soft px-4 py-3 text-body text-ink-2">
           <span className="font-medium text-wait">Demo claim data:</span> the queue below is simulated until the backend is connected.
         </div>
@@ -98,12 +98,12 @@ export function TreasuryDashboard({ initialMandate: mandate, readError }: Props)
               key={entry.id}
               type="button"
               onClick={() => setTab(entry.id)}
-              className={`rounded-control px-3 py-1.5 text-caption transition-colors duration-150 ${
-                tab === entry.id ? 'bg-raised font-medium text-ink' : 'text-ink-3 hover:bg-raised'
+              className={`rounded-badge px-4 py-2 font-display text-label uppercase transition-colors duration-150 ${
+                tab === entry.id ? 'bg-ink text-canvas' : 'text-ink-3 hover:bg-raised hover:text-ink'
               }`}
             >
               {entry.label}
-              <span className="tnum ml-2 text-ink-3">{counts[entry.id]}</span>
+              <span className="tnum ml-2 opacity-60">{counts[entry.id]}</span>
             </button>
           ))}
         </div>
@@ -121,7 +121,7 @@ export function TreasuryDashboard({ initialMandate: mandate, readError }: Props)
               </p>
               <Link
                 href="/safety"
-                className="mt-2 rounded-control border border-rule px-4 py-2 text-caption transition-colors duration-150 hover:bg-raised"
+                className="btn btn--ghost mt-2"
               >
                 Run a safety test
               </Link>

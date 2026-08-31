@@ -137,7 +137,7 @@ export function SafetyTest() {
           ))}
         </ol>
 
-        <dl className="flex flex-col gap-1 rounded-card border border-rule bg-surface p-4 font-mono text-caption">
+        <dl className="flex flex-col gap-1 rounded-card border border-rule bg-surface p-5 font-mono text-caption">
           <div className="flex gap-3">
             <dt className="w-20 text-ink-3">Recipient</dt>
             <dd className="break-all">{recipient.slice(0, 10)}…</dd>
@@ -153,7 +153,7 @@ export function SafetyTest() {
         </dl>
 
         <div className="flex flex-col gap-2 rounded-card border border-rule bg-surface p-4">
-          <span className="text-label uppercase text-ink-3">Reference balance</span>
+          <span className="eyebrow">Reference balance</span>
           <span className="tnum text-title">{toDisplay(AVAILABLE)}</span>
           <span className="text-caption text-ink-3">mock safety dataset · no state change</span>
         </div>
@@ -170,17 +170,17 @@ export function SafetyTest() {
           it does not sign, broadcast, spend gas, or change the mandate.
         </p>
         <div className="flex flex-wrap gap-3 text-body">
-          <a href={EXPLORER.tx(taliUsdcDemo.safetyTest.oversizedClaimTransaction).suiscan} target="_blank" rel="noreferrer" className="text-accent underline underline-offset-4">
+          <a href={EXPLORER.tx(taliUsdcDemo.safetyTest.oversizedClaimTransaction).suiscan} target="_blank" rel="noreferrer" className="link">
             Real overspend rejection ↗
           </a>
-          <a href={EXPLORER.tx(taliUsdcDemo.safetyTest.unapprovedRecipientTransaction).suiscan} target="_blank" rel="noreferrer" className="text-accent underline underline-offset-4">
+          <a href={EXPLORER.tx(taliUsdcDemo.safetyTest.unapprovedRecipientTransaction).suiscan} target="_blank" rel="noreferrer" className="link">
             Real recipient rejection ↗
           </a>
         </div>
       </header>
 
       <section className="flex flex-col gap-3">
-        <h2 className="text-label uppercase text-ink-3">1 · Pick an attack</h2>
+        <h2 className="eyebrow">1 · Pick an attack</h2>
         <div className="grid gap-2 sm:grid-cols-2">
           {SAFETY_ATTACKS.map((spec) => (
             <button
@@ -189,7 +189,7 @@ export function SafetyTest() {
               onClick={() => choose(spec.id)}
               className={`flex flex-col gap-1 rounded-card border px-4 py-3 text-left transition-colors duration-150 ${
                 attack === spec.id
-                  ? 'border-accent bg-accent-soft'
+                  ? 'border-accent-ink bg-accent-soft'
                   : 'border-rule bg-surface hover:bg-raised'
               }`}
             >
@@ -202,15 +202,15 @@ export function SafetyTest() {
       </section>
 
       <section className="flex flex-col gap-3">
-        <h2 className="text-label uppercase text-ink-3">2 · Set the amount — you choose, we don&rsquo;t</h2>
-        <div className="flex flex-col gap-3 rounded-card border border-rule bg-surface p-4">
+        <h2 className="eyebrow">2 · Set the amount — you choose, we don&rsquo;t</h2>
+        <div className="flex flex-col gap-3 rounded-card border border-rule bg-surface p-5">
           <label className="flex items-baseline gap-3">
             <span className="text-caption text-ink-3">Pay</span>
             <input
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
               inputMode="decimal"
-              className="tnum w-40 border-b border-rule bg-transparent pb-1 text-title outline-none focus-visible:border-accent"
+              className="tnum w-40 border-b border-rule bg-transparent pb-1 text-title outline-none focus-visible:border-accent-ink"
             />
           </label>
           <label className="flex flex-col gap-1">
@@ -218,7 +218,7 @@ export function SafetyTest() {
             <input
               value={recipient}
               onChange={(e) => setRecipient(e.target.value)}
-              className="w-full break-all rounded-control border border-rule bg-canvas px-3 py-2 font-mono text-caption outline-none focus-visible:border-accent"
+              className="w-full break-all rounded-control border border-rule bg-canvas px-3 py-2 font-mono text-caption outline-none focus-visible:border-accent-ink"
             />
           </label>
           <div className="flex flex-wrap gap-2">
@@ -227,7 +227,7 @@ export function SafetyTest() {
                 key={preset}
                 type="button"
                 onClick={() => setAmount(preset)}
-                className="tnum rounded-control border border-rule px-3 py-1 text-caption transition-colors duration-150 hover:bg-raised"
+                className="btn btn--ghost tnum h-8 px-4 text-caption normal-case tracking-normal"
               >
                 {preset}
               </button>
@@ -261,8 +261,8 @@ export function SafetyTest() {
       </section>
 
       <section className="flex flex-col gap-3">
-        <h2 className="text-label uppercase text-ink-3">3 · What should happen</h2>
-        <div className="rounded-card border border-rule bg-surface p-4">
+        <h2 className="eyebrow">3 · What should happen</h2>
+        <div className="rounded-card border border-rule bg-surface p-5">
           {prediction === null ? (
             <p className="text-caption text-ink-3" aria-live="polite">
               Calculating the local preview…
@@ -289,7 +289,7 @@ export function SafetyTest() {
       </section>
 
       {appBlocked ? (
-        <div className="flex flex-col gap-2 rounded-card border border-wait-line bg-wait-soft p-4">
+        <div className="flex flex-col gap-2 rounded-card border border-wait-line bg-wait-soft p-5">
           <p className="text-body font-medium text-wait">
             The simulated app check stopped this attempt.
           </p>
@@ -303,7 +303,7 @@ export function SafetyTest() {
       <button
         type="button"
         onClick={() => fire()}
-        className="h-14 rounded-card bg-accent text-subhead font-semibold text-surface transition-colors duration-150 hover:bg-accent/90"
+        className="btn btn--accent btn--block h-14"
       >
         Run simulation — {amount || '0.00'}
       </button>
