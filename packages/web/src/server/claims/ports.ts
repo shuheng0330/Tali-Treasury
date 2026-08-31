@@ -77,12 +77,12 @@ export interface ClaimRepository {
     decision: PolicyDecision;
     state: ProcessedClaimState;
   }): Promise<SaveDecisionResult>;
-  reservePayment?(claimId: string): Promise<PaymentMutationResult>;
-  failApprovedPayment?(input: {
+  reservePayment(claimId: string): Promise<PaymentMutationResult>;
+  failApprovedPayment(input: {
     claimId: string;
     payment: PaymentResult;
   }): Promise<PaymentMutationResult>;
-  finishPayment?(input: {
+  finishPayment(input: {
     claimId: string;
     state: TerminalPaymentState;
     payment: PaymentResult;
