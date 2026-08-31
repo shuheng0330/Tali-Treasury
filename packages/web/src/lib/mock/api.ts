@@ -86,9 +86,9 @@ export function evaluate(
     },
     {
       rule: 'confidence_sufficient',
-      label: 'AI confidence threshold',
+      label: 'Receipt ready for routing',
       passed: draft.confidence >= 0.9,
-      detail: draft.confidence >= 0.9 ? 'Meets the 90% routing threshold' : 'Needs human review',
+      detail: draft.confidence >= 0.9 ? 'Extraction meets the routing threshold' : 'Needs human review',
       onChain: false,
     },
     {
@@ -165,7 +165,7 @@ export async function pay(amount: Amount): Promise<PaymentResult> {
 export const recentClaims = seededClaims;
 
 const QUEUE_NOTES: Record<string, string> = {
-  'q-0148': 'Amount is 70% over the per-claim cap. The chain will refuse this if I try.',
+  'q-0148': 'Amount is well over the per-claim cap. The chain will refuse this if I try.',
   'q-0147': 'New recipient, never paid from this mandate before.',
   'q-0146': 'Every rule passes. The receipt photo is too dark to read the total.',
 };

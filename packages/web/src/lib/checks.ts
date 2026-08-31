@@ -15,11 +15,12 @@ export interface Check {
 }
 
 export const SPEND_CHECKS: readonly Check[] = [
-  { code: 3, key: 'E_WRONG_AGENT_CAP', label: 'The caller holds this mandate’s agent capability' },
-  { code: 9, key: 'E_MANDATE_REVOKED', label: 'The mandate has not been revoked' },
-  { code: 4, key: 'E_ZERO_AMOUNT', label: 'The amount is greater than zero' },
-  { code: 5, key: 'E_AMOUNT_ABOVE_LIMIT', label: 'The amount is within the per-claim cap' },
-  { code: 6, key: 'E_INSUFFICIENT_BUDGET', label: 'The mandate still holds that much budget' },
-  { code: 7, key: 'E_RECIPIENT_NOT_APPROVED', label: 'The recipient is on the allowlist' },
-  { code: 8, key: 'E_MANDATE_EXPIRED', label: 'The mandate has not expired' },
+  { code: TREASURY_ABORT_CODE.WRONG_AGENT_CAP, key: treasuryErrorFromCode(TREASURY_ABORT_CODE.WRONG_AGENT_CAP).key, label: 'The caller holds this mandate’s agent capability' },
+  { code: TREASURY_ABORT_CODE.MANDATE_REVOKED, key: treasuryErrorFromCode(TREASURY_ABORT_CODE.MANDATE_REVOKED).key, label: 'The mandate has not been revoked' },
+  { code: TREASURY_ABORT_CODE.ZERO_AMOUNT, key: treasuryErrorFromCode(TREASURY_ABORT_CODE.ZERO_AMOUNT).key, label: 'The amount is greater than zero' },
+  { code: TREASURY_ABORT_CODE.AMOUNT_ABOVE_LIMIT, key: treasuryErrorFromCode(TREASURY_ABORT_CODE.AMOUNT_ABOVE_LIMIT).key, label: 'The amount is within the per-claim cap' },
+  { code: TREASURY_ABORT_CODE.INSUFFICIENT_BUDGET, key: treasuryErrorFromCode(TREASURY_ABORT_CODE.INSUFFICIENT_BUDGET).key, label: 'The mandate still holds that much budget' },
+  { code: TREASURY_ABORT_CODE.RECIPIENT_NOT_APPROVED, key: treasuryErrorFromCode(TREASURY_ABORT_CODE.RECIPIENT_NOT_APPROVED).key, label: 'The recipient is on the allowlist' },
+  { code: TREASURY_ABORT_CODE.MANDATE_EXPIRED, key: treasuryErrorFromCode(TREASURY_ABORT_CODE.MANDATE_EXPIRED).key, label: 'The mandate has not expired' },
 ];
+import { TREASURY_ABORT_CODE, treasuryErrorFromCode } from '@tali/treasury-sui';

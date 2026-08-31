@@ -14,8 +14,8 @@ whole product flow is live.
 | Sui TypeScript boundary | ✅ Ready | Reads, builders, config, USDC helpers, abort mapping | Backend signer integration |
 | Shared contracts | ✅ Ready | Claim, event, policy, audit, mandate and endpoint types | Evolve only with team agreement |
 | Web dashboard | ✅ Live read-only | Current mandate state comes from Sui Testnet | Signed actions and backend claim totals |
-| Receipt and claim backend | ✅ Hosted schema ready | Gemini validation, private storage adapter, persistence, duplicate checks, guarded API routes, 72 web tests, 42 database assertions, and all three active team members verified | Configure the deployed API and add signed identity verification |
-| Claim and review UX | 🟡 Mixed | Real receipt analyze/create/list flow; mock review queue remains | Wallet auth and payment orchestration |
+| Receipt and claim backend | ✅ Hosted schema ready | Gemini validation, private storage adapter, persistence, duplicate checks, guarded API routes, 135 web tests, 42 database assertions, and all three active team members verified | Configure the deployed API and add signed identity verification |
+| Claim and review UX | 🟡 Mixed | Real receipt analyze/create/list plus server policy processing and persisted decisions | Wallet auth, review actions, FX quotes and payment orchestration |
 | Safety Test UI | 🟡 Mocked with live evidence links | Local preview plus links to two real rejected transactions | Interactive signed attempts and revocation scenario |
 | Deployment | ✅ Live | Vercel production and live Sui dashboard verified | Enable receipt writes only after wallet auth |
 | Submission | ⬜ Pending | — | Landing content, videos, deck, disclosure and rehearsal |
@@ -24,9 +24,10 @@ whole product flow is live.
 
 - **Real:** package, USDC mandate, live read-only dashboard, one payment, overspend rejection, unauthorized-recipient rejection.
 - **Real when authenticated/demo identity is enabled:** receipt analysis, private
-  storage, event-scoped duplicate checks, claim persistence, and claim listing.
-- **Simulated in the current UI:** policy orchestration, review actions, payment,
-  revoke preview, and interactive safety controls.
+  storage, event-scoped duplicate checks, claim persistence, claim listing, and
+  treasurer-triggered server policy processing.
+- **Simulated in the current UI:** review actions, payment, revoke preview, and
+  interactive safety controls.
 - **Never simulated without a label:** digests, checkpoints, gas, finality, wallet signatures, or chain state.
 
 ## Frontend phase history
@@ -44,7 +45,7 @@ interactions as simulations and links separately to genuine Testnet evidence.
 | 3 | Treasurer dashboard and review queue | 🟡 Live mandate and API-backed queue; review actions pending | 31 Aug |
 | 4 | Safety Test panel | 🟡 Mock flow; live refusals linked | 29 Aug |
 | 5 | Landing page | ✅ Done, rebuilt 31 Aug | 30 Aug |
-| 6 | Wire to live contract and backend | 🟡 Live reads, receipt analysis, claim submission and history; policy, review, payment and auth pending | 31 Aug |
+| 6 | Wire to live contract and backend | 🟡 Live reads, receipt analysis, claim submission/history and policy decisions; review, FX, payment and auth pending | 31 Aug |
 | 7 | Submission pack | ⬜ Not started | — |
 
 Legend: ✅ done · 🟡 in progress · ⬜ not started · ⛔ cut
@@ -53,44 +54,15 @@ Legend: ✅ done · 🟡 in progress · ⬜ not started · ⛔ cut
 
 ## What is not built yet
 
-Inventory taken 30 Aug against the repo, not from memory. Ordered by how much it
-would hurt to still be true on 5 Sep.
+Ordered by the risk of leaving it unfinished:
 
-**1. There is no backend.** Zero route handlers under `packages/web/src/app`.
-`.env.example` describes an architecture — Supabase for receipts and data,
-`AGENT_PRIVATE_KEY` and `AGENT_CAP_ID` for server-side signing,
-`AUTO_PAY_CONFIDENCE_THRESHOLD` — and none of it has code behind it.
-
-**2. There is no agent.** The pitch is that an agent reads receipts and pays what the
-rules allow. `GEMINI_API_KEY` and `gemini-flash-lite-latest` are in the env file; there
-is no Gemini call, no image upload and no OCR anywhere in the repo or its history.
-Receipt analysis is mocked end to end. This is the widest gap between what the site
-says and what exists.
-
-**3. The web app never touches the chain.** `@tali/treasury-sui` builds unsigned
-transactions and is imported by the web app for exactly one thing:
-`treasuryErrorFromCode`. No wallet either — `@mysten/dapp-kit` is not installed.
-
-**4. The mock mandate and the live mandate are different objects.** On chain: 0.50 SUI
-budget, 0.10 SUI cap, mandate `0x471cc5a2…`. In the app: 2,000 budget, 200 cap,
-mandate `0x3ac91e57…`. `NEXT_PUBLIC_MANDATE_ID` is empty. Every figure on screen
-changes the day this is wired.
-
-**5. Nothing outside the contract wrapper is tested.** 11 tests, all in
-`sui-integration`. `@tali/shared` and `@tali/web` have no `test` script, so the money
-helpers, the abort ordering and the rule evaluation are unverified.
-
-**6. Phase 7 is untouched.** The README covers the contract and never mentions the web
-app or how to run it. No deck, no video, no Vercel deploy, no Devfolio submission, and
-no AI-tool declaration — which MUBA requires and which is an instant DQ if
-misrepresented.
-
-**7. Dark mode has never been looked at.** The palette is complete and its contrast is
-fixed, but every screenshot taken so far has been light.
-
-Still deliberately cut, listed at the bottom of this file: zkLogin, sponsored
-transactions, the public transparency page, duplicate-review resolution UI, Bahasa
-Malaysia, on-chain category checks.
+1. Wallet-signature or session authentication for members and the treasurer.
+2. A persisted, one-time analysis draft binding the uploaded receipt to confirmation.
+3. A trusted MYR-to-USDC quote with source, timestamp, expiry, rounding and payout amount.
+4. Treasurer approve, reject and request-correction state transitions.
+5. Idempotent backend signing, finality tracking, payment retry and reconciliation.
+6. Interactive on-chain safety attempts and live revocation.
+7. Submission video, deck, AI disclosure and rehearsal.
 
 ---
 
@@ -360,7 +332,7 @@ Agreed in advance so nothing is argued about at 2am. Cut in this order if hours 
 6. On-chain category check — stays off-chain policy
 
 Already cut and not coming back: Gonka track, mainnet, real funds, Walrus, editable
-mandate policies, budget top-ups, currency conversion.
+mandate policies and budget top-ups.
 
 ## Standing rules
 

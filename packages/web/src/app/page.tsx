@@ -3,7 +3,6 @@ import { EXPLORER, toDisplay } from '@tali/shared';
 import { mandate } from '@/lib/mock/data';
 import { TALI_TESTNET_PACKAGE_ID } from '@tali/treasury-sui';
 import { SPEND_CHECKS } from '@/lib/checks';
-import { AFTERMATH, ON_CHAIN_RUNS } from '@/lib/evidence';
 import { CheckMarquee } from '@/components/landing/CheckMarquee';
 import { Evidence } from '@/components/landing/Evidence';
 import { PhoneCode } from '@/components/landing/PhoneCode';
@@ -11,34 +10,6 @@ import { REFUSED_AMOUNT, Wire } from '@/components/landing/Wire';
 
 const PACKAGE_SHORT = `${TALI_TESTNET_PACKAGE_ID.slice(0, 6)}…${TALI_TESTNET_PACKAGE_ID.slice(-4)}`;
 const PACKAGE_LINK = EXPLORER.object(TALI_TESTNET_PACKAGE_ID).suivision;
-
-const FIGURES = [
-  { value: String(SPEND_CHECKS.length), unit: 'checks', note: 'inside spend()' },
-  { value: String(ON_CHAIN_RUNS.length), unit: 'transactions', note: 'run on Sui testnet' },
-  { value: toDisplay(mandate.maxPerClaim), unit: 'USDC', note: 'per-claim cap' },
-  { value: AFTERMATH.gasBurnedByRefusals.split(' ')[0], unit: 'SUI', note: 'burned being refused' },
-];
-
-const ROLES = [
-  {
-    href: '/claim',
-    label: 'Member',
-    title: 'Photograph a receipt',
-    body: 'Snap it, confirm the amount, watch the rules run. No wallet needed to look around.',
-  },
-  {
-    href: '/treasury',
-    label: 'Treasurer',
-    title: 'Read the mandate',
-    body: 'Budget, cap, expiry and allowlist, read off the chain rather than from a copy we keep.',
-  },
-  {
-    href: '/safety',
-    label: 'Attacker',
-    title: 'Try to break it',
-    body: 'Skip every check this app performs and send the transaction raw. See what the contract does.',
-  },
-];
 
 export default function Page() {
   return (
@@ -70,9 +41,8 @@ export default function Page() {
         </h1>
 
         <p className="max-w-2xl text-lead text-ink-2">
-          One student shouldn&rsquo;t have to front the club&rsquo;s money for six weeks. An
-          agent reimburses your members in seconds, and a Move contract — not our backend —
-          holds the limits.
+          Members should not front club expenses for weeks. Tali reads a receipt, checks the
+          rules, and reimburses while Move — not our backend — holds the limits.
         </p>
 
         <div className="flex flex-wrap items-center gap-3">
@@ -84,17 +54,6 @@ export default function Page() {
           </Link>
         </div>
 
-        <dl className="mt-6 grid grid-cols-2 gap-x-6 gap-y-8 border-t border-rule pt-8 md:grid-cols-4">
-          {FIGURES.map((figure) => (
-            <div key={figure.note} className="flex flex-col gap-1.5">
-              <dt className="eyebrow order-2">{figure.note}</dt>
-              <dd className="order-1 flex flex-wrap items-baseline gap-x-1.5 font-display">
-                <span className="tnum text-title">{figure.value}</span>
-                <span className="text-caption text-ink-3">{figure.unit}</span>
-              </dd>
-            </div>
-          ))}
-        </dl>
       </section>
 
       <CheckMarquee />
@@ -161,7 +120,7 @@ export default function Page() {
           <h2 className="text-title">The backend is the part you should not have to trust</h2>
           <p className="text-body text-ink-2">
             The mandate is an object, not a row in our database. When a claim is too large,{' '}
-            <span className="font-mono">spend()</span> aborts on code 5 before it ever reaches
+            <span className="font-mono">spend()</span> aborts on code <span className="tnum">5</span> before it ever reaches
             the coin, and Move rolls the entire transaction back atomically — so there is no
             state where the check failed but half the transfer went out anyway. That gap is
             where most custody bugs live.
@@ -200,30 +159,12 @@ export default function Page() {
         </div>
       </section>
 
-      <section className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-5 pb-20 sm:px-8 md:pb-28">
-        <p className="eyebrow">Look around</p>
-        <div className="grid gap-4 md:grid-cols-3">
-          {ROLES.map((role) => (
-            <Link
-              key={role.href}
-              href={role.href}
-              className="flood group flex flex-col gap-3 rounded-card border border-rule bg-surface p-6 md:p-8"
-            >
-              <span className="eyebrow">{role.label}</span>
-              <span className="flood-ink font-display text-heading">{role.title}</span>
-              <span className="flood-mute text-body">{role.body}</span>
-              <span
-                aria-hidden
-                className="flood-ink mt-4 text-control transition-transform duration-200 ease-pop group-hover:translate-x-1"
-              >
-                →
-              </span>
-            </Link>
-          ))}
-        </div>
-      </section>
-
       <section className="mx-auto w-full max-w-6xl px-5 pb-20 sm:px-8 md:pb-28">
+        <p className="mb-6 text-body text-ink-2">
+          Look around as a <Link href="/claim" className="link">member</Link>, as the{' '}
+          <Link href="/treasury" className="link">treasurer</Link>, or in the{' '}
+          <Link href="/safety" className="link">safety test</Link>.
+        </p>
         <div className="rounded-panel border border-rule bg-surface p-6 md:p-8">
           <PhoneCode />
         </div>
@@ -233,9 +174,9 @@ export default function Page() {
         <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-5 py-12 text-caption text-ink-3 sm:px-8">
           <p className="max-w-2xl">
             The contract and its mandate are live on Sui testnet, and the treasurer view reads
-            them straight off the chain rather than from a copy we keep. The claim flow and the
-            safety test still run on sample data, and the agent does not yet sign its own
-            transactions — that is the piece we are building next. No mainnet, no real funds,
+            them straight off the chain rather than from a copy we keep. Receipt submission and
+            server policy processing are connected when demo identity is enabled; review,
+            safety controls, and payment are not yet signed transactions. No mainnet, no real funds,
             and nothing here is a custody service.
           </p>
           <div className="flex flex-wrap items-end justify-between gap-x-8 gap-y-4 border-t border-rule pt-6">

@@ -1,10 +1,8 @@
-import type { Claim, MandateView, ReviewQueueItem } from '@tali/shared';
-import { evaluate } from '@/lib/mock/api';
+import type { Claim, PolicyDecision, ReviewQueueItem } from '@tali/shared';
 
 /**
  * What a treasurer still has to look at. New claims land in `submitted`, and
- * the two review states are what the policy engine will move them to once it
- * exists — until then the queue is whatever has not been settled or refused.
+ * the two review states are what the server policy engine can move them to.
  */
 const REVIEW_STATES: ReadonlySet<Claim['state']> = new Set([
   'submitted',
@@ -15,34 +13,30 @@ const REVIEW_STATES: ReadonlySet<Claim['state']> = new Set([
 /** Nothing tracks committed-but-unsettled claims yet, so the reserve is zero. */
 
 /**
- * Builds the review queue out of real claims. The claims are the database's;
- * the decision attached to each one is still evaluated locally, because no
- * policy endpoint exists yet — `/api/claims/:id/process` is declared in the
- * shared contract and has no route handler behind it.
+ * An unprocessed claim gets a presentation-only pending decision. It contains
+ * no invented checks and cannot be approved until the server stores a result.
  */
-export function toReviewQueue(
-  claims: readonly Claim[],
-  against: MandateView,
-): ReviewQueueItem[] {
+const PENDING_DECISION: PolicyDecision = {
+  outcome: 'review',
+  checks: [],
+  reason: 'Awaiting server policy evaluation.',
+  evaluatedAtMs: 0,
+};
+
+export function toReviewQueue(claims: readonly Claim[]): ReviewQueueItem[] {
   return claims
     .filter((claim) => REVIEW_STATES.has(claim.state))
     .map((claim) => {
-      const decision = evaluate({
-        merchant: claim.merchant,
-        amount: claim.amount,
-        receiptDate: claim.receiptDate,
-        category: claim.category,
-        recipient: claim.submitter,
-        description: claim.description,
-        confidence: claim.analysis?.confidence ?? 0,
-        receiptHash: claim.receiptHash,
-      }, against, '0');
+      const decision = claim.decision ?? PENDING_DECISION;
 
       return {
         claim,
         decision,
         agentNote: '',
-        reason: decision.outcome === 'auto_pay' ? 'agent_uncertain' : 'rule_failed',
+        reason:
+          decision.checks.length === 0 || decision.outcome === 'review'
+            ? 'agent_uncertain'
+            : 'rule_failed',
       };
     });
 }

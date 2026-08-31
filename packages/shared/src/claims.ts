@@ -2,7 +2,7 @@ export type Address = string;
 export type ObjectId = string;
 export type Digest = string;
 
-/** Base units as a decimal string, so amounts survive JSON. 1 USDC = "1000000". */
+/** Six-decimal fixed-point units as a decimal string, so amounts survive JSON. */
 export type Amount = string;
 
 export type ExpenseCategory =

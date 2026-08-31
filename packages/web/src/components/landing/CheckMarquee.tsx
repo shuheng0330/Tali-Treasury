@@ -20,7 +20,7 @@ export function CheckMarquee() {
       <div className="flex w-max animate-drift items-center gap-10 pr-10 motion-reduce:animate-none">
         {items.map((check, i) => (
           <span key={`${check.code}-${i}`} className="flex shrink-0 items-center gap-3">
-            <span className="font-mono text-label text-accent-ink">
+            <span className="tnum font-mono text-label text-accent-ink">
               {String(check.code).padStart(2, '0')}
             </span>
             <span className="text-label whitespace-nowrap text-ink-2">{check.key}</span>

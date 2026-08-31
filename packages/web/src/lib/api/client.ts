@@ -4,6 +4,8 @@ import type {
   CreateClaimRequest,
   CreateClaimResponse,
   ListClaimsResponse,
+  ProcessClaimRequest,
+  ProcessClaimResponse,
 } from '@tali/shared';
 import { isApiError } from '@tali/shared';
 
@@ -81,6 +83,20 @@ export async function listClaims(
   return responseJson<ListClaimsResponse>(
     await fetch(`/api/events/${encodeURIComponent(eventId)}/claims?${query}`, {
       cache: 'no-store',
+    }),
+  );
+}
+
+export async function processClaim(
+  claimId: string,
+  processor: string,
+): Promise<ProcessClaimResponse> {
+  const request: ProcessClaimRequest = { processor };
+  return responseJson<ProcessClaimResponse>(
+    await fetch(`/api/claims/${encodeURIComponent(claimId)}/process`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(request),
     }),
   );
 }

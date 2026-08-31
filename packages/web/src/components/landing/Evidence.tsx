@@ -47,7 +47,7 @@ export function Evidence() {
                   {refused ? 'Refused' : 'Allowed'}
                 </span>
                 {run.abort ? (
-                  <span className="font-mono text-caption text-ink-3">
+                  <span className="tnum font-mono text-caption text-ink-3">
                     abort {run.abort.code} · {run.abort.key}
                   </span>
                 ) : null}

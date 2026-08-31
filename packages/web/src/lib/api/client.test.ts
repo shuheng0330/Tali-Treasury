@@ -1,7 +1,7 @@
-import type { AnalyzeReceiptResponse } from '@tali/shared';
+import type { AnalyzeReceiptResponse, ProcessClaimResponse } from '@tali/shared';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { analyzeReceipt, listClaims } from './client';
+import { analyzeReceipt, listClaims, processClaim } from './client';
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -60,5 +60,22 @@ describe('claim API client', () => {
       '/api/events/event%2Fid/claims?viewer=0xmember%2Bone',
       { cache: 'no-store' },
     );
+  });
+
+  it('processes a claim through the server policy endpoint', async () => {
+    const response = {
+      claim: { id: 'claim-id' },
+      decision: { outcome: 'review' },
+      payment: null,
+    } as ProcessClaimResponse;
+    const fetchMock = vi.fn(async () => Response.json(response));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(processClaim('claim/id', '0xtreasurer')).resolves.toEqual(response);
+    expect(fetchMock).toHaveBeenCalledWith('/api/claims/claim%2Fid/process', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ processor: '0xtreasurer' }),
+    });
   });
 });
