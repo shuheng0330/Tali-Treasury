@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { AppNav } from '@/components/AppNav';
+import { BackButton } from '@/components/BackButton';
 
 /**
  * Every screen in this group used to be a dead end: once you were on one, the
@@ -10,19 +11,21 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex min-h-dvh flex-col">
       <header className="sticky top-0 z-30 border-b border-rule bg-canvas/85 backdrop-blur-md">
-        <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-x-4 gap-y-2 px-4 py-3 sm:px-6 sm:py-4">
+        <div className="mx-auto flex max-w-5xl flex-wrap items-center gap-x-3 gap-y-3 px-4 py-3 sm:gap-x-4 sm:px-6 sm:py-4">
+          <BackButton />
+
           <Link
             href="/"
-            className="group flex items-center gap-2.5 font-display text-subhead font-semibold transition-colors duration-150 hover:text-accent-ink"
+            className="group flex min-w-0 items-center gap-2.5 font-display text-subhead font-semibold transition-colors duration-150 hover:text-accent-ink"
           >
             <span
               aria-hidden
               className="h-2.5 w-2.5 shrink-0 rounded-badge bg-accent transition-transform duration-200 ease-pop group-hover:scale-125"
             />
-            <span className="hidden sm:inline">Tali Treasury</span>
-            <span className="sm:hidden">Tali</span>
+            <span className="truncate">Tali Treasury</span>
           </Link>
-          <AppNav />
+
+          <AppNav className="w-full sm:ml-auto sm:w-auto" />
         </div>
       </header>
 
