@@ -1,4 +1,4 @@
-import type { Amount, Claim, PaymentResult, PolicyDecision } from '@tali/shared';
+import type { Amount, PaymentResult, PolicyDecision } from '@tali/shared';
 import { Money } from '@/components/Money';
 
 function Stamp({ label, at }: { label: string; at: string }) {
@@ -10,55 +10,37 @@ function Stamp({ label, at }: { label: string; at: string }) {
   );
 }
 
+function NotSaved({ saveError }: { saveError: string | null }) {
+  if (!saveError) return null;
+
+  return (
+    <p className="rounded-card border border-no-line bg-no-soft p-4 text-caption text-no">
+      <span className="font-medium">{saveError}</span>{' '}
+      <span className="text-ink-2">
+        Nothing below reached the treasurer, and it will not appear in your claim history.
+      </span>
+    </p>
+  );
+}
+
 function clock(offsetMs: number) {
   return new Date(Date.now() + offsetMs).toLocaleTimeString('en-GB', { hour12: false });
 }
 
-export function Submitted({ claim, onDone }: { claim: Claim; onDone: () => void }) {
+export function Paid({
+  amount,
+  payment,
+  saveError,
+  onDone,
+}: {
+  amount: Amount;
+  payment: PaymentResult;
+  saveError: string | null;
+  onDone: () => void;
+}) {
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-col items-center gap-2 pt-4 text-center">
-        <svg
-          viewBox="0 0 24 24"
-          width="34"
-          height="34"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1.8"
-          className="text-ok"
-          aria-hidden
-        >
-          <path d="M4 12.5 9.2 18 20 6" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
-        <Money amount={claim.amount} size="hero" />
-        <p className="text-heading">Claim submitted</p>
-        <p className="text-body text-ink-2">Receipt stored and claim recorded.</p>
-      </div>
-
-      <div className="rounded-card border border-rule bg-surface px-4 py-2">
-        <Stamp label="Submitted" at={clock(0)} />
-        <Stamp label="Claim ID" at={claim.id.slice(0, 12)} />
-      </div>
-
-      <p className="rounded-card border border-wait-line bg-wait-soft p-4 text-body text-wait">
-        Policy processing and payment are not connected yet. No Sui transaction was signed and
-        no treasury funds moved.
-      </p>
-
-      <button
-        type="button"
-        onClick={onDone}
-        className="h-12 rounded-card border border-rule text-subhead font-medium transition-colors duration-150 hover:bg-raised"
-      >
-        Back to my claims
-      </button>
-    </div>
-  );
-}
-
-export function Paid({ amount, payment, onDone }: { amount: Amount; payment: PaymentResult; onDone: () => void }) {
-  return (
-    <div className="flex flex-col gap-6">
+      <NotSaved saveError={saveError} />
       <div className="flex flex-col items-center gap-2 pt-4 text-center">
         <svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="currentColor" strokeWidth="1.8" className="text-ok" aria-hidden>
           <path d="M13 2 L4 14h7l-1 8 9-12h-7z" strokeLinejoin="round" />
@@ -76,7 +58,7 @@ export function Paid({ amount, payment, onDone }: { amount: Amount; payment: Pay
 
       <div className="flex flex-col gap-2 rounded-card border border-rule bg-surface p-4">
         <div className="flex items-baseline justify-between gap-3">
-          <span className="text-label uppercase text-ink-3">Transaction</span>
+          <span className="eyebrow">Transaction</span>
           <span className="tnum text-caption text-ink-3">Not submitted</span>
         </div>
         <span className="text-body text-ink-2">No digest, checkpoint, gas, or finality exists for this simulated result.</span>
@@ -85,7 +67,7 @@ export function Paid({ amount, payment, onDone }: { amount: Amount; payment: Pay
       <button
         type="button"
         onClick={onDone}
-        className="h-12 rounded-card border border-rule text-subhead font-medium transition-colors duration-150 hover:bg-raised"
+        className="btn btn--ghost btn--block btn--lg"
       >
         Snap another
       </button>
@@ -93,12 +75,23 @@ export function Paid({ amount, payment, onDone }: { amount: Amount; payment: Pay
   );
 }
 
-export function Held({ amount, decision, onDone }: { amount: Amount; decision: PolicyDecision; onDone: () => void }) {
+export function Held({
+  amount,
+  decision,
+  saveError,
+  onDone,
+}: {
+  amount: Amount;
+  decision: PolicyDecision;
+  saveError: string | null;
+  onDone: () => void;
+}) {
   const failed = decision.checks.filter((check) => !check.passed);
   const immutableFailure = failed.some((check) => check.onChain);
 
   return (
     <div className="flex flex-col gap-6">
+      <NotSaved saveError={saveError} />
       <div className="flex flex-col items-center gap-2 pt-4 text-center">
         <svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="currentColor" strokeWidth="1.7" className="text-wait" aria-hidden>
           <path d="M12 3 3.5 19.5h17z" strokeLinejoin="round" />
@@ -123,17 +116,16 @@ export function Held({ amount, decision, onDone }: { amount: Amount; decision: P
         </p>
       </div>
 
-      <div className="flex flex-col gap-2">
-        <button
-          type="button"
-          className="h-12 rounded-card bg-accent text-subhead font-semibold text-surface transition-colors duration-150 hover:bg-accent/90"
-        >
-          Ask the treasurer
-        </button>
+      <div className="flex flex-col gap-3">
+        <p className="text-caption text-ink-3">
+          {saveError
+            ? 'Because it was not saved, no treasurer will see it. Photograph the receipt again once the backend is reachable.'
+            : 'You do not need to chase anyone. This claim is already in the treasurer’s review queue, and they will see it the next time they open the treasury.'}
+        </p>
         <button
           type="button"
           onClick={onDone}
-          className="h-12 rounded-card border border-rule text-subhead font-medium transition-colors duration-150 hover:bg-raised"
+          className="btn btn--primary btn--block btn--lg"
         >
           Back to my claims
         </button>

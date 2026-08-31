@@ -2,6 +2,7 @@ import type {
   Amount,
   Claim,
   DraftClaim,
+  MandateView,
   PaymentResult,
   PolicyDecision,
   ReviewQueueItem,
@@ -9,7 +10,7 @@ import type {
   RuleCheck,
   SafetyPreviewInput,
 } from '@tali/shared';
-import { compare, subtract, toBaseUnits, toDisplay } from '@tali/shared';
+import { compare, isAllowedRecipient, subtract, toBaseUnits, toDisplay } from '@tali/shared';
 import { treasuryErrorFromCode } from '@tali/treasury-sui';
 import { COMMITTED, MEMBER, event, mandate, queuedClaims, seededClaims } from './data';
 
@@ -43,8 +44,12 @@ export async function analyzeReceipt(): Promise<ReceiptAnalysis> {
   };
 }
 
-export function evaluate(draft: DraftClaim): PolicyDecision {
-  const available = subtract(mandate.remainingBudget, COMMITTED);
+export function evaluate(
+  draft: DraftClaim,
+  against: MandateView = mandate,
+  committed: Amount = COMMITTED,
+): PolicyDecision {
+  const available = subtract(against.remainingBudget, committed);
   const recipient = draft.recipient ?? MEMBER;
   const exactDuplicate = seededClaims.some(
     (claim) =>
@@ -89,22 +94,22 @@ export function evaluate(draft: DraftClaim): PolicyDecision {
     {
       rule: 'per_claim_max',
       label: 'Per-claim cap',
-      passed: compare(draft.amount, mandate.maxPerClaim) <= 0,
-      detail: `${toDisplay(draft.amount)} vs ${toDisplay(mandate.maxPerClaim)} cap`,
+      passed: compare(draft.amount, against.maxPerClaim) <= 0,
+      detail: `${toDisplay(draft.amount)} vs ${toDisplay(against.maxPerClaim)} cap`,
       onChain: true,
     },
     {
       rule: 'total_budget',
       label: 'Budget remaining',
-      passed: compare(draft.amount, available) <= 0,
-      detail: `${toDisplay(available)} available`,
+      passed: compare(draft.amount, against.remainingBudget) <= 0,
+      detail: `${toDisplay(against.remainingBudget)} in the mandate, ${toDisplay(available)} uncommitted`,
       onChain: true,
     },
     {
       rule: 'recipient_allowlist',
       label: 'Recipient approved',
-      passed: mandate.approvedRecipients.includes(recipient),
-      detail: mandate.approvedRecipients.includes(recipient)
+      passed: isAllowedRecipient(against, recipient),
+      detail: isAllowedRecipient(against, recipient)
         ? 'On the mandate allowlist'
         : `${recipient.slice(0, 6)}…${recipient.slice(-4)} is not on the allowlist`,
       onChain: true,
@@ -112,15 +117,15 @@ export function evaluate(draft: DraftClaim): PolicyDecision {
     {
       rule: 'mandate_active',
       label: 'Mandate active',
-      passed: !mandate.revoked,
+      passed: !against.revoked,
       detail: 'Not revoked',
       onChain: true,
     },
     {
       rule: 'not_expired',
       label: 'Not expired',
-      passed: Date.now() < mandate.expiryMs,
-      detail: `Expires ${new Date(mandate.expiryMs).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}`,
+      passed: Date.now() < against.expiryMs,
+      detail: `Expires ${new Date(against.expiryMs).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}`,
       onChain: true,
     },
   ];
@@ -191,9 +196,26 @@ export function settledClaims(): Claim[] {
   return seededClaims.filter((claim) => claim.state === 'paid');
 }
 
-function attackChecks(input: SafetyPreviewInput): RuleCheck[] {
-  const available = subtract(mandate.remainingBudget, COMMITTED);
-  const approved = mandate.approvedRecipients.includes(input.recipient);
+/** The preview adds one scenario the shared type has no reason to carry. */
+export interface AttackInput extends SafetyPreviewInput {
+  /** Optional so the shared preview input still satisfies this type. */
+  drainFirst?: boolean;
+}
+
+/** What the mandate holds once the treasurer has already spent most of it. It
+ *  has to sit below the per-claim cap, because otherwise the cap always catches
+ *  a large claim first and the budget rule can never be the one that fails. */
+export const DRAINED_BUDGET = toBaseUnits('3.00');
+
+/** The contract compares against the mandate's own balance. Claims we have
+ *  committed but not settled are an app-side reserve it knows nothing about. */
+export function attackBudget(input: Pick<AttackInput, 'drainFirst'>): Amount {
+  return input.drainFirst ? DRAINED_BUDGET : mandate.remainingBudget;
+}
+
+function attackChecks(input: AttackInput): RuleCheck[] {
+  const budget = attackBudget(input);
+  const approved = isAllowedRecipient(mandate, input.recipient);
 
   return [
     {
@@ -206,8 +228,8 @@ function attackChecks(input: SafetyPreviewInput): RuleCheck[] {
     {
       rule: 'total_budget',
       label: 'Budget remaining',
-      passed: compare(input.amount, available) <= 0,
-      detail: `${toDisplay(input.amount)} vs ${toDisplay(available)} available`,
+      passed: compare(input.amount, budget) <= 0,
+      detail: `${toDisplay(input.amount)} vs ${toDisplay(budget)} in the mandate`,
       onChain: true,
     },
     {
@@ -252,7 +274,7 @@ function firstAbort(checks: RuleCheck[]): number | null {
   return null;
 }
 
-export async function simulateAttack(input: SafetyPreviewInput) {
+export async function simulateAttack(input: AttackInput) {
   const started = performance.now();
   await wait(300);
 
@@ -268,13 +290,13 @@ export async function simulateAttack(input: SafetyPreviewInput) {
   };
 }
 
-export async function fireAttack(input: SafetyPreviewInput) {
+export async function fireAttack(input: AttackInput) {
   await wait(1200);
 
   const checks = attackChecks(input);
   const code = firstAbort(checks);
   const error = code === null ? null : treasuryErrorFromCode(code);
-  const available = subtract(mandate.remainingBudget, COMMITTED);
+  const budget = attackBudget(input);
 
   const payment: PaymentResult = {
     ok: code === null,
@@ -289,8 +311,8 @@ export async function fireAttack(input: SafetyPreviewInput) {
       code === null
         ? null
         : `Simulated treasury::spend abort ${code}: "${error?.message ?? ''}"`,
-    budgetBefore: available,
-    budgetAfter: code === null ? subtract(available, input.amount) : available,
+    budgetBefore: budget,
+    budgetAfter: code === null ? subtract(budget, input.amount) : budget,
   };
 
   return { payment, checks };

@@ -13,6 +13,11 @@ export const metadata = {
 
 export const dynamic = 'force-dynamic';
 
+/**
+ * Reads the mandate the way the treasurer screen does. The member's budget bar
+ * used to come from the sample data while the banner above it said the screen
+ * was live, which put an invented figure under a truthful-looking label.
+ */
 export default async function ClaimPage() {
   const apiEnabled = process.env.TALI_ALLOW_INSECURE_DEMO_IDENTITY === 'true';
 
@@ -21,15 +26,9 @@ export default async function ClaimPage() {
     const mandateId = process.env.TALI_MANDATE_ID ?? taliUsdcDemo.mandateId;
     const state = await readMandate(client, taliTestnetUsdcConfig, mandateId);
 
-    return <ClaimFlow apiEnabled={apiEnabled} initialMandate={toMandateView(state)} />;
+    return <ClaimFlow apiEnabled={apiEnabled} mandate={toMandateView(state)} />;
   } catch (cause) {
     const message = cause instanceof Error ? cause.message : 'Unknown Sui read error';
-    return (
-      <ClaimFlow
-        apiEnabled={apiEnabled}
-        initialMandate={null}
-        mandateReadError={message}
-      />
-    );
+    return <ClaimFlow apiEnabled={apiEnabled} mandate={null} mandateReadError={message} />;
   }
 }

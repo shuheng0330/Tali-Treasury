@@ -42,22 +42,21 @@ export function ClaimHome({
           <span className="tnum text-caption text-ink-3">of {toDisplay(budget)} left</span>
         </div>
         <div className="h-2 w-full overflow-hidden rounded-badge bg-sunken">
-          <div className="h-full bg-accent" style={{ width: `${used}%` }} />
+          <div className="h-full bg-ink" style={{ width: `${used}%` }} />
         </div>
       </section>
-
       <label
-        className={`flex h-16 items-center justify-center gap-3 rounded-card text-surface transition-colors duration-150 ease-pop focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-accent ${
+        className={`btn btn--block h-16 focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-accent-ink ${
           captureDisabled
-            ? 'cursor-not-allowed bg-rule-strong text-ink-3'
-            : 'cursor-pointer bg-accent hover:bg-accent/90'
+            ? 'cursor-not-allowed border-rule bg-raised text-ink-3'
+            : 'btn--primary cursor-pointer'
         }`}
       >
         <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
           <path d="M3 8.5A1.5 1.5 0 0 1 4.5 7h2.2l1.2-2h8.2l1.2 2h2.2A1.5 1.5 0 0 1 21 8.5v9a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 17.5z" />
           <circle cx="12" cy="13" r="3.6" />
         </svg>
-        <span className="text-subhead font-semibold">Snap a receipt</span>
+        <span>Snap a receipt</span>
         <input
           type="file"
           accept="image/jpeg,image/png,image/webp"
@@ -73,7 +72,7 @@ export function ClaimHome({
       </label>
 
       <section className="flex flex-col gap-3">
-        <h2 className="text-label uppercase text-ink-3">My claims</h2>
+        <h2 className="eyebrow">My claims</h2>
 
         {claimsLoading ? (
           <p className="rounded-card border border-dashed border-rule px-4 py-8 text-center text-caption text-ink-3">
@@ -84,14 +83,16 @@ export function ClaimHome({
             Nothing yet. Photograph a receipt and it lands here.
           </p>
         ) : (
-          <ul className="flex flex-col divide-y divide-rule rounded-card border border-rule bg-surface">
+          <ul className="flex flex-col divide-y divide-rule overflow-hidden rounded-card border border-rule bg-surface">
             {claims.map((claim) => (
               <li key={claim.id} className="flex items-center gap-3 px-4 py-3">
                 <div className="flex min-w-0 flex-1 flex-col gap-1">
                   <span className="truncate text-body">{claim.merchant}</span>
                   <span className="flex items-center gap-2">
                     <StatusChip status={CLAIM_CHIP[claim.state]} />
-                    <span className="text-caption text-ink-3">{relative(claim.updatedAtMs)}</span>
+                    <span className="text-caption text-ink-3" suppressHydrationWarning>
+                      {relative(claim.updatedAtMs)}
+                    </span>
                   </span>
                 </div>
                 <Money amount={claim.amount} size="row" />

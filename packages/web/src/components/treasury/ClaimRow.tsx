@@ -25,7 +25,7 @@ function ReasonMark({ reason }: { reason: ReviewQueueItem['reason'] }) {
   }
 
   return (
-    <span className="mt-1 flex h-4 w-4 items-center justify-center text-wait" title="The agent is unsure">
+    <span className="mt-1 flex h-4 w-4 items-center justify-center text-wait" title="Awaiting review">
       <svg viewBox="0 0 12 12" width="12" height="12" aria-hidden>
         <circle cx="6" cy="6" r="4.4" fill="none" stroke="currentColor" strokeWidth="1.6" />
         <path d="M6 6 v-2.6" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
@@ -60,14 +60,17 @@ export function ClaimRow({ item, onApprove, onReject }: Props) {
           <span className="truncate text-body">{claim.merchant}</span>
           <span className="text-caption text-ink-3">
             {claim.submitterName} · <span className="capitalize">{claim.category}</span> ·{' '}
-            {relative(claim.createdAtMs)}
+            {/* The demo timestamps are relative to module load, and the server
+                module loads before the client bundle, so the two renders
+                legitimately disagree by a minute or two. */}
+            <span suppressHydrationWarning>{relative(claim.createdAtMs)}</span>
           </span>
         </div>
 
         <Money amount={claim.amount} size="row" className="shrink-0" />
       </div>
 
-      <div className="ml-7 flex flex-col gap-2 rounded-control border border-rule bg-canvas p-3">
+      <div className="ml-7 flex flex-col gap-2 rounded-card border border-rule bg-canvas p-4">
         <ul className="grid gap-x-6 gap-y-1 sm:grid-cols-2">
           {decision.checks.map((check) => (
             <li key={check.rule} className="flex items-baseline gap-2">
@@ -92,21 +95,20 @@ export function ClaimRow({ item, onApprove, onReject }: Props) {
         </p>
       ) : null}
 
-      <div className="ml-7 flex items-center gap-3">
+      <div className="ml-7 flex flex-wrap items-center gap-3">
         <button
           type="button"
           disabled={immutableFailure}
           onClick={() => onApprove(claim.id)}
-          className="rounded-control bg-accent px-4 py-1.5 text-caption font-medium text-surface transition-colors duration-150 hover:bg-accent/90 disabled:cursor-not-allowed disabled:bg-rule-strong disabled:text-ink-2"
+          className="btn btn--primary h-9 px-5 text-label"
           title={immutableFailure ? 'This claim violates an immutable on-chain rule' : undefined}
         >
           {immutableFailure ? 'Cannot approve' : 'Approve demo'}
         </button>
-        <span className="w-2" aria-hidden />
         <button
           type="button"
           onClick={() => onReject(claim.id)}
-          className="rounded-control border border-rule px-4 py-1.5 text-caption transition-colors duration-150 hover:bg-raised"
+          className="btn btn--ghost h-9 px-5 text-label"
         >
           Reject
         </button>

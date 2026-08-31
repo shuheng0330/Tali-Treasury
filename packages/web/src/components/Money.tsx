@@ -5,9 +5,9 @@ type Size = 'inline' | 'row' | 'lead' | 'hero';
 
 const SIZES: Record<Size, { value: string; unit: string; gap: string }> = {
   inline: { value: 'text-body', unit: 'text-caption', gap: 'gap-1' },
-  row: { value: 'text-subhead', unit: 'text-caption', gap: 'gap-1' },
-  lead: { value: 'text-title', unit: 'text-body', gap: 'gap-1.5' },
-  hero: { value: 'text-display', unit: 'text-subhead', gap: 'gap-2' },
+  row: { value: 'text-body-lg', unit: 'text-caption', gap: 'gap-1' },
+  lead: { value: 'text-heading', unit: 'text-body', gap: 'gap-1.5' },
+  hero: { value: 'text-title', unit: 'text-subhead', gap: 'gap-2' },
 };
 
 interface Props {
@@ -23,7 +23,7 @@ export function Money({ amount, size = 'inline', unit = 'USDC', struck = false, 
 
   return (
     <span className={`inline-flex items-baseline ${scale.gap} ${struck ? 'line-through decoration-1' : ''} ${className}`}>
-      <span className={`tnum font-medium ${scale.value}`}>{toDisplay(amount)}</span>
+      <span className={`tnum font-display font-medium ${scale.value}`}>{toDisplay(amount)}</span>
       <span className={`${scale.unit} font-normal text-ink-3`}>{unit}</span>
     </span>
   );

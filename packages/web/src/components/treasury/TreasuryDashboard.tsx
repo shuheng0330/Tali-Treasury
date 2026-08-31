@@ -9,6 +9,9 @@ import { Money } from '@/components/Money';
 import { StatusChip } from '@/components/StatusChip';
 import { event } from '@/lib/mock/data';
 import { reviewQueue, settledClaims } from '@/lib/mock/api';
+import { settledFrom, toReviewQueue } from '@/lib/queue';
+import { useClaims } from '@/lib/api/useClaims';
+import { DataNotice } from '@/components/DataNotice';
 import { ClaimRow } from './ClaimRow';
 import { MandateHeader } from './MandateHeader';
 import { RevokeDialog } from './RevokeDialog';
@@ -22,24 +25,47 @@ const TABS: { id: Tab; label: string }[] = [
 ];
 
 interface Props {
+  apiEnabled: boolean;
   initialMandate: MandateView | null;
   readError?: string;
 }
 
 const NO_COMMITTED_CLAIMS = '0';
 
-export function TreasuryDashboard({ initialMandate: mandate, readError }: Props) {
+export function TreasuryDashboard({ apiEnabled, initialMandate: mandate, readError }: Props) {
   const router = useRouter();
   const [refreshing, startRefresh] = useTransition();
-  const [queue, setQueue] = useState(() => reviewQueue());
   const [tab, setTab] = useState<Tab>('review');
   const [confirming, setConfirming] = useState(false);
+  const [resolved, setResolved] = useState<string[]>([]);
 
-  const paid = useMemo(() => settledClaims(), []);
-  const counts = { review: queue.length, paid: paid.length, all: queue.length + paid.length };
+  const live = useClaims(apiEnabled);
+
+  const queue = useMemo(() => {
+    const items =
+      live.source === 'live' && mandate !== null
+        ? toReviewQueue(live.claims, mandate)
+        : reviewQueue();
+    return items.filter((item) => !resolved.includes(item.claim.id));
+  }, [live.source, live.claims, resolved, mandate]);
+
+  const paid = useMemo(
+    () => (live.source === 'live' ? settledFrom(live.claims) : settledClaims()),
+    [live.source, live.claims],
+  );
+
+  const everything = useMemo(
+    () =>
+      live.source === 'live'
+        ? live.claims
+        : [...reviewQueue().map((item) => item.claim), ...settledClaims()],
+    [live.source, live.claims],
+  );
+
+  const counts = { review: queue.length, paid: paid.length, all: everything.length };
 
   function resolve(id: string) {
-    setQueue((items) => items.filter((item) => item.claim.id !== id));
+    setResolved((current) => [...current, id]);
   }
 
   if (mandate === null) {
@@ -52,7 +78,7 @@ export function TreasuryDashboard({ initialMandate: mandate, readError }: Props)
         <p className="break-all rounded-card border border-rule bg-surface p-4 font-mono text-caption text-ink-2">
           {readError ?? 'Unknown Sui read error'}
         </p>
-        <button type="button" onClick={() => router.refresh()} className="w-fit rounded-control bg-accent px-4 py-2 text-body font-medium text-surface">
+        <button type="button" onClick={() => router.refresh()} className="btn btn--primary w-fit">
           Retry live read
         </button>
       </div>
@@ -69,10 +95,12 @@ export function TreasuryDashboard({ initialMandate: mandate, readError }: Props)
         onRevoke={() => setConfirming(true)}
       />
 
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-card border border-ok-line bg-ok-soft px-4 py-3">
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-card border border-ok-line bg-ok-soft px-4 py-3 sm:px-6">
         <div>
           <p className="text-body font-medium text-ok">Live from Sui Testnet</p>
-          <p className="text-caption text-ink-2">
+          {/* The server formats this in its own timezone and the browser in the
+              viewer's, so the two renders legitimately differ. */}
+          <p className="text-caption text-ink-2" suppressHydrationWarning>
             Read at {new Date(mandate.fetchedAtMs).toLocaleTimeString('en-GB')} · Circle Testnet USDC
           </p>
         </div>
@@ -80,15 +108,20 @@ export function TreasuryDashboard({ initialMandate: mandate, readError }: Props)
           type="button"
           disabled={refreshing}
           onClick={() => startRefresh(() => router.refresh())}
-          className="rounded-control border border-rule bg-surface px-4 py-2 text-body transition-colors hover:bg-raised disabled:opacity-50"
+          className="btn btn--ghost h-10 px-5 text-label"
         >
           {refreshing ? 'Refreshing…' : 'Refresh chain state'}
         </button>
       </div>
 
-      <section className="flex flex-col rounded-card border border-rule bg-surface">
-        <div className="border-b border-wait-line bg-wait-soft px-4 py-3 text-body text-ink-2">
-          <span className="font-medium text-wait">Demo claim data:</span> the queue below is simulated until the backend is connected.
+      <section className="flex flex-col overflow-hidden rounded-panel border border-rule bg-surface">
+        <div className="border-b border-rule p-4">
+          <DataNotice
+            source={live.source}
+            reason={live.reason}
+            live="The claim queue"
+            simulated="Each claim is still scored locally and approving one changes nothing on chain."
+          />
         </div>
         <div className="flex flex-wrap items-center gap-1 border-b border-rule px-3 py-2">
           {TABS.map((entry) => (
@@ -96,12 +129,12 @@ export function TreasuryDashboard({ initialMandate: mandate, readError }: Props)
               key={entry.id}
               type="button"
               onClick={() => setTab(entry.id)}
-              className={`rounded-control px-3 py-1.5 text-caption transition-colors duration-150 ${
-                tab === entry.id ? 'bg-raised font-medium text-ink' : 'text-ink-3 hover:bg-raised'
+              className={`rounded-badge px-4 py-2 font-display text-label uppercase transition-colors duration-150 ${
+                tab === entry.id ? 'bg-ink text-canvas' : 'text-ink-3 hover:bg-raised hover:text-ink'
               }`}
             >
               {entry.label}
-              <span className="tnum ml-2 text-ink-3">{counts[entry.id]}</span>
+              <span className="tnum ml-2 opacity-60">{counts[entry.id]}</span>
             </button>
           ))}
         </div>
@@ -114,12 +147,13 @@ export function TreasuryDashboard({ initialMandate: mandate, readError }: Props)
               </span>
               <p className="text-subhead">Nothing needs you</p>
               <p className="max-w-sm text-caption text-ink-3">
-                The agent has paid {paid.length} claims from this mandate and escalated
-                nothing in the last six hours.
+                {paid.length === 0
+                  ? 'No claim from this mandate is waiting on you.'
+                  : `${paid.length} settled, none waiting on you.`}
               </p>
               <Link
                 href="/safety"
-                className="mt-2 rounded-control border border-rule px-4 py-2 text-caption transition-colors duration-150 hover:bg-raised"
+                className="btn btn--ghost mt-2"
               >
                 Run a safety test
               </Link>
@@ -135,7 +169,7 @@ export function TreasuryDashboard({ initialMandate: mandate, readError }: Props)
 
         {tab !== 'review' ? (
           <ul className="flex flex-col divide-y divide-rule">
-            {(tab === 'paid' ? paid : [...queue.map((item) => item.claim), ...paid]).map((claim) => (
+            {(tab === 'paid' ? paid : everything).map((claim) => (
               <li key={claim.id} className="flex items-center gap-3 px-4 py-3">
                 <div className="flex min-w-0 flex-1 flex-col gap-1">
                   <span className="truncate text-body">{claim.merchant}</span>

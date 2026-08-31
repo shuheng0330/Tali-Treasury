@@ -41,13 +41,56 @@ interactions as simulations and links separately to genuine Testnet evidence.
 | 0 | Repo, shared contracts, design tokens | ✅ Done | 29 Aug |
 | 1 | Design system, app shell, status chips | ✅ Done | 29 Aug |
 | 2 | Mobile claim flow — capture to submitted | 🟡 API-backed; auth pending | 31 Aug |
-| 3 | Treasurer dashboard and review queue | 🟡 Mixed: live mandate, mock claims | 29 Aug |
-| 4 | Safety Test panel | 🟡 Mock complete; live evidence linked | 29 Aug |
-| 5 | Landing page | ⬜ Not started | — |
-| 6 | Wire to live contract and backend | 🟡 Live reads and claim submission complete; auth/payment pending | 31 Aug |
+| 3 | Treasurer dashboard and review queue | 🟡 Live mandate and API-backed queue; review actions pending | 31 Aug |
+| 4 | Safety Test panel | 🟡 Mock flow; live refusals linked | 29 Aug |
+| 5 | Landing page | ✅ Done, rebuilt 31 Aug | 30 Aug |
+| 6 | Wire to live contract and backend | 🟡 Live reads, receipt analysis, claim submission and history; policy, review, payment and auth pending | 31 Aug |
 | 7 | Submission pack | ⬜ Not started | — |
 
 Legend: ✅ done · 🟡 in progress · ⬜ not started · ⛔ cut
+
+---
+
+## What is not built yet
+
+Inventory taken 30 Aug against the repo, not from memory. Ordered by how much it
+would hurt to still be true on 5 Sep.
+
+**1. There is no backend.** Zero route handlers under `packages/web/src/app`.
+`.env.example` describes an architecture — Supabase for receipts and data,
+`AGENT_PRIVATE_KEY` and `AGENT_CAP_ID` for server-side signing,
+`AUTO_PAY_CONFIDENCE_THRESHOLD` — and none of it has code behind it.
+
+**2. There is no agent.** The pitch is that an agent reads receipts and pays what the
+rules allow. `GEMINI_API_KEY` and `gemini-flash-lite-latest` are in the env file; there
+is no Gemini call, no image upload and no OCR anywhere in the repo or its history.
+Receipt analysis is mocked end to end. This is the widest gap between what the site
+says and what exists.
+
+**3. The web app never touches the chain.** `@tali/treasury-sui` builds unsigned
+transactions and is imported by the web app for exactly one thing:
+`treasuryErrorFromCode`. No wallet either — `@mysten/dapp-kit` is not installed.
+
+**4. The mock mandate and the live mandate are different objects.** On chain: 0.50 SUI
+budget, 0.10 SUI cap, mandate `0x471cc5a2…`. In the app: 2,000 budget, 200 cap,
+mandate `0x3ac91e57…`. `NEXT_PUBLIC_MANDATE_ID` is empty. Every figure on screen
+changes the day this is wired.
+
+**5. Nothing outside the contract wrapper is tested.** 11 tests, all in
+`sui-integration`. `@tali/shared` and `@tali/web` have no `test` script, so the money
+helpers, the abort ordering and the rule evaluation are unverified.
+
+**6. Phase 7 is untouched.** The README covers the contract and never mentions the web
+app or how to run it. No deck, no video, no Vercel deploy, no Devfolio submission, and
+no AI-tool declaration — which MUBA requires and which is an instant DQ if
+misrepresented.
+
+**7. Dark mode has never been looked at.** The palette is complete and its contrast is
+fixed, but every screenshot taken so far has been light.
+
+Still deliberately cut, listed at the bottom of this file: zkLogin, sponsored
+transactions, the public transparency page, duplicate-review resolution UI, Bahasa
+Malaysia, on-chain category checks.
 
 ---
 
@@ -178,6 +221,130 @@ Verified: build passes, all routes serve 200, claim page renders end to end.
 Routes now: `/` landing · `/claim` · `/treasury` · `/safety` · `/system`.
 
 Verified: build passes, all five routes serve 200 with expected content.
+
+## Phase 5 — Landing page ✅
+
+`/`. Hero, the rule apparatus, the objection, why Move, and an honest scope note.
+
+- **The apparatus is the argument.** A claim travels a wire through four gates. The
+  refused claim runs **first** and holds longest, because it is the only one of the two
+  that demonstrates anything — three consecutive successes before a failure is the order
+  for a product tour, not for a claim under scrutiny.
+- **The verdict is 28px, not 14px.** "Over the 200.00 cap. Nothing moved." carries the
+  message; the 12.5px rule table is detail for whoever is close enough to read it. The
+  amount is struck through when refused.
+- **Gate order and abort codes are the contract's.** Verified line by line against
+  `treasury.move`: 9 → 5 → 6 → 7 is the true relative assert order, and a claim breaking
+  both the cap and the budget aborts on 5, which is what the panel predicts.
+- **The panel says it is four of seven.** The hero says `spend()` holds seven checks and
+  the wire draws four, so the wire names the three it omits rather than leaving a judge to
+  find the discrepancy.
+- **Amounts carry a unit.** A money product with bare numbers invites "so an RM 84 receipt
+  pays 84 SUI?" and has no answer. Every amount is now denominated, and the panel states
+  that testnet SUI stands in for a ringgit stablecoin.
+- **The QR is 128px**, generated client-side from `window.location.origin`, so it works on
+  localhost and on the deployed origin without configuration. Always dark-on-white
+  regardless of theme — scanners cope badly with inverted codes.
+
+**Honesty pass.** The first cut of this page presented fabricated evidence: hardcoded
+base58 digests, invented latencies ("Paid in 412 milliseconds"), and copy promising
+"you get the digest either way, so you can look it up without us". None of it was true —
+nothing in the app touches the network yet. All of it is gone. What replaced it:
+
+- The apparatus is labelled **"Illustration — not a live transaction"** in amber at
+  readable size, not 11px grey in a corner.
+- `/safety` carries a banner saying the panel mirrors the deployed contract's rules and
+  abort codes exactly, but does not yet submit to the network.
+- The footer states the split plainly: contract live on testnet, app on sample data,
+  wiring the safety test is next.
+
+This is a product about not having to trust us. One judge pasting an invented digest into
+SuiVision would have ended the competition.
+
+**Then the real ones went on.** Shuheng had already executed three transactions against
+the deployed package and recorded them in `contracts/tali_treasury/DEPLOYMENT.md` — one
+allowed reimbursement, one refused on abort 5, one refused on abort 7 — so no keypair and
+no new signing were needed. They now sit on the landing page directly beneath the
+illustration, each linked to two explorers, with the aftermath stated: the mandate held
+the same balance afterwards, neither refusal emitted `PaymentMade`, and the agent still
+burned gas being turned down. A refusal that costs nothing did not happen on a chain. The
+two refusals are linked from the safety panel's banner as well, since that is where the
+objection actually arises. `lib/evidence.ts` writes those amounts out as strings rather
+than passing them through `toDisplay`, because they are SUI at 9 decimals and
+`COIN_DECIMALS` is 6 — the very bug recorded below.
+
+**Rhythm.** Ten sentences on the first draft shared one metre — setup clause, then a terse
+three-word punch. That uniformity is itself the AI tell, more than any single word choice
+is. Three of them are now deliberately plain or over-long.
+
+## Defects found and fixed this phase
+
+Found by review of the deployed contract against the UI, not by testing the happy path.
+
+- **`/system` linked the package ID as if it were the mandate object.** A local constant
+  shadowed the shared one, so `/system` and `/treasury` disagreed about the mandate, and
+  the explorer link resolved to a package.
+- **`MANDATE_ID` in the mock was the package ID.** An object ID and a package ID cannot be
+  the same value.
+- **`MEMBER` and `TREASURER` were 65 hex characters.** Sui addresses are 32 bytes. Both
+  would have been rejected by `normalizeAddress` the moment Phase 6 touched them.
+- **`STRANGER` shared 62 characters with `MEMBER`**, so every truncated display of the two
+  was identical — during the unknown-recipient attack the screen read as the agent paying
+  itself. Given an unrelated prefix.
+- **The raw abort string named the mandate where Sui names the package.** It only ever
+  looked right because the two IDs were accidentally equal.
+- **`total_budget` was marked on-chain while comparing against `remainingBudget − COMMITTED`.**
+  The contract checks its own balance and has no notion of our committed-but-unsettled
+  claims. The on-chain rule now compares against the balance; the reserve is stated
+  separately.
+- **The drain-budget attack could never abort on its own guard.** With a 200 cap and 1,408
+  available, any amount large enough to exhaust the budget breaks the cap first, so the
+  card promised `total_budget` while the dry run predicted `AMOUNT_ABOVE_LIMIT`. It now
+  spends the mandate down below the cap first, which is the only state where the budget
+  rule is the one that has to catch it.
+- **Amounts were labelled USDC in three screens and SUI in another.** Now one unit
+  everywhere.
+
+Found by a second pass over the landing code and the token set:
+
+- **`:focus-visible` set `border-radius: 2px` and was unlayered**, so it beat every
+  `rounded-*` utility in `@layer utilities`. Tabbing to any button visibly squared its
+  corners from 8px to 2px. Browsers already curve the outline to the element's own radius,
+  so the line was doing nothing but damage.
+- **`--ink-3` failed WCAG AA everywhere it was used** — 4.06:1 on white, 3.72:1 on canvas,
+  3.32:1 on a failed row. Now 96 105 116 in light and 119 129 140 in dark, which clears
+  4.5:1 against all three backgrounds in both themes.
+- **Rule pass/fail was invisible to screen readers.** Every state signal — the rail, the
+  glyphs — was `aria-hidden`, and the row text carried no state word, so the outcome
+  reached sighted users through colour and shape and reached everyone else not at all.
+  Each row now carries an `sr-only` verdict.
+- **The live region announced on every auto-advance**, roughly every five seconds, forever.
+  It now fills only when someone picks a claim themselves.
+- **`prefers-reduced-motion` was honoured by the CSS and ignored by the loop**, which left
+  those users with content still swapping every 600ms and a dot that teleported instead of
+  easing. The loop now starts paused for them.
+- **`truncate` on the rule label clipped it below ~448px** — "Inside the rem…" on every
+  phone in portrait. It wraps instead.
+- **The verdict hardcoded the cap**, so a budget failure would have read "Over the 200.00
+  cap" and claimed rules 3 and 4 were skipped when rule 3 was the one that failed. Both
+  strings derive from the failing gate now.
+- **The QR had a 2.7-module quiet zone** against the 4 the spec requires, which is exactly
+  the kind of thing that works on a desk and fails in a dark room.
+- Re-selecting the already-current claim left a stale timer, because none of the effect's
+  dependencies changed. Harmless with two runs of differing length; silently broken the
+  moment a third is added. `index` is now a dependency.
+
+## Known issue carried into Phase 6
+
+`COIN_DECIMALS` is **6** while `mandate.coinType` is `0x2::sui::SUI`, which has **9**.
+Nothing renders wrong today because every mock figure is minted and displayed through the
+same constant, but the moment real chain data arrives, `toMandateView` copies raw MIST
+straight through and the deployed mandate's 450000000 MIST renders as "450.00" instead of
+0.45. Gas in `AttackResult` has the same fault today. **Decide before wiring:** either
+switch to testnet USDC and keep 6, or keep SUI and move to a per-coin decimals lookup.
+`DEPLOYMENT.md` calls the SUI mandate a smoke test "before integrating official testnet
+USDC", and USDC is 6 decimals, so the plan of record already points at USDC — it just
+has not been carried out.
 
 ---
 

@@ -2,44 +2,32 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import type {
-  Claim,
-  CreateClaimRequest,
   DraftClaim,
   MandateView,
+  PaymentResult,
+  PolicyDecision,
   ReceiptAnalysis,
 } from '@tali/shared';
-import { analyzeReceipt, createClaim, listClaims, TaliApiError } from '@/lib/api/client';
-import {
-  DEMO_EVENT_ID,
-  DEMO_EVENT_NAME,
-  DEMO_SUBMITTER,
-} from '@/lib/demo-config';
+import { mandate as sampleMandate } from '@/lib/mock/data';
+import { evaluate, pay } from '@/lib/mock/api';
+import { tryAnalyzeReceipt, tryCreateClaim, type Source } from '@/lib/api/demo';
+import { useClaims } from '@/lib/api/useClaims';
+import { DEMO_EVENT_ID, DEMO_EVENT_NAME, DEMO_SUBMITTER } from '@/lib/demo-config';
+import { DataNotice } from '@/components/DataNotice';
 import { ClaimHome } from './ClaimHome';
 import { ReceiptConfirm } from './ReceiptConfirm';
-import { Submitted } from './Outcome';
+import { RuleCheck } from './RuleCheck';
+import { Held, Paid } from './Outcome';
 
-type Step = 'home' | 'reading' | 'confirm' | 'submitting' | 'submitted';
+type Step = 'home' | 'reading' | 'confirm' | 'checking' | 'paid' | 'held';
 
 interface Props {
   apiEnabled: boolean;
-  initialMandate: MandateView | null;
+  mandate: MandateView | null;
   mandateReadError?: string;
 }
 
-function messageFor(error: unknown): string {
-  if (error instanceof TaliApiError) {
-    if (error.code === 'authentication_required') {
-      return 'Receipt submission requires wallet authentication, which is not configured yet.';
-    }
-    if (error.code === 'duplicate_receipt') {
-      return 'This receipt has already been submitted.';
-    }
-    return error.message;
-  }
-  return error instanceof Error ? error.message : 'The request failed. Please try again.';
-}
-
-function Reading({ photoUrl, submitting = false }: { photoUrl: string; submitting?: boolean }) {
+function Reading({ photoUrl }: { photoUrl: string }) {
   return (
     <div className="flex flex-col items-center gap-5 pt-6">
       <div className="relative w-full overflow-hidden rounded-card border border-rule bg-raised">
@@ -48,34 +36,41 @@ function Reading({ photoUrl, submitting = false }: { photoUrl: string; submittin
         <span className="absolute inset-0 animate-breathe bg-accent/10" aria-hidden />
       </div>
       <p className="text-subhead text-ink-2" aria-live="polite">
-        {submitting ? 'Submitting your claim…' : 'Reading your receipt…'}
+        Reading your receipt…
       </p>
     </div>
   );
 }
 
-function confirmedAnalysis(analysis: ReceiptAnalysis, draft: DraftClaim): ReceiptAnalysis {
-  const merchant = draft.merchant.trim();
-  return {
-    ...analysis,
-    merchant,
-    amount: draft.amount,
-    receiptDate: draft.receiptDate,
-    category: draft.category,
-    uncertainFields: [],
-    fuzzyKey: [merchant.toLowerCase().replace(/\s+/g, ' '), draft.receiptDate, draft.amount].join('|'),
-  };
-}
-
-export function ClaimFlow({ apiEnabled, initialMandate, mandateReadError }: Props) {
+export function ClaimFlow({ apiEnabled, mandate, mandateReadError }: Props) {
   const [step, setStep] = useState<Step>('home');
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const [analysis, setAnalysis] = useState<ReceiptAnalysis | null>(null);
   const [storagePath, setStoragePath] = useState<string | null>(null);
-  const [submittedClaim, setSubmittedClaim] = useState<Claim | null>(null);
-  const [claims, setClaims] = useState<Claim[]>([]);
-  const [claimsLoading, setClaimsLoading] = useState(apiEnabled);
-  const [error, setError] = useState<string | null>(null);
+  const [duplicateOf, setDuplicateOf] = useState<string | null>(null);
+  const [draft, setDraft] = useState<DraftClaim | null>(null);
+  const [decision, setDecision] = useState<PolicyDecision | null>(null);
+  const [payment, setPayment] = useState<PaymentResult | null>(null);
+
+  /** Where this receipt's analysis came from, which decides whether the claim
+   *  can be persisted: without a live read there is no uploaded image, so the
+   *  storage path the API insists on does not exist. */
+  const [source, setSource] = useState<Source>('mock');
+  const [notice, setNotice] = useState<string | null>(null);
+
+  /** Kept apart from `source`, because a claim that failed to save says nothing
+   *  about whether the receipt was read — conflating them had the banner
+   *  blaming the analyser for a database refusal. */
+  const [saveError, setSaveError] = useState<string | null>(null);
+
+  const claims = useClaims(apiEnabled);
+  const reloadClaims = claims.reload;
+
+  /** The chain is the authority on the budget. Falling back to the sample
+   *  mandate keeps the screen usable when the RPC is down, and the banner says
+   *  which one is on screen. */
+  const chainLive = mandate !== null;
+  const budget = mandate ?? sampleMandate;
 
   useEffect(() => {
     return () => {
@@ -83,134 +78,120 @@ export function ClaimFlow({ apiEnabled, initialMandate, mandateReadError }: Prop
     };
   }, [photoUrl]);
 
-  useEffect(() => {
-    if (!apiEnabled) return;
-
-    let active = true;
-    listClaims(DEMO_EVENT_ID, DEMO_SUBMITTER)
-      .then(({ claims: loaded }) => {
-        if (active) {
-          setClaims(
-            loaded.filter(
-              (claim) => claim.submitter.toLowerCase() === DEMO_SUBMITTER.toLowerCase(),
-            ),
-          );
-        }
-      })
-      .catch((cause) => {
-        if (active) setError(`Could not load claims: ${messageFor(cause)}`);
-      })
-      .finally(() => {
-        if (active) setClaimsLoading(false);
-      });
-
-    return () => {
-      active = false;
-    };
-  }, [apiEnabled]);
-
-  const onCapture = useCallback(async (file: File) => {
-    setError(null);
-    setAnalysis(null);
-    setStoragePath(null);
+  const onCapture = useCallback((file: File) => {
     setPhotoUrl((previous) => {
       if (previous) URL.revokeObjectURL(previous);
       return URL.createObjectURL(file);
     });
     setStep('reading');
+    setSaveError(null);
 
-    try {
-      const result = await analyzeReceipt(file, DEMO_EVENT_ID, DEMO_SUBMITTER);
-      if (result.duplicateOf) {
-        throw new TaliApiError(
-          `This receipt is already attached to claim ${result.duplicateOf}.`,
-          'duplicate_receipt',
-          409,
-        );
-      }
-      setAnalysis(result.analysis);
-      setStoragePath(result.storagePath);
+    tryAnalyzeReceipt(file).then((result) => {
+      setAnalysis(result.data?.analysis ?? null);
+      setStoragePath(result.data?.storagePath || null);
+      setDuplicateOf(result.data?.duplicateOf ?? null);
+      setSource(result.source);
+      setNotice(result.reason);
       setStep('confirm');
-    } catch (cause) {
-      setError(messageFor(cause));
-      setPhotoUrl(null);
-      setStep('home');
-    }
+    });
   }, []);
 
-  const onSubmit = useCallback(async (draft: DraftClaim) => {
-    if (!analysis || !storagePath) return;
+  const onSubmit = useCallback(
+    (next: DraftClaim) => {
+      setDraft(next);
+      setDecision(evaluate(next, budget, chainLive ? '0' : undefined));
+      setStep('checking');
 
-    setError(null);
-    setStep('submitting');
-    const request: CreateClaimRequest = {
-      eventId: DEMO_EVENT_ID,
-      submitter: DEMO_SUBMITTER,
-      amount: draft.amount,
-      merchant: draft.merchant.trim(),
-      receiptDate: draft.receiptDate,
-      category: draft.category,
-      description: draft.description.trim(),
-      storagePath,
-      analysis: confirmedAnalysis(analysis, draft),
-    };
+      if (source !== 'live' || analysis === null || storagePath === null) {
+        setSaveError('This claim was not saved: the receipt was never uploaded.');
+        return;
+      }
 
-    try {
-      const { claim } = await createClaim(request);
-      setClaims((current) => [claim, ...current.filter((item) => item.id !== claim.id)]);
-      setSubmittedClaim(claim);
-      setStep('submitted');
-    } catch (cause) {
-      setError(messageFor(cause));
-      setStep('confirm');
+      setSaveError(null);
+      tryCreateClaim({
+        eventId: DEMO_EVENT_ID,
+        submitter: DEMO_SUBMITTER,
+        amount: next.amount,
+        merchant: next.merchant,
+        receiptDate: next.receiptDate,
+        category: next.category,
+        description: next.description,
+        storagePath,
+        analysis,
+      }).then((created) => {
+        if (created.data !== null) {
+          reloadClaims();
+          return;
+        }
+        setSaveError(`This claim was not saved: ${created.reason}.`);
+      });
+    },
+    [source, analysis, storagePath, reloadClaims, budget, chainLive],
+  );
+
+  const onSettled = useCallback(() => {
+    if (!decision || !draft) return;
+
+    if (decision.outcome === 'auto_pay') {
+      pay(draft.amount).then((result) => {
+        setPayment(result);
+        setStep('paid');
+      });
+      return;
     }
-  }, [analysis, storagePath]);
+
+    setStep('held');
+  }, [decision, draft]);
 
   const reset = useCallback(() => {
     setAnalysis(null);
     setStoragePath(null);
-    setSubmittedClaim(null);
-    setError(null);
-    setPhotoUrl(null);
+    setDuplicateOf(null);
+    setDraft(null);
+    setDecision(null);
+    setPayment(null);
+    setSource('mock');
+    setNotice(null);
+    setSaveError(null);
     setStep('home');
   }, []);
 
-  const budget = initialMandate?.initialBudget ?? '0';
-  const available = initialMandate?.remainingBudget ?? '0';
+  const mine = claims.claims.filter(
+    (claim) => claim.submitter.toLowerCase() === DEMO_SUBMITTER.toLowerCase(),
+  );
+
+  const home = step === 'home';
+  const homeLive = claims.source === 'live' && chainLive;
+  const chainReason = mandateReadError
+    ? `the mandate could not be read from Sui (${mandateReadError})`
+    : 'the mandate could not be read from Sui';
+  const homeReason = chainLive ? claims.reason : chainReason;
+  /** Name only what actually fell back. A live chain read with a dead claims
+   *  API is not "your budget fell back". */
+  const homeLabel =
+    chainLive && !homeLive ? 'Your claim history' : 'Your budget and claim history';
 
   return (
     <div className="mx-auto flex w-full max-w-md flex-col px-5 py-6">
-      <p
-        className={`mb-4 rounded-control border p-3 text-body ${
-          apiEnabled
-            ? 'border-ok-line bg-ok-soft text-ok'
-            : 'border-wait-line bg-wait-soft text-wait'
-        }`}
-      >
-        {apiEnabled
-          ? 'Live receipt flow — Gemini analysis and private Supabase storage are connected. Policy processing and payment remain pending.'
-          : 'Receipt APIs are safely disabled until wallet authentication is configured. This page does not fall back to mock submissions.'}
-      </p>
+      {step === 'reading' ? null : (
+        <div className="mb-6">
+          <DataNotice
+            source={home ? (homeLive ? 'live' : 'mock') : source}
+            reason={home ? homeReason : notice}
+            live={home ? homeLabel : 'Receipt reading and storage'}
+            plural={home && homeLabel.includes(' and ')}
+            simulated="Policy, payment and wallet signing still run locally — nothing is signed or broadcast."
+          />
+        </div>
+      )}
 
-      {mandateReadError ? (
-        <p className="mb-4 rounded-control border border-wait-line bg-wait-soft p-3 text-body text-wait">
-          Live treasury balance is unavailable: {mandateReadError}
-        </p>
-      ) : null}
-
-      {error ? (
-        <p className="mb-4 rounded-control border border-no-line bg-no-soft p-3 text-body text-no" role="alert">
-          {error}
-        </p>
-      ) : null}
-
-      {step === 'home' ? (
+      {home ? (
         <ClaimHome
           eventName={DEMO_EVENT_NAME}
-          available={available}
-          budget={budget}
-          claims={claims}
-          claimsLoading={claimsLoading}
+          available={budget.remainingBudget}
+          budget={budget.initialBudget}
+          claims={mine}
+          claimsLoading={claims.loading}
           captureDisabled={!apiEnabled}
           onCapture={onCapture}
         />
@@ -218,19 +199,26 @@ export function ClaimFlow({ apiEnabled, initialMandate, mandateReadError }: Prop
 
       {step === 'reading' && photoUrl ? <Reading photoUrl={photoUrl} /> : null}
 
-      {step === 'confirm' && photoUrl && analysis ? (
+      {step === 'confirm' && photoUrl ? (
         <ReceiptConfirm
           photoUrl={photoUrl}
           analysis={analysis}
+          duplicateOf={duplicateOf}
           onRetake={reset}
           onSubmit={onSubmit}
         />
       ) : null}
 
-      {step === 'submitting' && photoUrl ? <Reading photoUrl={photoUrl} submitting /> : null}
+      {step === 'checking' && decision ? (
+        <RuleCheck decision={decision} onSettled={onSettled} />
+      ) : null}
 
-      {step === 'submitted' && submittedClaim ? (
-        <Submitted claim={submittedClaim} onDone={reset} />
+      {step === 'paid' && draft && payment ? (
+        <Paid amount={draft.amount} payment={payment} saveError={saveError} onDone={reset} />
+      ) : null}
+
+      {step === 'held' && draft && decision ? (
+        <Held amount={draft.amount} decision={decision} saveError={saveError} onDone={reset} />
       ) : null}
     </div>
   );

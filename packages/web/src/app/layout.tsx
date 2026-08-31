@@ -1,10 +1,16 @@
 import type { Metadata, Viewport } from 'next';
-import { IBM_Plex_Mono, Instrument_Sans } from 'next/font/google';
+import { Albert_Sans, Bricolage_Grotesque, IBM_Plex_Mono } from 'next/font/google';
 import './globals.css';
 
-const sans = Instrument_Sans({
+const sans = Albert_Sans({
   subsets: ['latin'],
-  variable: '--font-instrument-sans',
+  variable: '--font-albert-sans',
+  display: 'swap',
+});
+
+const display = Bricolage_Grotesque({
+  subsets: ['latin'],
+  variable: '--font-bricolage',
   display: 'swap',
 });
 
@@ -28,7 +34,10 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${sans.variable} ${mono.variable}`}>
+    <html
+      lang="en"
+      className={`${sans.variable} ${display.variable} ${mono.variable}`}
+    >
       <body className="font-sans text-body antialiased">{children}</body>
     </html>
   );

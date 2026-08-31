@@ -17,6 +17,7 @@
     "@tali/shared": "0.1.0",
     "@tali/treasury-sui": "0.1.0",
     "next": "16.3.3",
+    "qrcode": "^1.5.4",
     "react": "19.1.1",
     "react-dom": "19.1.1",
     "zod": "4.4.3"
@@ -24,6 +25,7 @@
   "devDependencies": {
     "@tailwindcss/postcss": "4.1.13",
     "@types/node": "22.15.3",
+    "@types/qrcode": "^1.5.5",
     "@types/react": "19.1.9",
     "@types/react-dom": "19.1.7",
     "tailwindcss": "4.1.13",

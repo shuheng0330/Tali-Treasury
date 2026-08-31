@@ -7,6 +7,11 @@ import type {
 } from '@tali/shared';
 import { isApiError } from '@tali/shared';
 
+/**
+ * Transport only: every function here throws a typed error and knows nothing
+ * about the app. The forgiving wrappers bound to the demo identity live in
+ * ./demo, which is what the screens use.
+ */
 export class TaliApiError extends Error {
   constructor(
     message: string,
@@ -79,4 +84,3 @@ export async function listClaims(
     }),
   );
 }
-

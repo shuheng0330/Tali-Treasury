@@ -54,7 +54,7 @@ export function RuleCheck({
         </p>
       </div>
 
-      <ul className="flex flex-col divide-y divide-rule rounded-card border border-rule bg-surface">
+      <ul className="flex flex-col divide-y divide-rule overflow-hidden rounded-card border border-rule bg-surface">
         {decision.checks.map((check, index) => {
           const state = index >= revealed ? 'pending' : check.passed ? 'pass' : 'fail';
 
@@ -73,7 +73,7 @@ export function RuleCheck({
                 <span className="tnum text-caption text-ink-3">{check.detail}</span>
               </span>
               {check.onChain ? (
-                <span className="mt-0.5 font-mono text-label uppercase text-ink-3">on-chain</span>
+                <span className="mt-0.5 shrink-0 rounded-badge bg-raised px-2 py-1 font-mono text-label uppercase text-ink-3">on-chain</span>
               ) : null}
             </li>
           );

@@ -11,11 +11,11 @@ interface Props {
   onRevoke: () => void;
 }
 
-function Stat({ label, value, note }: { label: string; value: string; note: string }) {
+function Stat({ label, value, note }: { label: string; value: React.ReactNode; note: string }) {
   return (
     <div className="flex flex-col gap-1 border-l border-rule px-4 first:border-l-0 first:pl-0">
-      <span className="text-label uppercase text-ink-3">{label}</span>
-      <span className="tnum text-subhead">{value}</span>
+      <span className="eyebrow">{label}</span>
+      <span className="tnum font-display text-subhead">{value}</span>
       <span className="text-caption text-ink-3">{note}</span>
     </div>
   );
@@ -31,16 +31,16 @@ export function MandateHeader({ eventName, organisation, mandate, committed, onR
   const capacity = Math.floor(Number(available) / Number(mandate.maxPerClaim));
 
   return (
-    <section className="flex flex-col gap-6 rounded-card border border-rule bg-surface p-6">
+    <section className="flex flex-col gap-6 rounded-panel border border-rule bg-surface p-6 md:p-8">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="flex flex-col gap-1">
-          <span className="text-label uppercase text-ink-3">{organisation}</span>
+          <span className="eyebrow">{organisation}</span>
           <h1 className="text-heading">{eventName}</h1>
           <a
             href={EXPLORER.object(mandate.id).suiscan}
             target="_blank"
             rel="noreferrer"
-            className="font-mono text-caption text-ink-3 underline-offset-4 hover:text-ink-2 hover:underline"
+            className="link font-mono text-caption text-ink-3"
           >
             {mandate.id.slice(0, 8)}…{mandate.id.slice(-6)}
           </a>
@@ -52,7 +52,7 @@ export function MandateHeader({ eventName, organisation, mandate, committed, onR
             type="button"
             onClick={onRevoke}
             disabled={status !== 'active'}
-            className="rounded-control border border-rule px-3 py-1.5 text-caption transition-colors duration-150 hover:bg-raised disabled:cursor-not-allowed disabled:opacity-40"
+            className="btn btn--danger h-9 px-4 text-label"
           >
             Preview revoke
           </button>
@@ -74,7 +74,7 @@ export function MandateHeader({ eventName, organisation, mandate, committed, onR
         />
         <Stat
           label="Expires"
-          value={`in ${daysUntil(mandate.expiryMs)} days`}
+          value={<span suppressHydrationWarning>{`in ${daysUntil(mandate.expiryMs)} days`}</span>}
           note={new Date(mandate.expiryMs).toLocaleDateString('en-GB', {
             day: 'numeric',
             month: 'short',
