@@ -105,6 +105,9 @@ function createRepository(overrides: Partial<ClaimRepository> = {}): ClaimReposi
     listByEvent: vi.fn(async () => []),
     getProcessContext: vi.fn(),
     saveDecision: vi.fn(),
+    reservePayment: vi.fn(),
+    failApprovedPayment: vi.fn(),
+    finishPayment: vi.fn(),
     ...overrides,
   };
 }

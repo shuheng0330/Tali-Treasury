@@ -10,6 +10,8 @@ export type ServerErrorCode =
   | 'claim_not_found'
   | 'processing_conflict'
   | 'mandate_read_failed'
+  | 'payment_configuration_failed'
+  | 'payment_submission_uncertain'
   | 'duplicate_receipt'
   | 'analysis_failed'
   | 'storage_failed'
