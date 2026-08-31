@@ -13,6 +13,7 @@ const CURRENCY = /^[A-Z]{3}$/;
 const RECEIPT_PATH = /^([0-9a-f-]{36})\/([0-9a-f]{64})\.(?:jpg|png|webp)$/;
 
 export const eventIdSchema = z.string().uuid();
+export const claimIdSchema = z.string().uuid();
 export const suiAddressSchema = z.string().regex(SUI_ADDRESS, 'invalid Sui address');
 
 function isValidIsoDate(value: string): boolean {
@@ -145,4 +146,18 @@ const createClaimRequestSchema = z
 
 export function parseCreateClaimRequest(input: unknown): CreateClaimRequest {
   return createClaimRequestSchema.parse(input) as CreateClaimRequest;
+}
+
+const processClaimInputSchema = z
+  .object({
+    claimId: claimIdSchema,
+    processor: suiAddressSchema,
+  })
+  .strict();
+
+export function parseProcessClaimInput(input: unknown): {
+  claimId: string;
+  processor: string;
+} {
+  return processClaimInputSchema.parse(input);
 }
