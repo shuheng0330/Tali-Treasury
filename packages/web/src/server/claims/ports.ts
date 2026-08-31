@@ -2,10 +2,14 @@ import type {
   Address,
   Claim,
   CreateClaimRequest,
+  MandateView,
+  ObjectId,
+  PolicyDecision,
   ReceiptAnalysis,
 } from '@tali/shared';
 
 import type { ReceiptMimeType } from '../receipts/hash';
+import type { PolicyEventSnapshot } from '../policy/evaluate';
 
 export interface DuplicateReceipt {
   claimId: string;
@@ -18,6 +22,24 @@ export interface StoredClaim {
   storagePath: string;
 }
 
+export interface ClaimProcessContext {
+  claim: Claim;
+  event: PolicyEventSnapshot & {
+    treasurer: Address;
+    mandateId: ObjectId;
+  };
+}
+
+export type ProcessedClaimState = 'approved' | 'awaiting_review' | 'rejected';
+
+export type SaveDecisionResult =
+  | { status: 'saved'; claim: Claim }
+  | { status: 'lost_race'; claim: Claim };
+
+export interface MandateReader {
+  read(mandateId: ObjectId): Promise<MandateView>;
+}
+
 export interface ClaimRepository {
   assertEventExists(eventId: string): Promise<void>;
   assertActiveMember(eventId: string, submitter: Address): Promise<void>;
@@ -27,6 +49,12 @@ export interface ClaimRepository {
   ): Promise<DuplicateReceipt | null>;
   create(input: CreateClaimRequest): Promise<Claim>;
   listByEvent(eventId: string): Promise<StoredClaim[]>;
+  getProcessContext(claimId: string): Promise<ClaimProcessContext>;
+  saveDecision(input: {
+    claimId: string;
+    decision: PolicyDecision;
+    state: ProcessedClaimState;
+  }): Promise<SaveDecisionResult>;
 }
 
 export interface ReceiptStore {

@@ -26,6 +26,50 @@ The current backend increment must:
 - expose analyze, create-claim and list-claims API routes;
 - return stable, sanitized API errors without credentials or provider details.
 
+## Implemented deterministic-policy scope
+
+The server policy evaluator must:
+
+- return the shared `PolicyDecision` contract without performing database, network,
+  wallet or filesystem I/O;
+- evaluate the per-claim cap, remaining mandate budget, recipient allowlist,
+  revocation, mandate expiry, exact duplicate status, allowed category, receipt
+  date and receipt-extraction certainty;
+- use integer USDC base-unit comparisons, accepting an amount equal to the cap or
+  remaining budget;
+- require at least 90% Gemini confidence with no uncertain fields or warnings;
+- validate canonical receipt dates within the event window and no later than the
+  current UTC date;
+- reject exact duplicates and claims that cannot satisfy the current Sui mandate;
+- send correctable category, date and extraction exceptions to treasurer review;
+- make hard rejection take precedence when review and rejection failures coexist;
+  and
+- explain every check without exposing receipt contents, credentials or provider
+  errors.
+
+The evaluator mirrors on-chain rules for early routing. The Sui Move contract is
+still the final payment authority.
+
+## Implemented claim-processing scope
+
+The claim-processing endpoint must:
+
+- remain disabled unless insecure demo identity mode is explicitly enabled;
+- accept a claim UUID and canonical processor address;
+- allow only the event's configured treasurer to trigger processing;
+- return a stored decision idempotently without rereading Sui;
+- load the current read-only mandate snapshot for a new submitted claim;
+- reject a mandate whose object ID or coin type differs from the event and
+  configured official testnet USDC treasury;
+- persist exactly one decision through a compare-and-set update;
+- map `auto_pay` to `approved`, `review` to `awaiting_review`, and `reject` to
+  `rejected`;
+- return a concurrent winner's stored decision rather than overwriting it; and
+- return `payment: null` without constructing, signing or broadcasting a
+  transaction.
+
+An `approved` claim is ready for a later payment step; it is not paid.
+
 ## Security and business rules
 
 - Gemini and Supabase credentials are server-only and must never use a
@@ -52,9 +96,9 @@ The current backend increment must:
 
 - wallet-signature authentication;
 - cryptographic or one-time binding between analysis and claim creation;
-- deterministic policy evaluation and review actions;
+- treasurer review actions and review-driven claim-state transitions;
 - agent private-key use, Sui transaction construction, signing or payment;
-- frontend replacement of current mock claim data;
+- frontend replacement of remaining mock policy and payment data;
 - production readiness; the schema is hosted, but real identity, deployed API
   configuration and end-to-end verification remain pending.
 

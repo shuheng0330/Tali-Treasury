@@ -11,7 +11,12 @@ Last updated: 31 August 2026 (MYT)
 - Supabase database and storage adapters with sanitized errors;
 - Next.js API routes for all three shared endpoint contracts;
 - API-backed `/claim` receipt analysis, confirmation, claim creation and claim list;
-- 72 passing web Vitest tests, plus 14 Sui integration tests;
+- pure deterministic policy evaluation across all nine shared rules, with
+  explainable `auto_pay`, `review` and `reject` outcomes;
+- treasurer-only `POST /api/claims/:id/process` integration with live read-only Sui
+  mandate snapshots, idempotent decisions and atomic Supabase state transitions;
+- 126 passing web Vitest tests, including 32 focused policy tests, plus 14 Sui
+  integration tests;
 - 42 passing pgTAP database assertions on a clean disposable PostgreSQL 17
   database;
 - web TypeScript check passing at the API checkpoint.
@@ -22,6 +27,8 @@ Last updated: 31 August 2026 (MYT)
   `mnoalwykrmueimmuyllw` on 30 August 2026.
 - Seed migration `20260831000000` created demo event
   `ba7e50e2-7e7b-4a67-a505-9e3a329739ae` and its Kian Xiang membership.
+- Additive membership migration `20260831010000` is applied. Shu Heng, Lim Wey
+  Cheng, and Kian Xiang were verified as active members of the hosted demo event.
 - Migration history, schema lint, RLS, grants and private receipt-bucket metadata
   were checked. The recorded scope and reproducible checks are in
   [`docs/HOSTED_SUPABASE_VERIFICATION.md`](docs/HOSTED_SUPABASE_VERIFICATION.md).
@@ -37,11 +44,10 @@ not needed.
 
 ## Pending integration
 
-- apply and verify additive migration `20260831010000` for Shu Heng and Lim Wey
-  Cheng;
+- configure server-only Gemini and Supabase credentials in the deployment;
 - add wallet-signature authentication;
 - bind analysis to claim confirmation through a signed token or persisted draft;
-- implement deterministic policy, review actions and backend Sui signing;
+- implement treasurer review actions and backend Sui signing;
 - run the hosted receipt flow end to end after authenticated identity is available.
 
 ## Known limitations
@@ -53,4 +59,6 @@ not needed.
   bound to one another.
 - The frontend is wired to the hosted receipt APIs, but Production intentionally
   disables them until authenticated identity replaces the demo address.
+- Claim processing stores decisions and states but intentionally returns
+  `payment: null`; approved claims are not yet paid.
 - No backend code in this increment can sign or broadcast a Sui transaction.

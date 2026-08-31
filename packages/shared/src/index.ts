@@ -53,6 +53,7 @@ export type {
   GetEventResponse,
   GetMandateResponse,
   ListClaimsResponse,
+  ProcessClaimRequest,
   ProcessClaimResponse,
   ReviewClaimRequest,
   ReviewClaimResponse,
