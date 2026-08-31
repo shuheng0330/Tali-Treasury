@@ -3,8 +3,10 @@ import {
   buildSpendTransaction,
   createTestnetClient,
   normalizeAddress,
+  parseTreasuryError,
   readMandate,
   taliTestnetUsdcConfig,
+  treasuryErrorFromCode,
   type TreasuryConfig,
 } from '@tali/treasury-sui';
 
@@ -68,6 +70,32 @@ interface ExecutorOptions {
   now?: () => number;
 }
 
+function asRecord(value: unknown): Record<string, unknown> | null {
+  return value !== null && typeof value === 'object' && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : null;
+}
+
+function moveAbortCode(value: unknown): number | null {
+  const error = asRecord(value);
+  if (!error) return null;
+  const moveAbort = asRecord(error.MoveAbort);
+  if (error.$kind !== 'MoveAbort' || !moveAbort) return null;
+  const code = moveAbort.abortCode;
+  if (typeof code !== 'string' && typeof code !== 'number') return null;
+  const parsed = Number(code);
+  return Number.isSafeInteger(parsed) ? parsed : null;
+}
+
+function netGasUsed(gas: ConfirmedPayment['gasUsed']): string {
+  const netGas =
+    BigInt(gas.computationCost) +
+    BigInt(gas.storageCost) +
+    BigInt(gas.nonRefundableStorageFee) -
+    BigInt(gas.storageRebate);
+  return (netGas < 0n ? 0n : netGas).toString();
+}
+
 function createDefaultOperations(input: {
   keypair: Ed25519Keypair;
   config: TreasuryConfig;
@@ -122,6 +150,7 @@ export function createSuiPaymentExecutor(
 ): PaymentExecutor {
   const env = options.env ?? process.env;
   const config = options.config ?? taliTestnetUsdcConfig;
+  const now = options.now ?? Date.now;
   let runtime:
     | { agentCapId: string; operations: PaymentOperations }
     | undefined;
@@ -162,13 +191,88 @@ export function createSuiPaymentExecutor(
 
     async execute(input) {
       const ready = getRuntime();
-      await ready.operations.prepare({
-        agentCapId: ready.agentCapId,
-        mandateId: input.mandateId,
-        recipient: input.recipient,
-        amount: BigInt(input.amount),
-      });
-      throw new Error('Payment outcome mapping is not implemented');
+      let prepared: PreparedPayment;
+      try {
+        prepared = await ready.operations.prepare({
+          agentCapId: ready.agentCapId,
+          mandateId: input.mandateId,
+          recipient: input.recipient,
+          amount: BigInt(input.amount),
+        });
+      } catch {
+        return {
+          status: 'rejected',
+          payment: {
+            ok: false,
+            digest: null,
+            checkpoint: null,
+            gasUsed: null,
+            finalityMs: null,
+            abortCode: null,
+            abortKey: 'TRANSACTION_PREPARATION_FAILED',
+            message: 'Payment could not be prepared for Sui testnet.',
+            rawError: null,
+            budgetBefore: input.budgetBefore,
+            budgetAfter: input.budgetBefore,
+          },
+        };
+      }
+
+      const startedAt = now();
+      let confirmed: ConfirmedPayment;
+      try {
+        confirmed = await ready.operations.submit(prepared);
+      } catch {
+        throw new PaymentSubmissionUncertainError();
+      }
+      const finalityMs = Math.max(0, now() - startedAt);
+      if (!confirmed.status.success) {
+        const code = moveAbortCode(confirmed.status.error);
+        const treasuryError =
+          code === null
+            ? parseTreasuryError(confirmed.status.error)
+            : treasuryErrorFromCode(code);
+        return {
+          status: 'rejected',
+          payment: {
+            ok: false,
+            digest: confirmed.digest,
+            checkpoint: confirmed.checkpoint,
+            gasUsed: netGasUsed(confirmed.gasUsed),
+            finalityMs,
+            abortCode: treasuryError.code,
+            abortKey: treasuryError.key,
+            message: treasuryError.message,
+            rawError: null,
+            budgetBefore: input.budgetBefore,
+            budgetAfter: input.budgetBefore,
+          },
+        };
+      }
+
+      let budgetAfter: string;
+      try {
+        budgetAfter = await ready.operations.readBudget(input.mandateId);
+      } catch {
+        throw new PaymentSubmissionUncertainError();
+      }
+
+      return {
+        status: 'paid',
+        payment: {
+          ok: true,
+          digest: confirmed.digest,
+          checkpoint: confirmed.checkpoint,
+          gasUsed: netGasUsed(confirmed.gasUsed),
+          finalityMs,
+          abortCode: null,
+          abortKey: null,
+          message: 'Payment confirmed on Sui testnet.',
+          rawError: null,
+          budgetBefore: input.budgetBefore,
+          budgetAfter,
+        },
+      };
     },
   };
 }
