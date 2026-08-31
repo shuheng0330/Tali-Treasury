@@ -11,7 +11,7 @@ interface Props {
   onRevoke: () => void;
 }
 
-function Stat({ label, value, note }: { label: string; value: string; note: string }) {
+function Stat({ label, value, note }: { label: string; value: React.ReactNode; note: string }) {
   return (
     <div className="flex flex-col gap-1 border-l border-rule px-4 first:border-l-0 first:pl-0">
       <span className="text-label uppercase text-ink-3">{label}</span>
@@ -74,7 +74,7 @@ export function MandateHeader({ eventName, organisation, mandate, committed, onR
         />
         <Stat
           label="Expires"
-          value={`in ${daysUntil(mandate.expiryMs)} days`}
+          value={<span suppressHydrationWarning>{`in ${daysUntil(mandate.expiryMs)} days`}</span>}
           note={new Date(mandate.expiryMs).toLocaleDateString('en-GB', {
             day: 'numeric',
             month: 'short',

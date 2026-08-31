@@ -70,7 +70,9 @@ export function ClaimHome({ eventName, available, budget, claims, onCapture }: P
                   <span className="truncate text-body">{claim.merchant}</span>
                   <span className="flex items-center gap-2">
                     <StatusChip status={CLAIM_CHIP[claim.state]} />
-                    <span className="text-caption text-ink-3">{relative(claim.updatedAtMs)}</span>
+                    <span className="text-caption text-ink-3" suppressHydrationWarning>
+                      {relative(claim.updatedAtMs)}
+                    </span>
                   </span>
                 </div>
                 <Money amount={claim.amount} size="row" />
