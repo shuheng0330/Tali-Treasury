@@ -1,7 +1,11 @@
 import type { Claim, ExpenseCategory, MandateView } from '@tali/shared';
 import { describe, expect, it } from 'vitest';
 
-import { evaluatePolicy, type PolicyEventSnapshot } from './evaluate';
+import {
+  evaluatePolicy,
+  type PolicyEvaluationInput,
+  type PolicyEventSnapshot,
+} from './evaluate';
 
 const NOW_MS = Date.UTC(2026, 7, 31, 7, 0, 0);
 const MEMBER = `0x${'a'.repeat(64)}`;
@@ -64,7 +68,7 @@ const expectedRules = [
 ];
 
 function evaluate(
-  overrides: Partial<Parameters<typeof evaluatePolicy>[0]> = {},
+  overrides: Partial<PolicyEvaluationInput> = {},
 ) {
   return evaluatePolicy({
     claim,
@@ -96,5 +100,125 @@ describe('evaluatePolicy', () => {
       'not_expired',
     ]);
     expect(decision.reason).toContain('eligible for automatic payment');
+  });
+
+  it.each<
+    [string, Partial<PolicyEvaluationInput>, string]
+  >([
+    [
+      'the amount exceeds the per-claim cap',
+      { claim: { ...claim, amount: '5000001' } },
+      'per_claim_max',
+    ],
+    [
+      'the amount exceeds the remaining budget',
+      { mandate: { ...mandate, remainingBudget: '4000000' } },
+      'total_budget',
+    ],
+    [
+      'the recipient is not allowlisted',
+      { mandate: { ...mandate, approvedRecipients: [] } },
+      'recipient_allowlist',
+    ],
+    [
+      'the mandate is revoked',
+      { mandate: { ...mandate, revoked: true } },
+      'mandate_active',
+    ],
+    [
+      'the mandate is expired',
+      { mandate: { ...mandate, expiryMs: NOW_MS } },
+      'not_expired',
+    ],
+    ['the receipt is an exact duplicate', { exactDuplicate: true }, 'not_duplicate'],
+  ])('rejects when %s', (_label, overrides, expectedRule) => {
+    const decision = evaluate(overrides);
+
+    expect(decision.outcome).toBe('reject');
+    expect(
+      decision.checks.find(({ rule }) => rule === expectedRule)?.passed,
+    ).toBe(false);
+    expect(decision.reason).toContain('Automatic payment rejected');
+  });
+
+  it.each<
+    [string, Partial<PolicyEvaluationInput>, string]
+  >([
+    [
+      'the category is outside event policy',
+      { claim: { ...claim, category: 'venue' } },
+      'category_allowed',
+    ],
+    [
+      'the receipt date is invalid',
+      { claim: { ...claim, receiptDate: 'not-a-date' } },
+      'receipt_date_valid',
+    ],
+    [
+      'confidence is below 90%',
+      {
+        claim: {
+          ...claim,
+          analysis: { ...claim.analysis!, confidence: 0.89 },
+        },
+      },
+      'confidence_sufficient',
+    ],
+    [
+      'Gemini reports an uncertain field',
+      {
+        claim: {
+          ...claim,
+          analysis: {
+            ...claim.analysis!,
+            uncertainFields: ['category'],
+          },
+        },
+      },
+      'confidence_sufficient',
+    ],
+    [
+      'Gemini reports a warning',
+      {
+        claim: {
+          ...claim,
+          analysis: {
+            ...claim.analysis!,
+            warnings: ['Receipt total may include a discount'],
+          },
+        },
+      },
+      'confidence_sufficient',
+    ],
+    [
+      'receipt analysis is missing',
+      { claim: { ...claim, analysis: null } },
+      'confidence_sufficient',
+    ],
+  ])('routes to review when %s', (_label, overrides, expectedRule) => {
+    const decision = evaluate(overrides);
+
+    expect(decision.outcome).toBe('review');
+    expect(
+      decision.checks.find(({ rule }) => rule === expectedRule)?.passed,
+    ).toBe(false);
+    expect(decision.reason).toContain('Treasurer review required');
+  });
+
+  it('lets a hard failure take precedence while preserving review failures', () => {
+    const decision = evaluate({
+      claim: {
+        ...claim,
+        analysis: { ...claim.analysis!, confidence: 0.5 },
+      },
+      mandate: { ...mandate, revoked: true },
+    });
+
+    expect(decision.outcome).toBe('reject');
+    expect(
+      decision.checks
+        .filter(({ passed }) => !passed)
+        .map(({ rule }) => rule),
+    ).toEqual(['mandate_active', 'confidence_sufficient']);
   });
 });
