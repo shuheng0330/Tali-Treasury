@@ -14,21 +14,19 @@ whole product flow is live.
 | Sui TypeScript boundary | ✅ Ready | Reads, builders, config, USDC helpers, abort mapping | Backend signer integration |
 | Shared contracts | ✅ Ready | Claim, event, policy, audit, mandate and endpoint types | Evolve only with team agreement |
 | Web dashboard | ✅ Live read-only | Current mandate state comes from Sui Testnet | Signed actions and backend claim totals |
-| Receipt and claim backend | ✅ Hosted schema ready | Gemini validation, private storage adapter, persistence, duplicate checks, guarded API routes, 69 backend tests, 42 database assertions, hosted event and Kian Xiang | Apply the prepared Shu Heng/Lim membership migration, configure the deployed API and add signed identity verification |
-| Claim and review UX | 🟡 Mocked | Capture, confirmation, rule display and queue UI | Replace mock calls with the receipt/claim APIs; payment orchestration remains pending |
+| Receipt and claim backend | ✅ Hosted schema ready | Gemini validation, private storage adapter, persistence, duplicate checks, guarded API routes, 72 web tests, 42 database assertions, hosted event and Kian Xiang | Apply the prepared Shu Heng/Lim membership migration and add signed identity verification |
+| Claim and review UX | 🟡 Mixed | Real receipt analyze/create/list flow; mock review queue remains | Wallet auth and payment orchestration |
 | Safety Test UI | 🟡 Mocked with live evidence links | Local preview plus links to two real rejected transactions | Interactive signed attempts and revocation scenario |
-| Deployment | ⬜ Pending | Local production build | Hosted URL and fresh-browser verification |
+| Deployment | ✅ Live | Vercel production and live Sui dashboard verified | Enable receipt writes only after wallet auth |
 | Submission | ⬜ Pending | — | Landing content, videos, deck, disclosure and rehearsal |
 
 ## Real versus simulated
 
 - **Real:** package, USDC mandate, live read-only dashboard, one payment, overspend rejection, unauthorized-recipient rejection.
-- **Hosted schema, not yet wired end to end:** private receipt storage, event-scoped
-  duplicate checks and claim persistence are deployed at the database layer; the
-  receipt APIs and current UI are not yet connected in a hosted flow.
-- **Simulated in the current UI:** receipt analysis, claim persistence, policy
-  orchestration, review actions, payment result screens, revoke preview and
-  interactive safety controls.
+- **Real when authenticated/demo identity is enabled:** receipt analysis, private
+  storage, event-scoped duplicate checks, claim persistence, and claim listing.
+- **Simulated in the current UI:** policy orchestration, review actions, payment,
+  revoke preview, and interactive safety controls.
 - **Never simulated without a label:** digests, checkpoints, gas, finality, wallet signatures, or chain state.
 
 ## Frontend phase history
@@ -42,11 +40,11 @@ interactions as simulations and links separately to genuine Testnet evidence.
 |---|---|---|---|
 | 0 | Repo, shared contracts, design tokens | ✅ Done | 29 Aug |
 | 1 | Design system, app shell, status chips | ✅ Done | 29 Aug |
-| 2 | Mobile claim flow — capture to paid | 🟡 Mock complete | 29 Aug |
-| 3 | Treasurer dashboard and review queue | 🟡 Mixed: live mandate, mock claims | 29 Aug |
+| 2 | Mobile claim flow — capture to submitted | 🟡 API-backed; auth pending | 31 Aug |
+| 3 | Treasurer dashboard and review queue | 🟡 Live mandate and API-backed queue; review actions pending | 31 Aug |
 | 4 | Safety Test panel | 🟡 Mock flow; live refusals linked | 29 Aug |
-| 5 | Landing page | ✅ Done | 30 Aug |
-| 6 | Wire to live contract and backend | 🟡 Live reads + receipt APIs; agent writes pending | 30 Aug |
+| 5 | Landing page | ✅ Done, rebuilt 31 Aug | 30 Aug |
+| 6 | Wire to live contract and backend | 🟡 Live reads, receipt analysis, claim submission and history; policy, review, payment and auth pending | 31 Aug |
 | 7 | Submission pack | ⬜ Not started | — |
 
 Legend: ✅ done · 🟡 in progress · ⬜ not started · ⛔ cut
@@ -130,9 +128,10 @@ Next 15.5.4 was swapped for 16.3.3 — the former carries a published CVE and ju
 
 ## Phase 2 — Mobile claim flow ✅
 
-The member journey at `/claim`, built against `src/lib/mock/` so it never blocks on the
-backend. Six steps: **list → capture → reading → confirm → rule check → paid**, with a
-held path off the rule check.
+The original member journey at `/claim` was built against `src/lib/mock/`. The current
+flow replaces that path with the real receipt and claim APIs:
+**list → capture → Gemini reading → confirm → submit**. Policy evaluation and payment
+remain separate pending work and are never presented as completed by this screen.
 
 Decisions taken from the research, each one deliberate:
 

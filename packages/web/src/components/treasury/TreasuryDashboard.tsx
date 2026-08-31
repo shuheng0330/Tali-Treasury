@@ -25,20 +25,21 @@ const TABS: { id: Tab; label: string }[] = [
 ];
 
 interface Props {
+  apiEnabled: boolean;
   initialMandate: MandateView | null;
   readError?: string;
 }
 
 const NO_COMMITTED_CLAIMS = '0';
 
-export function TreasuryDashboard({ initialMandate: mandate, readError }: Props) {
+export function TreasuryDashboard({ apiEnabled, initialMandate: mandate, readError }: Props) {
   const router = useRouter();
   const [refreshing, startRefresh] = useTransition();
   const [tab, setTab] = useState<Tab>('review');
   const [confirming, setConfirming] = useState(false);
   const [resolved, setResolved] = useState<string[]>([]);
 
-  const live = useClaims();
+  const live = useClaims(apiEnabled);
 
   const queue = useMemo(() => {
     const items =

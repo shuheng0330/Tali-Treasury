@@ -2,7 +2,7 @@
 
 import type { Claim } from '@tali/shared';
 import { useCallback, useEffect, useState } from 'react';
-import { listClaims, type Source } from '@/lib/api/client';
+import { tryListClaims, type Source } from '@/lib/api/demo';
 import { recentClaims } from '@/lib/mock/api';
 
 export interface ClaimsState {
@@ -14,25 +14,35 @@ export interface ClaimsState {
 
 /**
  * Renders the sample claims first and swaps in the real ones once they arrive.
- * Starting from the mock rather than from an empty list keeps the first paint
+ * Starting from the sample rather than from an empty list keeps the first paint
  * identical on the server and the client, and means a backend that is down
  * costs the demo nothing but a label.
  */
-export function useClaims(): ClaimsState & { reload: () => void } {
+export function useClaims(enabled: boolean): ClaimsState & { reload: () => void } {
   const [state, setState] = useState<ClaimsState>({
     claims: recentClaims,
     source: 'mock',
     reason: null,
-    loading: true,
+    loading: enabled,
   });
 
   const [nonce, setNonce] = useState(0);
   const reload = useCallback(() => setNonce((n) => n + 1), []);
 
   useEffect(() => {
+    if (!enabled) {
+      setState({
+        claims: recentClaims,
+        source: 'mock',
+        reason: 'the demo identity API is switched off',
+        loading: false,
+      });
+      return;
+    }
+
     let live = true;
 
-    listClaims()
+    tryListClaims()
       .then((result) => {
         if (!live) return;
         setState({
@@ -50,7 +60,7 @@ export function useClaims(): ClaimsState & { reload: () => void } {
     return () => {
       live = false;
     };
-  }, [nonce]);
+  }, [nonce, enabled]);
 
   return { ...state, reload };
 }

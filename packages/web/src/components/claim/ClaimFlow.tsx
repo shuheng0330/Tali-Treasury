@@ -8,11 +8,11 @@ import type {
   PolicyDecision,
   ReceiptAnalysis,
 } from '@tali/shared';
-import { event, mandate as sampleMandate } from '@/lib/mock/data';
+import { mandate as sampleMandate } from '@/lib/mock/data';
 import { evaluate, pay } from '@/lib/mock/api';
-import { analyzeReceipt, createClaim, type Source } from '@/lib/api/client';
+import { tryAnalyzeReceipt, tryCreateClaim, type Source } from '@/lib/api/demo';
 import { useClaims } from '@/lib/api/useClaims';
-import { DEMO_EVENT_ID, DEMO_VIEWER } from '@/lib/config';
+import { DEMO_EVENT_ID, DEMO_EVENT_NAME, DEMO_SUBMITTER } from '@/lib/demo-config';
 import { DataNotice } from '@/components/DataNotice';
 import { ClaimHome } from './ClaimHome';
 import { ReceiptConfirm } from './ReceiptConfirm';
@@ -20,6 +20,12 @@ import { RuleCheck } from './RuleCheck';
 import { Held, Paid } from './Outcome';
 
 type Step = 'home' | 'reading' | 'confirm' | 'checking' | 'paid' | 'held';
+
+interface Props {
+  apiEnabled: boolean;
+  mandate: MandateView | null;
+  mandateReadError?: string;
+}
 
 function Reading({ photoUrl }: { photoUrl: string }) {
   return (
@@ -36,7 +42,7 @@ function Reading({ photoUrl }: { photoUrl: string }) {
   );
 }
 
-export function ClaimFlow({ mandate }: { mandate: MandateView | null }) {
+export function ClaimFlow({ apiEnabled, mandate, mandateReadError }: Props) {
   const [step, setStep] = useState<Step>('home');
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const [analysis, setAnalysis] = useState<ReceiptAnalysis | null>(null);
@@ -57,7 +63,8 @@ export function ClaimFlow({ mandate }: { mandate: MandateView | null }) {
    *  blaming the analyser for a database refusal. */
   const [saveError, setSaveError] = useState<string | null>(null);
 
-  const { claims: allClaims, source: claimsSource, reason: claimsReason, reload } = useClaims();
+  const claims = useClaims(apiEnabled);
+  const reloadClaims = claims.reload;
 
   /** The chain is the authority on the budget. Falling back to the sample
    *  mandate keeps the screen usable when the RPC is down, and the banner says
@@ -79,7 +86,7 @@ export function ClaimFlow({ mandate }: { mandate: MandateView | null }) {
     setStep('reading');
     setSaveError(null);
 
-    analyzeReceipt(file).then((result) => {
+    tryAnalyzeReceipt(file).then((result) => {
       setAnalysis(result.data?.analysis ?? null);
       setStoragePath(result.data?.storagePath || null);
       setDuplicateOf(result.data?.duplicateOf ?? null);
@@ -101,9 +108,9 @@ export function ClaimFlow({ mandate }: { mandate: MandateView | null }) {
       }
 
       setSaveError(null);
-      createClaim({
+      tryCreateClaim({
         eventId: DEMO_EVENT_ID,
-        submitter: DEMO_VIEWER,
+        submitter: DEMO_SUBMITTER,
         amount: next.amount,
         merchant: next.merchant,
         receiptDate: next.receiptDate,
@@ -113,13 +120,13 @@ export function ClaimFlow({ mandate }: { mandate: MandateView | null }) {
         analysis,
       }).then((created) => {
         if (created.data !== null) {
-          reload();
+          reloadClaims();
           return;
         }
         setSaveError(`This claim was not saved: ${created.reason}.`);
       });
     },
-    [source, analysis, storagePath, reload, budget, chainLive],
+    [source, analysis, storagePath, reloadClaims, budget, chainLive],
   );
 
   const onSettled = useCallback(() => {
@@ -149,11 +156,16 @@ export function ClaimFlow({ mandate }: { mandate: MandateView | null }) {
     setStep('home');
   }, []);
 
-  const mine = allClaims.filter((claim) => claim.submitter === DEMO_VIEWER);
+  const mine = claims.claims.filter(
+    (claim) => claim.submitter.toLowerCase() === DEMO_SUBMITTER.toLowerCase(),
+  );
 
   const home = step === 'home';
-  const homeLive = claimsSource === 'live' && chainLive;
-  const homeReason = chainLive ? claimsReason : 'the mandate could not be read from Sui';
+  const homeLive = claims.source === 'live' && chainLive;
+  const chainReason = mandateReadError
+    ? `the mandate could not be read from Sui (${mandateReadError})`
+    : 'the mandate could not be read from Sui';
+  const homeReason = chainLive ? claims.reason : chainReason;
   /** Name only what actually fell back. A live chain read with a dead claims
    *  API is not "your budget fell back". */
   const homeLabel =
@@ -175,10 +187,12 @@ export function ClaimFlow({ mandate }: { mandate: MandateView | null }) {
 
       {home ? (
         <ClaimHome
-          eventName={event.name}
+          eventName={DEMO_EVENT_NAME}
           available={budget.remainingBudget}
           budget={budget.initialBudget}
           claims={mine}
+          claimsLoading={claims.loading}
+          captureDisabled={!apiEnabled}
           onCapture={onCapture}
         />
       ) : null}

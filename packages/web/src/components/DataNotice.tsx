@@ -1,4 +1,4 @@
-import type { Source } from '@/lib/api/client';
+import type { Source } from '@/lib/api/demo';
 
 /**
  * Says which half of the screen is real. `docs/PROGRESS.md` forbids simulating

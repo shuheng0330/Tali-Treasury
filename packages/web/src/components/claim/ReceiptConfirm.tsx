@@ -47,10 +47,14 @@ export function ReceiptConfirm({ photoUrl, analysis, duplicateOf, onRetake, onSu
   const [description, setDescription] = useState('');
 
   const uncertain = new Set(analysis?.uncertainFields ?? []);
+  const normalizedAmount = amount.replace(/[,\s]/g, '');
+  const amountIsValid =
+    /^\d+(?:\.\d{1,6})?$/.test(normalizedAmount) &&
+    BigInt(toBaseUnits(normalizedAmount)) > 0n;
   const ready =
     duplicateOf === null &&
     merchant.trim() !== '' &&
-    amount.trim() !== '' &&
+    amountIsValid &&
     receiptDate.trim() !== '' &&
     description.trim() !== '';
 
@@ -165,7 +169,7 @@ export function ReceiptConfirm({ photoUrl, analysis, duplicateOf, onRetake, onSu
         disabled={!ready}
         onClick={() => onSubmit({
           merchant,
-          amount: toBaseUnits(amount),
+          amount: toBaseUnits(normalizedAmount),
           receiptDate,
           category,
           description,

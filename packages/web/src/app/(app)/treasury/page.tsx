@@ -14,14 +14,20 @@ export const metadata = {
 export const dynamic = 'force-dynamic';
 
 export default async function TreasuryPage() {
+  const apiEnabled = process.env.TALI_ALLOW_INSECURE_DEMO_IDENTITY === 'true';
+
   try {
     const client = createTestnetClient(process.env.SUI_GRPC_URL);
     const mandateId = process.env.TALI_MANDATE_ID ?? taliUsdcDemo.mandateId;
     const state = await readMandate(client, taliTestnetUsdcConfig, mandateId);
 
-    return <TreasuryDashboard initialMandate={toMandateView(state)} />;
+    return (
+      <TreasuryDashboard apiEnabled={apiEnabled} initialMandate={toMandateView(state)} />
+    );
   } catch (cause) {
     const message = cause instanceof Error ? cause.message : 'Unknown Sui read error';
-    return <TreasuryDashboard initialMandate={null} readError={message} />;
+    return (
+      <TreasuryDashboard apiEnabled={apiEnabled} initialMandate={null} readError={message} />
+    );
   }
 }
