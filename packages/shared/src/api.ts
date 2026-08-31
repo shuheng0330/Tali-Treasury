@@ -60,6 +60,10 @@ export interface DraftClaim {
   receiptHash: string;
 }
 
+export interface ProcessClaimRequest {
+  processor: Address;
+}
+
 /** POST /api/claims/:id/process — evaluates policy, pays when it clears. */
 export interface ProcessClaimResponse {
   claim: Claim;

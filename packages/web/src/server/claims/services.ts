@@ -2,6 +2,7 @@ import type {
   AnalyzeReceiptResponse,
   CreateClaimResponse,
   ListClaimsResponse,
+  ProcessClaimResponse,
 } from '@tali/shared';
 import { ZodError } from 'zod';
 
@@ -9,10 +10,11 @@ import { ServerError, isServerError } from '../errors';
 import type { ReceiptAnalyzer } from '../receipts/gemini';
 import { hashReceipt, type ReceiptMimeType } from '../receipts/hash';
 import { toReceiptAnalysis } from '../receipts/schema';
-import type { ClaimRepository, ReceiptStore } from './ports';
+import type { ClaimRepository, MandateReader, ReceiptStore } from './ports';
 import {
   eventIdSchema,
   parseCreateClaimRequest,
+  parseProcessClaimInput,
   suiAddressSchema,
 } from './validation';
 
@@ -182,5 +184,30 @@ export function createListClaimsService(deps: {
         { cause: error },
       );
     }
+  };
+}
+
+export function createProcessClaimService(deps: {
+  claims: ClaimRepository;
+  mandates: MandateReader;
+  now?: () => number;
+}): (input: unknown) => Promise<ProcessClaimResponse> {
+  return async (input) => {
+    try {
+      parseProcessClaimInput(input);
+    } catch (error) {
+      if (error instanceof ZodError) {
+        throw new ServerError('invalid_request', 400, 'Invalid claim process request', {
+          cause: error,
+        });
+      }
+      throw error;
+    }
+
+    throw new ServerError(
+      'processing_conflict',
+      409,
+      'Claim processing is not available',
+    );
   };
 }

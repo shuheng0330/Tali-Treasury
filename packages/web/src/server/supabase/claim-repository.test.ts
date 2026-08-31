@@ -1,10 +1,16 @@
-import type { CreateClaimRequest, ReceiptAnalysis } from '@tali/shared';
+import type {
+  CreateClaimRequest,
+  PolicyDecision,
+  ReceiptAnalysis,
+} from '@tali/shared';
 import { describe, expect, it } from 'vitest';
 
 import { createSupabaseClaimRepository } from './claim-repository';
 
 const eventId = 'ba7e50e2-7e7b-4a67-a505-9e3a329739ae';
 const submitter = `0x${'a'.repeat(64)}`;
+const treasurer = `0x${'b'.repeat(64)}`;
+const mandateId = `0x${'1'.repeat(64)}`;
 const receiptHash = 'a'.repeat(64);
 const storagePath = `${eventId}/${receiptHash}.png`;
 const analysis: ReceiptAnalysis = {
@@ -51,6 +57,24 @@ const row = {
   event_members: { display_name: 'Lim Wey Cheng' },
 };
 
+const processRow = {
+  ...row,
+  events: {
+    treasurer_wallet: treasurer,
+    mandate_object_id: mandateId,
+    allowed_categories: ['printing'],
+    starts_at: '2026-08-29T00:00:00.000Z',
+    expires_at: '2026-09-05T23:59:59.000Z',
+  },
+};
+
+const decision: PolicyDecision = {
+  outcome: 'auto_pay',
+  checks: [],
+  reason: 'Every policy rule passed.',
+  evaluatedAtMs: 1_788_156_000_000,
+};
+
 interface ScriptedResult {
   data: unknown;
   error: { code?: string; message: string } | null;
@@ -58,21 +82,37 @@ interface ScriptedResult {
 
 function scriptedClient(options: {
   maybeSingle?: ScriptedResult;
+  maybeSingles?: ScriptedResult[];
   single?: ScriptedResult;
   list?: ScriptedResult;
   captureInsert?: (value: unknown) => void;
+  captureUpdate?: (value: unknown) => void;
+  captureFilter?: (kind: 'eq' | 'is', column: string, value: unknown) => void;
 }) {
+  const maybeSingles = [...(options.maybeSingles ?? [])];
   return {
     from: () => {
       const query = {
         select: () => query,
-        eq: () => query,
+        eq: (column: string, value: unknown) => {
+          options.captureFilter?.('eq', column, value);
+          return query;
+        },
+        is: (column: string, value: unknown) => {
+          options.captureFilter?.('is', column, value);
+          return query;
+        },
         order: () => query,
         insert: (value: unknown) => {
           options.captureInsert?.(value);
           return query;
         },
-        maybeSingle: async () => options.maybeSingle ?? { data: null, error: null },
+        update: (value: unknown) => {
+          options.captureUpdate?.(value);
+          return query;
+        },
+        maybeSingle: async () =>
+          maybeSingles.shift() ?? options.maybeSingle ?? { data: null, error: null },
         single: async () => options.single ?? { data: null, error: null },
         limit: async () => options.list ?? { data: [], error: null },
       };
@@ -82,6 +122,85 @@ function scriptedClient(options: {
 }
 
 describe('createSupabaseClaimRepository', () => {
+  it('loads a claim with its trusted event processing context', async () => {
+    const repository = createSupabaseClaimRepository(
+      scriptedClient({
+        maybeSingle: { data: processRow, error: null },
+      }),
+    );
+
+    await expect(repository.getProcessContext(row.id)).resolves.toEqual({
+      claim: expect.objectContaining({ id: row.id, state: 'submitted' }),
+      event: {
+        treasurer,
+        mandateId,
+        allowedCategories: ['printing'],
+        startsAtMs: Date.parse('2026-08-29T00:00:00.000Z'),
+        expiresAtMs: Date.parse('2026-09-05T23:59:59.000Z'),
+      },
+    });
+  });
+
+  it('atomically saves a decision only for an undecided submitted claim', async () => {
+    let updated: unknown;
+    const filters: Array<[string, string, unknown]> = [];
+    const repository = createSupabaseClaimRepository(
+      scriptedClient({
+        maybeSingle: {
+          data: { ...row, state: 'approved', decision },
+          error: null,
+        },
+        captureUpdate: (value) => {
+          updated = value;
+        },
+        captureFilter: (kind, column, value) => {
+          filters.push([kind, column, value]);
+        },
+      }),
+    );
+
+    await expect(
+      repository.saveDecision({ claimId: row.id, decision, state: 'approved' }),
+    ).resolves.toEqual({
+      status: 'saved',
+      claim: expect.objectContaining({
+        id: row.id,
+        state: 'approved',
+        decision,
+      }),
+    });
+    expect(updated).toEqual({ decision, state: 'approved' });
+    expect(filters).toContainEqual(['eq', 'id', row.id]);
+    expect(filters).toContainEqual(['eq', 'state', 'submitted']);
+    expect(filters).toContainEqual(['is', 'decision', null]);
+  });
+
+  it('returns a stored decision when another processor wins the race', async () => {
+    const winningRow = {
+      ...processRow,
+      state: 'awaiting_review',
+      decision: { ...decision, outcome: 'review' },
+    };
+    const repository = createSupabaseClaimRepository(
+      scriptedClient({
+        maybeSingles: [
+          { data: null, error: null },
+          { data: winningRow, error: null },
+        ],
+      }),
+    );
+
+    await expect(
+      repository.saveDecision({ claimId: row.id, decision, state: 'approved' }),
+    ).resolves.toEqual({
+      status: 'lost_race',
+      claim: expect.objectContaining({
+        state: 'awaiting_review',
+        decision: expect.objectContaining({ outcome: 'review' }),
+      }),
+    });
+  });
+
   it('maps database rows to JSON-safe Claim values without exposing object paths', async () => {
     let inserted: unknown;
     const repository = createSupabaseClaimRepository(

@@ -11,6 +11,7 @@ import {
   createAnalyzeReceiptService,
   createClaimService,
   createListClaimsService,
+  createProcessClaimService,
 } from './services';
 
 const eventId = 'ba7e50e2-7e7b-4a67-a505-9e3a329739ae';
@@ -73,6 +74,8 @@ function createRepository(overrides: Partial<ClaimRepository> = {}): ClaimReposi
     findDuplicateReceipt: vi.fn(async () => null),
     create: vi.fn(async () => claim),
     listByEvent: vi.fn(async () => []),
+    getProcessContext: vi.fn(),
+    saveDecision: vi.fn(),
     ...overrides,
   };
 }
@@ -287,5 +290,23 @@ describe('createListClaimsService', () => {
     expect(claims.assertEventExists).toHaveBeenCalledWith(eventId);
     expect(claims.assertActiveMember).toHaveBeenCalledWith(eventId, submitter);
     expect(receipts.createSignedUrl).toHaveBeenCalledWith(storagePath, 300);
+  });
+});
+
+describe('createProcessClaimService', () => {
+  it('rejects malformed processing identity before repository access', async () => {
+    const claims = createRepository();
+    const mandates = { read: vi.fn() };
+    const processClaim = createProcessClaimService({
+      claims,
+      mandates,
+      now: () => 1_788_156_000_000,
+    });
+
+    await expect(
+      processClaim({ claimId: 'bad', processor: 'bad' }),
+    ).rejects.toMatchObject({ code: 'invalid_request', status: 400 });
+    expect(claims.getProcessContext).not.toHaveBeenCalled();
+    expect(mandates.read).not.toHaveBeenCalled();
   });
 });

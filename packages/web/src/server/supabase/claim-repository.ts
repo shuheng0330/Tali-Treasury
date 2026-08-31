@@ -1,3 +1,4 @@
+import { EXPENSE_CATEGORIES } from '@tali/shared';
 import type {
   Claim,
   ClaimState,
@@ -28,8 +29,10 @@ interface QueryResult {
 interface QueryBuilder {
   select(columns: string): QueryBuilder;
   eq(column: string, value: unknown): QueryBuilder;
+  is(column: string, value: unknown): QueryBuilder;
   order(column: string, options: { ascending: boolean }): QueryBuilder;
   insert(value: unknown): QueryBuilder;
+  update(value: unknown): QueryBuilder;
   maybeSingle(): Promise<QueryResult>;
   single(): Promise<QueryResult>;
   limit(count: number): Promise<QueryResult>;
@@ -59,6 +62,18 @@ interface ClaimRow {
   event_members: { display_name: string } | { display_name: string }[];
 }
 
+interface EventProcessRow {
+  treasurer_wallet: string;
+  mandate_object_id: string;
+  allowed_categories: ExpenseCategory[];
+  starts_at: string;
+  expires_at: string;
+}
+
+interface ClaimProcessRow extends ClaimRow {
+  events: EventProcessRow | EventProcessRow[];
+}
+
 const CLAIM_COLUMNS = `
   id,
   event_id,
@@ -77,6 +92,17 @@ const CLAIM_COLUMNS = `
   created_at,
   updated_at,
   event_members!claims_active_member_fk(display_name)
+`;
+
+const PROCESS_COLUMNS = `
+  ${CLAIM_COLUMNS},
+  events!inner(
+    treasurer_wallet,
+    mandate_object_id,
+    allowed_categories,
+    starts_at,
+    expires_at
+  )
 `;
 
 function databaseFailure(error: DatabaseError | null): ServerError {
@@ -122,6 +148,37 @@ function mapClaimRow(input: unknown): StoredClaim {
   return { claim, storagePath: row.receipt_object_path };
 }
 
+function mapProcessRow(input: unknown) {
+  const stored = mapClaimRow(input);
+  const row = input as ClaimProcessRow;
+  const event = Array.isArray(row.events) ? row.events[0] : row.events;
+  const startsAtMs = Date.parse(event?.starts_at ?? '');
+  const expiresAtMs = Date.parse(event?.expires_at ?? '');
+  if (
+    !event?.treasurer_wallet ||
+    !event.mandate_object_id ||
+    !Array.isArray(event.allowed_categories) ||
+    !event.allowed_categories.every((category) =>
+      EXPENSE_CATEGORIES.includes(category),
+    ) ||
+    !Number.isFinite(startsAtMs) ||
+    !Number.isFinite(expiresAtMs)
+  ) {
+    throw databaseFailure(null);
+  }
+
+  return {
+    claim: stored.claim,
+    event: {
+      treasurer: event.treasurer_wallet,
+      mandateId: event.mandate_object_id,
+      allowedCategories: event.allowed_categories,
+      startsAtMs,
+      expiresAtMs,
+    },
+  };
+}
+
 function query(client: SupabaseDataClient, table: string): QueryBuilder {
   return client.from(table) as QueryBuilder;
 }
@@ -129,6 +186,23 @@ function query(client: SupabaseDataClient, table: string): QueryBuilder {
 export function createSupabaseClaimRepository(
   client: SupabaseDataClient,
 ): ClaimRepository {
+  async function getProcessContext(claimId: string) {
+    const { data, error } = await query(client, 'claims')
+      .select(PROCESS_COLUMNS)
+      .eq('id', claimId)
+      .maybeSingle();
+
+    if (error && error.code !== 'PGRST116') {
+      throw databaseFailure(error);
+    }
+    if (!data) {
+      throw new ServerError('claim_not_found', 404, 'Claim not found', {
+        cause: error ?? undefined,
+      });
+    }
+    return mapProcessRow(data);
+  }
+
   return {
     async assertEventExists(eventId) {
       const { data, error } = await query(client, 'events')
@@ -257,6 +331,35 @@ export function createSupabaseClaimRepository(
         throw databaseFailure(null);
       }
       return data.map(mapClaimRow);
+    },
+
+    getProcessContext,
+
+    async saveDecision(input) {
+      const { data, error } = await query(client, 'claims')
+        .update({ decision: input.decision, state: input.state })
+        .eq('id', input.claimId)
+        .eq('state', 'submitted')
+        .is('decision', null)
+        .select(CLAIM_COLUMNS)
+        .maybeSingle();
+
+      if (error && error.code !== 'PGRST116') {
+        throw databaseFailure(error);
+      }
+      if (data) {
+        return { status: 'saved', claim: mapClaimRow(data).claim };
+      }
+
+      const current = await getProcessContext(input.claimId);
+      if (current.claim.decision) {
+        return { status: 'lost_race', claim: current.claim };
+      }
+      throw new ServerError(
+        'processing_conflict',
+        409,
+        'Claim is not available for processing',
+      );
     },
   };
 }
