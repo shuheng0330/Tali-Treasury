@@ -77,7 +77,10 @@ const mandate: MandateView = {
 };
 
 const processContext = {
-  claim,
+  claim: {
+    ...claim,
+    analysis: { ...analysis, currency: 'USDC' },
+  },
   event: {
     treasurer,
     mandateId,
@@ -94,7 +97,7 @@ const approvedDecision: PolicyDecision = {
   evaluatedAtMs: nowMs,
 };
 const approvedClaim: Claim = {
-  ...claim,
+  ...processContext.claim,
   state: 'approved',
   decision: approvedDecision,
 };
@@ -281,14 +284,29 @@ describe('createAnalyzeReceiptService', () => {
 });
 
 describe('createClaimService', () => {
-  it('rejects malformed or internally inconsistent input before repository access', async () => {
+  it('rejects malformed input before repository access', async () => {
     const claims = createRepository();
     const createClaim = createClaimService({ claims });
 
     await expect(
-      createClaim({ ...createRequest(), amount: '4500001' }),
+      createClaim({ ...createRequest(), amount: 'not-an-amount' }),
     ).rejects.toMatchObject({ code: 'invalid_request', status: 400 });
     expect(claims.create).not.toHaveBeenCalled();
+  });
+
+  it('preserves the original analysis while accepting corrected claim fields', async () => {
+    const claims = createRepository();
+    const createClaim = createClaimService({ claims });
+    const corrected = {
+      ...createRequest(),
+      amount: '4750000',
+      merchant: 'Campus Print & Copy',
+      receiptDate: '2026-08-31',
+      category: 'materials' as const,
+    };
+
+    await expect(createClaim(corrected)).resolves.toEqual({ claim });
+    expect(claims.create).toHaveBeenCalledWith(corrected);
   });
 
   it('persists a valid shared CreateClaimRequest', async () => {

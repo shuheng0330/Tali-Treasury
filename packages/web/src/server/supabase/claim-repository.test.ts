@@ -388,6 +388,28 @@ describe('createSupabaseClaimRepository', () => {
     });
   });
 
+  it.each([
+    ['treasurer address', { treasurer_wallet: '0x1234' }],
+    ['mandate object id', { mandate_object_id: 'not-an-object-id' }],
+  ])('rejects a malformed joined %s', async (_label, eventOverrides) => {
+    const repository = createSupabaseClaimRepository(
+      scriptedClient({
+        maybeSingle: {
+          data: {
+            ...processRow,
+            events: { ...processRow.events, ...eventOverrides },
+          },
+          error: null,
+        },
+      }),
+    );
+
+    await expect(repository.getProcessContext(row.id)).rejects.toMatchObject({
+      code: 'database_failed',
+      status: 500,
+    });
+  });
+
   it('reports a conflict when a lost compare-and-set has no stored decision', async () => {
     const repository = createSupabaseClaimRepository(
       scriptedClient({

@@ -106,6 +106,8 @@ const PROCESS_COLUMNS = `
   )
 `;
 
+const CANONICAL_SUI_ID = /^0x[0-9a-f]{64}$/;
+
 function databaseFailure(error: DatabaseError | null): ServerError {
   return new ServerError('database_failed', 500, 'The database operation failed', {
     cause: error ?? undefined,
@@ -157,7 +159,9 @@ function mapProcessRow(input: unknown) {
   const expiresAtMs = Date.parse(event?.expires_at ?? '');
   if (
     !event?.treasurer_wallet ||
+    !CANONICAL_SUI_ID.test(event.treasurer_wallet) ||
     !event.mandate_object_id ||
+    !CANONICAL_SUI_ID.test(event.mandate_object_id) ||
     !Array.isArray(event.allowed_categories) ||
     !event.allowed_categories.every((category) =>
       EXPENSE_CATEGORIES.includes(category),

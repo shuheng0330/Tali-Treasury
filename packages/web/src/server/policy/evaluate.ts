@@ -118,14 +118,20 @@ export function evaluatePolicy(input: PolicyEvaluationInput): PolicyDecision {
   const maxPerClaim = parseUnsignedInteger(input.mandate.maxPerClaim);
   const remainingBudget = parseUnsignedInteger(input.mandate.remainingBudget);
   const positiveAmount = amount !== null && amount > 0n ? amount : null;
+  const receiptCurrency = input.claim.analysis?.currency;
+  const currencyReady = receiptCurrency === 'USDC';
   const amountWithinCap =
-    positiveAmount !== null &&
-    maxPerClaim !== null &&
-    positiveAmount <= maxPerClaim;
+    !currencyReady || (
+      positiveAmount !== null &&
+      maxPerClaim !== null &&
+      positiveAmount <= maxPerClaim
+    );
   const amountWithinBudget =
-    positiveAmount !== null &&
-    remainingBudget !== null &&
-    positiveAmount <= remainingBudget;
+    !currencyReady || (
+      positiveAmount !== null &&
+      remainingBudget !== null &&
+      positiveAmount <= remainingBudget
+    );
 
   const receiptDay = parseUtcDate(input.claim.receiptDate);
   const eventStartDay = utcDay(input.event.startsAtMs);
@@ -141,8 +147,13 @@ export function evaluatePolicy(input: PolicyEvaluationInput): PolicyDecision {
     receiptDay <= currentDay;
 
   const analysis = input.claim.analysis;
-  const confidenceSufficient =
+  const analysisArraysValid =
     analysis !== null &&
+    Array.isArray(analysis.uncertainFields) &&
+    Array.isArray(analysis.warnings);
+  const confidenceSufficient =
+    analysisArraysValid &&
+    currencyReady &&
     Number.isFinite(analysis.confidence) &&
     analysis.confidence >= 0.9 &&
     analysis.uncertainFields.length === 0 &&
@@ -165,13 +176,17 @@ export function evaluatePolicy(input: PolicyEvaluationInput): PolicyDecision {
       'per_claim_max',
       amountWithinCap,
       'Per-claim cap',
-      `${displayAmount(input.claim.amount)} against a ${displayAmount(input.mandate.maxPerClaim)} cap`,
+      currencyReady
+        ? `${displayAmount(input.claim.amount)} against a ${displayAmount(input.mandate.maxPerClaim)} cap`
+        : 'Checked after an explicit USDC conversion quote is attached',
     ),
     check(
       'total_budget',
       amountWithinBudget,
       'Budget remaining',
-      `${displayAmount(input.mandate.remainingBudget)} remains in the mandate`,
+      currencyReady
+        ? `${displayAmount(input.mandate.remainingBudget)} remains in the mandate`
+        : 'Checked after an explicit USDC conversion quote is attached',
     ),
     check(
       'recipient_allowlist',
@@ -222,10 +237,12 @@ export function evaluatePolicy(input: PolicyEvaluationInput): PolicyDecision {
     check(
       'confidence_sufficient',
       confidenceSufficient,
-      'Receipt extraction certain',
-      confidenceSufficient
-        ? 'Receipt extraction meets the 90% certainty threshold'
-        : 'Receipt extraction is missing, uncertain, warned, or below 90%',
+      'Receipt ready for payment',
+      analysis?.currency && analysis.currency !== 'USDC'
+        ? `${analysis.currency} receipt requires an explicit USDC conversion quote`
+        : confidenceSufficient
+          ? 'Receipt extraction is complete and meets the routing threshold'
+          : 'Receipt extraction is missing, uncertain, warned, or below the routing threshold',
     ),
   ];
 

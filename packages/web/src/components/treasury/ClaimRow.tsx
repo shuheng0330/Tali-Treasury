@@ -43,13 +43,16 @@ function relative(atMs: number) {
 
 interface Props {
   item: ReviewQueueItem;
+  processing: boolean;
+  onProcess: (id: string) => void;
   onApprove: (id: string) => void;
   onReject: (id: string) => void;
 }
 
-export function ClaimRow({ item, onApprove, onReject }: Props) {
+export function ClaimRow({ item, processing, onProcess, onApprove, onReject }: Props) {
   const { claim, decision, agentNote, reason } = item;
   const immutableFailure = decision.checks.some((check) => check.onChain && !check.passed);
+  const awaitingPolicy = claim.state === 'submitted' && claim.decision === null;
 
   return (
     <li className="flex flex-col gap-3 px-4 py-4">
@@ -67,23 +70,27 @@ export function ClaimRow({ item, onApprove, onReject }: Props) {
           </span>
         </div>
 
-        <Money amount={claim.amount} size="row" className="shrink-0" />
+        <Money amount={claim.amount} unit={claim.analysis?.currency ?? 'USDC'} size="row" className="shrink-0" />
       </div>
 
       <div className="ml-7 flex flex-col gap-2 rounded-card border border-rule bg-canvas p-4">
-        <ul className="grid gap-x-6 gap-y-1 sm:grid-cols-2">
-          {decision.checks.map((check) => (
-            <li key={check.rule} className="flex items-baseline gap-2">
-              <span className="translate-y-0.5">
-                <Verdict passed={check.passed} />
-              </span>
-              <span className={`text-caption ${check.passed ? 'text-ink-2' : 'font-medium text-no'}`}>
-                {check.label}
-              </span>
-              <span className="tnum ml-auto text-caption text-ink-3">{check.detail}</span>
-            </li>
-          ))}
-        </ul>
+        {awaitingPolicy ? (
+          <p className="text-caption text-ink-2">Awaiting server policy evaluation.</p>
+        ) : (
+          <ul className="grid gap-x-6 gap-y-1 sm:grid-cols-2">
+            {decision.checks.map((check) => (
+              <li key={check.rule} className="flex items-baseline gap-2">
+                <span className="translate-y-0.5">
+                  <Verdict passed={check.passed} />
+                </span>
+                <span className={`text-caption ${check.passed ? 'text-ink-2' : 'font-medium text-no'}`}>
+                  {check.label}
+                </span>
+                <span className="tnum ml-auto text-caption text-ink-3">{check.detail}</span>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
 
       {agentNote ? (
@@ -96,22 +103,35 @@ export function ClaimRow({ item, onApprove, onReject }: Props) {
       ) : null}
 
       <div className="ml-7 flex flex-wrap items-center gap-3">
-        <button
-          type="button"
-          disabled={immutableFailure}
-          onClick={() => onApprove(claim.id)}
-          className="btn btn--primary h-9 px-5 text-label"
-          title={immutableFailure ? 'This claim violates an immutable on-chain rule' : undefined}
-        >
-          {immutableFailure ? 'Cannot approve' : 'Approve demo'}
-        </button>
-        <button
-          type="button"
-          onClick={() => onReject(claim.id)}
-          className="btn btn--ghost h-9 px-5 text-label"
-        >
-          Reject
-        </button>
+        {awaitingPolicy ? (
+          <button
+            type="button"
+            disabled={processing}
+            onClick={() => onProcess(claim.id)}
+            className="btn btn--primary h-9 px-5 text-label"
+          >
+            {processing ? 'Evaluating…' : 'Evaluate claim'}
+          </button>
+        ) : (
+          <>
+            <button
+              type="button"
+              disabled={immutableFailure}
+              onClick={() => onApprove(claim.id)}
+              className="btn btn--primary h-9 px-5 text-label"
+              title={immutableFailure ? 'This claim violates an immutable on-chain rule' : undefined}
+            >
+              {immutableFailure ? 'Cannot approve' : 'Approve demo'}
+            </button>
+            <button
+              type="button"
+              onClick={() => onReject(claim.id)}
+              className="btn btn--ghost h-9 px-5 text-label"
+            >
+              Reject demo
+            </button>
+          </>
+        )}
       </div>
     </li>
   );

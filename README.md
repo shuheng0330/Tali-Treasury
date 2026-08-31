@@ -28,6 +28,7 @@ Status words are intentionally precise:
 | TypeScript Sui integration | **Complete locally** | Reads, PTB builders, amount helpers, error mapping |
 | Treasurer mandate dashboard | **Live** (read-only) | Server reads the current mandate from Sui Testnet |
 | Claim receipt submission UI | **Complete locally** | Real analyze, create, and list API calls; Production remains fail-closed pending wallet auth |
+| Claim policy processing | **Complete locally** | Treasurer action invokes the server evaluator and persists the decision |
 | Review, revoke, payment UI, and Safety Test interactions | **Mocked** | Clearly labelled; no browser signing or state changes |
 | Gemini receipt analysis and Supabase claims | **Hosted schema ready** | API-backed UI integration, 42 pgTAP assertions, and all three active team members verified |
 | Deterministic policy and backend agent signing | **Complete locally** | Testnet-only, treasurer-triggered, race-safe and fake-operation verified; no transaction broadcast in this increment |
@@ -59,13 +60,18 @@ Member receipt UI (real analyze, create, and list API calls)
 Gemini receipt + private Supabase claims (hosted; auth-gated; team verified)
              |
              v
-Deterministic policy + server-only testnet signer (complete locally)
+Deterministic policy + persisted decision (complete locally)
+             | USDC auto_pay
+             v
+Server-only testnet signer (complete locally)
              |
              v
 @tali/treasury-sui (readers and unsigned transaction builders)
              |
              v
 Sui Testnet Mandate<USDC> (live enforcement and audit events)
+
+Non-USDC receipts stay in review pending a trusted conversion quote.
 ```
 
 The web application reads public mandate state without a key. The process API can
@@ -117,8 +123,10 @@ npm run dev
 Then open `http://localhost:3000/treasury`. The page should say **Live from Sui
 Testnet** and display the current mandate state. `/claim` uses the real receipt
 and claim APIs when demo identity is explicitly enabled. The process API has real
-policy and backend testnet-signing code, while review, browser payment, revoke, and
-Safety Test writes remain clearly marked simulations or previews.
+and claim APIs when demo identity is explicitly enabled. The treasury process API
+persists real policy decisions and can run the server-only testnet signer for USDC
+`auto_pay` claims. Review actions, browser payment presentation, revoke, and Safety
+Test writes remain clearly marked simulations or previews.
 
 Run Move tests separately:
 
@@ -232,6 +240,7 @@ Immediate next vertical slice:
 ## Documentation index
 
 - [`docs/PROGRESS.md`](docs/PROGRESS.md) — authoritative team status and next work.
+- [`docs/NEXT_STEPS.md`](docs/NEXT_STEPS.md) — production implementation order and acceptance criteria.
 - [`docs/HOSTED_SUPABASE_VERIFICATION.md`](docs/HOSTED_SUPABASE_VERIFICATION.md) — hosted schema verification scope and reproducible checks.
 - [`docs/OWNERSHIP.md`](docs/OWNERSHIP.md) — path ownership and coordination rules.
 - [`docs/DESIGN.md`](docs/DESIGN.md) — binding UI design rules.

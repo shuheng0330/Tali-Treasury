@@ -1,6 +1,6 @@
 # Project status
 
-Last updated: 31 August 2026 (MYT)
+Last updated: 1 September 2026 (MYT)
 
 ## Complete locally
 
@@ -15,14 +15,16 @@ Last updated: 31 August 2026 (MYT)
   explainable `auto_pay`, `review` and `reject` outcomes;
 - treasurer-only `POST /api/claims/:id/process` integration with live read-only Sui
   mandate snapshots, idempotent decisions and atomic Supabase state transitions;
+- live treasury queue action for invoking the server policy endpoint and rendering
+  its persisted decision instead of a browser-side duplicate;
+- non-USDC receipts fail closed to review until an explicit USDC quote exists;
 - testnet-only backend-agent payment execution for `auto_pay` claims, including a
   fresh policy preflight, atomic `approved -> paying` reservation, confirmed
   terminal persistence and reconciliation-safe uncertain submissions;
 - lazy server-only Ed25519 and `AgentCap` configuration with preparation separated
   from submission and fake-operation verification that never broadcasts;
-- 146 web Vitest tests and 14 Sui integration tests passing, including 32 focused
-  policy tests and dedicated payment concurrency, sanitization and idempotency
-  coverage;
+- 155 web Vitest tests and 14 Sui integration tests passing, including currency,
+  malformed-input, payment concurrency, sanitization and idempotency coverage;
 - 42 passing pgTAP database assertions on a clean disposable PostgreSQL 17
   database;
 - web TypeScript check passing at the API checkpoint.
@@ -55,6 +57,7 @@ not needed.
   separately authorized small live smoke payment;
 - add wallet-signature authentication;
 - bind analysis to claim confirmation through a signed token or persisted draft;
+- add trusted MYR-to-USDC quote capture, expiry and converted payout storage;
 - implement treasurer review actions and automatic reconciliation for uncertain
   payment submissions;
 - run the hosted receipt flow end to end after authenticated identity is available.
@@ -70,6 +73,8 @@ not needed.
   disables them until authenticated identity replaces the demo address.
 - Review and reject decisions still return `payment: null`; only `auto_pay` enters
   the backend payment path.
+- MYR and other non-USDC receipts are preserved but cannot auto-pay until the
+  conversion-quote increment is implemented.
 - Payment code can prepare and submit on Sui Testnet when valid server credentials
   are supplied, but no real transaction was broadcast during this increment.
 - A claim left in `paying` requires manual reconciliation before retry; automatic

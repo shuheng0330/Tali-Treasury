@@ -36,6 +36,12 @@ adapter repository store    (Sui Testnet)
   route never reads secrets.
 - `src/app/api` contains thin Node.js route handlers and testable handler factories.
 
+Receipt amounts retain the extracted ISO currency. Only a USDC-denominated claim
+may run the mandate's monetary comparisons. A non-USDC receipt is routed to review
+and its cap and budget checks remain deferred until a future quote module stores an
+explicit converted USDC payout. The original analysis remains unchanged when a
+member corrects the confirmed claim fields.
+
 ## Database design
 
 - `events` stores organisation, treasurer, mandate object, allowed categories and

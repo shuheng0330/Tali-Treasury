@@ -17,7 +17,7 @@ The current backend increment must:
   another event;
 - extract merchant, amount, currency, date and category through Gemini structured
   output without inventing uncertain values;
-- represent money as positive USDC base-unit decimal strings;
+- preserve the receipt amount and ISO currency as six-decimal fixed-point units;
 - store receipt objects in a private Supabase bucket;
 - persist claims using the categories, states and response types from
   `@tali/shared`;
@@ -35,8 +35,10 @@ The server policy evaluator must:
 - evaluate the per-claim cap, remaining mandate budget, recipient allowlist,
   revocation, mandate expiry, exact duplicate status, allowed category, receipt
   date and receipt-extraction certainty;
-- use integer USDC base-unit comparisons, accepting an amount equal to the cap or
-  remaining budget;
+- use integer USDC base-unit comparisons for USDC claims, accepting an amount
+  equal to the cap or remaining budget;
+- route non-USDC receipts to review and defer mandate amount checks until an
+  explicit USDC conversion quote is attached;
 - require at least 90% Gemini confidence with no uncertain fields or warnings;
 - validate canonical receipt dates within the event window and no later than the
   current UTC date;
@@ -93,7 +95,8 @@ The backend signer is restricted to Sui Testnet. Its private key and owned
   explicitly enabled; hosted use requires real wallet/session authentication.
 - Amounts must be positive integers below 10^30 base units.
 - Sui addresses and object IDs must be canonical lowercase 32-byte hex values.
-- Claim fields must match the validated receipt analysis supplied at confirmation.
+- Preserve the original validated receipt analysis when a member corrects the
+  confirmed merchant, amount, date or category.
 - A database unique constraint is the final race-safe same-event duplicate guard.
 
 ## Hosted demo configuration
@@ -108,12 +111,13 @@ The backend signer is restricted to Sui Testnet. Its private key and owned
 
 - wallet-signature authentication;
 - cryptographic or one-time binding between analysis and claim creation;
+- trusted MYR-to-USDC quote ingestion, quote expiry and converted payout storage;
 - treasurer review actions and review-driven claim-state transitions;
 - automatic reconciliation of a `paying` claim after an uncertain submission;
 - Sui Mainnet signing or any real-value payment;
 - a live funded smoke transaction for this increment (automated verification uses
   injected fake operations and never broadcasts);
-- frontend replacement of remaining mock policy and payment data;
+- frontend replacement of remaining mock review and payment-presentation data;
 - production readiness; the schema is hosted, but real identity, deployed API
   configuration and end-to-end verification remain pending.
 
