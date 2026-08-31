@@ -221,4 +221,142 @@ describe('evaluatePolicy', () => {
         .map(({ rule }) => rule),
     ).toEqual(['mandate_active', 'confidence_sufficient']);
   });
+
+  it('accepts exact monetary and confidence boundaries', () => {
+    const decision = evaluate({
+      claim: {
+        ...claim,
+        amount: '5000000',
+        analysis: { ...claim.analysis!, confidence: 0.9 },
+      },
+      mandate: {
+        ...mandate,
+        maxPerClaim: '5000000',
+        remainingBudget: '5000000',
+      },
+    });
+
+    expect(decision.outcome).toBe('auto_pay');
+    expect(
+      decision.checks
+        .filter(({ rule }) =>
+          ['per_claim_max', 'total_budget', 'confidence_sufficient'].includes(
+            rule,
+          ),
+        )
+        .every(({ passed }) => passed),
+    ).toBe(true);
+  });
+
+  it.each(['0', '-1', '1.5', '', '01'])(
+    'fails closed for malformed or non-positive claim amount %j',
+    (amount) => {
+      const decision = evaluate({ claim: { ...claim, amount } });
+
+      expect(decision.outcome).toBe('reject');
+      expect(
+        decision.checks
+          .filter(({ rule }) =>
+            ['per_claim_max', 'total_budget'].includes(rule),
+          )
+          .every(({ passed }) => !passed),
+      ).toBe(true);
+    },
+  );
+
+  it('labels malformed monetary snapshots without rendering a misleading value', () => {
+    const decision = evaluate({ claim: { ...claim, amount: '' } });
+
+    expect(
+      decision.checks.find(({ rule }) => rule === 'per_claim_max')?.detail,
+    ).toContain('invalid amount');
+  });
+
+  it.each([
+    ['maxPerClaim', { maxPerClaim: 'not-an-integer' }, 'per_claim_max'],
+    ['remainingBudget', { remainingBudget: '-1' }, 'total_budget'],
+  ] as const)(
+    'fails closed for a malformed mandate %s',
+    (_label, mandateOverrides, expectedRule) => {
+      const decision = evaluate({
+        mandate: { ...mandate, ...mandateOverrides },
+      });
+
+      expect(decision.outcome).toBe('reject');
+      expect(
+        decision.checks.find(({ rule }) => rule === expectedRule)?.passed,
+      ).toBe(false);
+    },
+  );
+
+  it.each([
+    ['the event start date', '2026-08-29'],
+    ['the current UTC date', '2026-08-31'],
+  ])('accepts a receipt on %s', (_label, receiptDate) => {
+    const decision = evaluate({ claim: { ...claim, receiptDate } });
+
+    expect(decision.outcome).toBe('auto_pay');
+  });
+
+  it('accepts a receipt on the event expiry date when it is not in the future', () => {
+    const expiryDayNow = Date.UTC(2026, 8, 5, 12);
+    const decision = evaluate({
+      claim: { ...claim, receiptDate: '2026-09-05' },
+      mandate: {
+        ...mandate,
+        expiryMs: Date.UTC(2026, 8, 6),
+      },
+      nowMs: expiryDayNow,
+    });
+
+    expect(decision.outcome).toBe('auto_pay');
+  });
+
+  it.each([
+    ['before the event', '2026-08-28'],
+    ['in the future', '2026-09-01'],
+    ['an impossible calendar date', '2026-02-30'],
+    ['a noncanonical date', '2026-8-30'],
+  ])('reviews a receipt date %s', (_label, receiptDate) => {
+    const decision = evaluate({ claim: { ...claim, receiptDate } });
+
+    expect(decision.outcome).toBe('review');
+    expect(
+      decision.checks.find(({ rule }) => rule === 'receipt_date_valid')
+        ?.passed,
+    ).toBe(false);
+  });
+
+  it('reviews a receipt after the event even when it is no longer in the future', () => {
+    const decision = evaluate({
+      claim: { ...claim, receiptDate: '2026-09-06' },
+      mandate: { ...mandate, expiryMs: Date.UTC(2026, 8, 7) },
+      nowMs: Date.UTC(2026, 8, 6, 12),
+    });
+
+    expect(decision.outcome).toBe('review');
+    expect(
+      decision.checks.find(({ rule }) => rule === 'receipt_date_valid')
+        ?.passed,
+    ).toBe(false);
+  });
+
+  it('treats the mandate expiry timestamp as an exclusive boundary', () => {
+    const immediatelyBefore = evaluate({
+      nowMs: mandate.expiryMs - 1,
+      claim: { ...claim, receiptDate: '2026-09-05' },
+    });
+    const exactlyAtExpiry = evaluate({ nowMs: mandate.expiryMs });
+
+    expect(immediatelyBefore.outcome).toBe('auto_pay');
+    expect(
+      immediatelyBefore.checks.find(({ rule }) => rule === 'not_expired')
+        ?.passed,
+    ).toBe(true);
+    expect(exactlyAtExpiry.outcome).toBe('reject');
+    expect(
+      exactlyAtExpiry.checks.find(({ rule }) => rule === 'not_expired')
+        ?.passed,
+    ).toBe(false);
+  });
 });

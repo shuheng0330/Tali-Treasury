@@ -50,6 +50,8 @@ function parseUnsignedInteger(value: string): bigint | null {
 }
 
 function displayAmount(value: string): string {
+  if (parseUnsignedInteger(value) === null) return 'an invalid amount';
+
   try {
     return `${toDisplay(value)} USDC`;
   } catch {
