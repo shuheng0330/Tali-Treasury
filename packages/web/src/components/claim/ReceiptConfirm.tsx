@@ -46,6 +46,7 @@ export function ReceiptConfirm({ photoUrl, analysis, duplicateOf, onRetake, onSu
   const [category, setCategory] = useState<ExpenseCategory>(analysis?.category ?? 'other');
   const [description, setDescription] = useState('');
 
+  const currency = analysis?.currency ?? 'MYR';
   const uncertain = new Set(analysis?.uncertainFields ?? []);
   const normalizedAmount = amount.replace(/[,\s]/g, '');
   const amountIsValid =
@@ -123,7 +124,7 @@ export function ReceiptConfirm({ photoUrl, analysis, duplicateOf, onRetake, onSu
               placeholder="0.00"
               className="tnum w-full bg-transparent text-title outline-none placeholder:text-ink-3"
             />
-            <span className="text-body text-ink-3">MYR</span>
+            <span className="text-body text-ink-3">{currency}</span>
           </span>
         </Field>
 
@@ -161,7 +162,8 @@ export function ReceiptConfirm({ photoUrl, analysis, duplicateOf, onRetake, onSu
       </div>
 
       <p className="text-body text-ink-2">
-        Prototype simplification: the extracted MYR number is reimbursed as the same numeric amount in Testnet USDC; no currency conversion is performed.
+        Prototype simplification: the extracted {currency} number is reimbursed as the same
+        numeric amount in Testnet USDC; no currency conversion is performed.
       </p>
 
       <button
