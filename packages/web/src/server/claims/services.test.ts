@@ -512,4 +512,38 @@ describe('createProcessClaimService', () => {
       mismatched({ claimId: claim.id, processor: treasurer }),
     ).rejects.toMatchObject({ code: 'mandate_read_failed', status: 502 });
   });
+
+  it('sanitizes repository failures during loading and persistence', async () => {
+    const loadFailure = createProcessClaimService({
+      claims: createRepository({
+        getProcessContext: vi.fn(async () => {
+          throw new Error('raw Supabase load detail');
+        }),
+      }),
+      mandates: { read: vi.fn() },
+    });
+    const loading = loadFailure({ claimId: claim.id, processor: treasurer });
+    await expect(loading).rejects.toMatchObject({
+      code: 'database_failed',
+      status: 500,
+    });
+    await expect(loading).rejects.not.toThrow('raw Supabase load detail');
+
+    const saveFailure = createProcessClaimService({
+      claims: createRepository({
+        getProcessContext: vi.fn(async () => processContext),
+        saveDecision: vi.fn(async () => {
+          throw new Error('raw Supabase update detail');
+        }),
+      }),
+      mandates: { read: vi.fn(async () => mandate) },
+      now: () => nowMs,
+    });
+    const saving = saveFailure({ claimId: claim.id, processor: treasurer });
+    await expect(saving).rejects.toMatchObject({
+      code: 'database_failed',
+      status: 500,
+    });
+    await expect(saving).rejects.not.toThrow('raw Supabase update detail');
+  });
 });

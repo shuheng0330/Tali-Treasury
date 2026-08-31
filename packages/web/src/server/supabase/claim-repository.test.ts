@@ -201,6 +201,47 @@ describe('createSupabaseClaimRepository', () => {
     });
   });
 
+  it('distinguishes a missing claim from malformed process context', async () => {
+    const missing = createSupabaseClaimRepository(
+      scriptedClient({ maybeSingle: { data: null, error: null } }),
+    );
+    await expect(missing.getProcessContext(row.id)).rejects.toMatchObject({
+      code: 'claim_not_found',
+      status: 404,
+    });
+
+    const malformed = createSupabaseClaimRepository(
+      scriptedClient({
+        maybeSingle: {
+          data: {
+            ...processRow,
+            events: { ...processRow.events, starts_at: 'not-a-date' },
+          },
+          error: null,
+        },
+      }),
+    );
+    await expect(malformed.getProcessContext(row.id)).rejects.toMatchObject({
+      code: 'database_failed',
+      status: 500,
+    });
+  });
+
+  it('reports a conflict when a lost compare-and-set has no stored decision', async () => {
+    const repository = createSupabaseClaimRepository(
+      scriptedClient({
+        maybeSingles: [
+          { data: null, error: null },
+          { data: processRow, error: null },
+        ],
+      }),
+    );
+
+    await expect(
+      repository.saveDecision({ claimId: row.id, decision, state: 'approved' }),
+    ).rejects.toMatchObject({ code: 'processing_conflict', status: 409 });
+  });
+
   it('maps database rows to JSON-safe Claim values without exposing object paths', async () => {
     let inserted: unknown;
     const repository = createSupabaseClaimRepository(
