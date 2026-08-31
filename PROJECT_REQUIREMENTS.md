@@ -50,6 +50,24 @@ The server policy evaluator must:
 The evaluator mirrors on-chain rules for early routing. The Sui Move contract is
 still the final payment authority.
 
+## Implemented claim-processing scope
+
+The claim-processing endpoint must:
+
+- remain disabled unless insecure demo identity mode is explicitly enabled;
+- accept a claim UUID and canonical processor address;
+- allow only the event's configured treasurer to trigger processing;
+- return a stored decision idempotently without rereading Sui;
+- load the current read-only mandate snapshot for a new submitted claim;
+- persist exactly one decision through a compare-and-set update;
+- map `auto_pay` to `approved`, `review` to `awaiting_review`, and `reject` to
+  `rejected`;
+- return a concurrent winner's stored decision rather than overwriting it; and
+- return `payment: null` without constructing, signing or broadcasting a
+  transaction.
+
+An `approved` claim is ready for a later payment step; it is not paid.
+
 ## Security and business rules
 
 - Gemini and Supabase credentials are server-only and must never use a
@@ -76,8 +94,7 @@ still the final payment authority.
 
 - wallet-signature authentication;
 - cryptographic or one-time binding between analysis and claim creation;
-- loading live event and Sui mandate snapshots into claim processing;
-- policy-decision persistence, review actions and claim-state transitions;
+- treasurer review actions and review-driven claim-state transitions;
 - agent private-key use, Sui transaction construction, signing or payment;
 - frontend replacement of remaining mock policy and payment data;
 - production readiness; the schema is hosted, but real identity, deployed API

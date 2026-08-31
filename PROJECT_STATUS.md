@@ -13,7 +13,9 @@ Last updated: 31 August 2026 (MYT)
 - API-backed `/claim` receipt analysis, confirmation, claim creation and claim list;
 - pure deterministic policy evaluation across all nine shared rules, with
   explainable `auto_pay`, `review` and `reject` outcomes;
-- 104 passing web Vitest tests, including 32 focused policy tests, plus 14 Sui
+- treasurer-only `POST /api/claims/:id/process` integration with live read-only Sui
+  mandate snapshots, idempotent decisions and atomic Supabase state transitions;
+- 125 passing web Vitest tests, including 32 focused policy tests, plus 14 Sui
   integration tests;
 - 42 passing pgTAP database assertions on a clean disposable PostgreSQL 17
   database;
@@ -44,9 +46,6 @@ not needed.
 
 - add wallet-signature authentication;
 - bind analysis to claim confirmation through a signed token or persisted draft;
-- load live event and mandate snapshots and call the policy evaluator from
-  `POST /api/claims/:id/process`;
-- persist policy decisions and claim-state transitions;
 - implement treasurer review actions and backend Sui signing;
 - run the hosted receipt flow end to end after authenticated identity is available.
 
@@ -59,6 +58,6 @@ not needed.
   bound to one another.
 - The frontend is wired to the hosted receipt APIs, but Production intentionally
   disables them until authenticated identity replaces the demo address.
-- The policy evaluator is side-effect-free and is not yet connected to a process
-  route, Supabase decision persistence or the service wallet.
+- Claim processing stores decisions and states but intentionally returns
+  `payment: null`; approved claims are not yet paid.
 - No backend code in this increment can sign or broadcast a Sui transaction.

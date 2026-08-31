@@ -72,10 +72,30 @@ failures, revoked or expired mandates, and non-allowlisted recipients produce
 `reject`. Category, date and extraction-certainty failures produce `review` unless
 a hard failure also exists. Only nine passing checks produce `auto_pay`.
 
-This module neither fetches the on-chain mandate nor persists the decision. A later
-claim-processing service will provide current snapshots, store the result and send
-eligible claims to the Sui transaction adapter. The Move contract remains the final
-authority and rechecks its rules at execution time.
+This module itself neither fetches the on-chain mandate nor persists the decision.
+The claim-processing service provides current snapshots and stores the result; a
+later payment service will send eligible claims to the Sui transaction adapter.
+The Move contract remains the final authority and rechecks its rules at execution
+time.
+
+## Claim-processing design
+
+`POST /api/claims/:id/process` is a thin route behind the existing fail-closed demo
+identity gate. Its injected service validates the claim and processor, loads the
+claim plus event policy, and permits only the configured treasurer. The processor
+address remains an insecure demo identity until wallet authentication exists.
+
+For a new submitted claim, a read-only Sui adapter composes `createTestnetClient`,
+`readMandate` and `toMandateView`. The service verifies the returned object ID,
+runs `evaluatePolicy`, and maps its outcome to `approved`, `awaiting_review` or
+`rejected`. It never imports transaction builders, keypairs or signing APIs.
+
+Supabase persists the state and decision with a compare-and-set update filtered by
+claim ID, `state = submitted` and `decision IS NULL`. A zero-row update reloads the
+claim: a stored decision is returned as the concurrent winner, while an undecided
+row becomes a conflict. Repeated requests return an existing decision without
+another Sui read. Every response has `payment: null`; `approved` means ready for a
+future payment step, not paid.
 
 ## Error handling
 
@@ -91,6 +111,9 @@ are retained only as an internal cause. Unknown failures become a generic
 - Policy tests exercise every reject and review rule, hard-failure precedence,
   exact monetary and confidence limits, malformed snapshots, strict calendar
   dates, and the exclusive mandate-expiry boundary.
+- Claim-processing tests cover treasurer authorization, stored-decision
+  idempotency, outcome-to-state mapping, atomic persistence races, live mandate
+  mapping, route validation and sanitized adapter failures.
 - pgTAP applies the migration to a clean database and checks constraints,
   privileges, RLS, storage configuration and duplicate behavior.
 - Repository completion requires build, typecheck, tests, audit, secret scan and
