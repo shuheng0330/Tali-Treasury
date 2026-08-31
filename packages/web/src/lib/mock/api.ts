@@ -2,6 +2,7 @@ import type {
   Amount,
   Claim,
   DraftClaim,
+  MandateView,
   PaymentResult,
   PolicyDecision,
   ReviewQueueItem,
@@ -43,8 +44,12 @@ export async function analyzeReceipt(): Promise<ReceiptAnalysis> {
   };
 }
 
-export function evaluate(draft: DraftClaim): PolicyDecision {
-  const available = subtract(mandate.remainingBudget, COMMITTED);
+export function evaluate(
+  draft: DraftClaim,
+  against: MandateView = mandate,
+  committed: Amount = COMMITTED,
+): PolicyDecision {
+  const available = subtract(against.remainingBudget, committed);
   const recipient = draft.recipient ?? MEMBER;
   const exactDuplicate = seededClaims.some(
     (claim) =>
@@ -89,22 +94,22 @@ export function evaluate(draft: DraftClaim): PolicyDecision {
     {
       rule: 'per_claim_max',
       label: 'Per-claim cap',
-      passed: compare(draft.amount, mandate.maxPerClaim) <= 0,
-      detail: `${toDisplay(draft.amount)} vs ${toDisplay(mandate.maxPerClaim)} cap`,
+      passed: compare(draft.amount, against.maxPerClaim) <= 0,
+      detail: `${toDisplay(draft.amount)} vs ${toDisplay(against.maxPerClaim)} cap`,
       onChain: true,
     },
     {
       rule: 'total_budget',
       label: 'Budget remaining',
-      passed: compare(draft.amount, mandate.remainingBudget) <= 0,
-      detail: `${toDisplay(mandate.remainingBudget)} in the mandate, ${toDisplay(available)} uncommitted`,
+      passed: compare(draft.amount, against.remainingBudget) <= 0,
+      detail: `${toDisplay(against.remainingBudget)} in the mandate, ${toDisplay(available)} uncommitted`,
       onChain: true,
     },
     {
       rule: 'recipient_allowlist',
       label: 'Recipient approved',
-      passed: isAllowedRecipient(mandate, recipient),
-      detail: isAllowedRecipient(mandate, recipient)
+      passed: isAllowedRecipient(against, recipient),
+      detail: isAllowedRecipient(against, recipient)
         ? 'On the mandate allowlist'
         : `${recipient.slice(0, 6)}…${recipient.slice(-4)} is not on the allowlist`,
       onChain: true,
@@ -112,15 +117,15 @@ export function evaluate(draft: DraftClaim): PolicyDecision {
     {
       rule: 'mandate_active',
       label: 'Mandate active',
-      passed: !mandate.revoked,
+      passed: !against.revoked,
       detail: 'Not revoked',
       onChain: true,
     },
     {
       rule: 'not_expired',
       label: 'Not expired',
-      passed: Date.now() < mandate.expiryMs,
-      detail: `Expires ${new Date(mandate.expiryMs).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}`,
+      passed: Date.now() < against.expiryMs,
+      detail: `Expires ${new Date(against.expiryMs).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}`,
       onChain: true,
     },
   ];

@@ -10,13 +10,37 @@ function Stamp({ label, at }: { label: string; at: string }) {
   );
 }
 
+function NotSaved({ saveError }: { saveError: string | null }) {
+  if (!saveError) return null;
+
+  return (
+    <p className="rounded-card border border-no-line bg-no-soft p-4 text-caption text-no">
+      <span className="font-medium">{saveError}</span>{' '}
+      <span className="text-ink-2">
+        Nothing below reached the treasurer, and it will not appear in your claim history.
+      </span>
+    </p>
+  );
+}
+
 function clock(offsetMs: number) {
   return new Date(Date.now() + offsetMs).toLocaleTimeString('en-GB', { hour12: false });
 }
 
-export function Paid({ amount, payment, onDone }: { amount: Amount; payment: PaymentResult; onDone: () => void }) {
+export function Paid({
+  amount,
+  payment,
+  saveError,
+  onDone,
+}: {
+  amount: Amount;
+  payment: PaymentResult;
+  saveError: string | null;
+  onDone: () => void;
+}) {
   return (
     <div className="flex flex-col gap-6">
+      <NotSaved saveError={saveError} />
       <div className="flex flex-col items-center gap-2 pt-4 text-center">
         <svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="currentColor" strokeWidth="1.8" className="text-ok" aria-hidden>
           <path d="M13 2 L4 14h7l-1 8 9-12h-7z" strokeLinejoin="round" />
@@ -51,12 +75,23 @@ export function Paid({ amount, payment, onDone }: { amount: Amount; payment: Pay
   );
 }
 
-export function Held({ amount, decision, onDone }: { amount: Amount; decision: PolicyDecision; onDone: () => void }) {
+export function Held({
+  amount,
+  decision,
+  saveError,
+  onDone,
+}: {
+  amount: Amount;
+  decision: PolicyDecision;
+  saveError: string | null;
+  onDone: () => void;
+}) {
   const failed = decision.checks.filter((check) => !check.passed);
   const immutableFailure = failed.some((check) => check.onChain);
 
   return (
     <div className="flex flex-col gap-6">
+      <NotSaved saveError={saveError} />
       <div className="flex flex-col items-center gap-2 pt-4 text-center">
         <svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="currentColor" strokeWidth="1.7" className="text-wait" aria-hidden>
           <path d="M12 3 3.5 19.5h17z" strokeLinejoin="round" />
@@ -83,8 +118,9 @@ export function Held({ amount, decision, onDone }: { amount: Amount; decision: P
 
       <div className="flex flex-col gap-3">
         <p className="text-caption text-ink-3">
-          You do not need to chase anyone. This claim is already in the treasurer&rsquo;s
-          review queue, and they will see it the next time they open the treasury.
+          {saveError
+            ? 'Because it was not saved, no treasurer will see it. Photograph the receipt again once the backend is reachable.'
+            : 'You do not need to chase anyone. This claim is already in the treasurer’s review queue, and they will see it the next time they open the treasury.'}
         </p>
         <button
           type="button"

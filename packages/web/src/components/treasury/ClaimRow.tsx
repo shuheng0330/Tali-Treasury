@@ -25,7 +25,7 @@ function ReasonMark({ reason }: { reason: ReviewQueueItem['reason'] }) {
   }
 
   return (
-    <span className="mt-1 flex h-4 w-4 items-center justify-center text-wait" title="The agent is unsure">
+    <span className="mt-1 flex h-4 w-4 items-center justify-center text-wait" title="Awaiting review">
       <svg viewBox="0 0 12 12" width="12" height="12" aria-hidden>
         <circle cx="6" cy="6" r="4.4" fill="none" stroke="currentColor" strokeWidth="1.6" />
         <path d="M6 6 v-2.6" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />

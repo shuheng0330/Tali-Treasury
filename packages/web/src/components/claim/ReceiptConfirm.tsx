@@ -7,6 +7,8 @@ import { EXPENSE_CATEGORIES, toBaseUnits, toDisplay } from '@tali/shared';
 interface Props {
   photoUrl: string;
   analysis: ReceiptAnalysis | null;
+  /** Set when the backend recognised this exact image on an existing claim. */
+  duplicateOf: string | null;
   onRetake: () => void;
   onSubmit: (draft: DraftClaim) => void;
 }
@@ -35,7 +37,7 @@ function Field({
   );
 }
 
-export function ReceiptConfirm({ photoUrl, analysis, onRetake, onSubmit }: Props) {
+export function ReceiptConfirm({ photoUrl, analysis, duplicateOf, onRetake, onSubmit }: Props) {
   const failed = analysis === null;
   const [zoomed, setZoomed] = useState(false);
   const [merchant, setMerchant] = useState(analysis?.merchant ?? '');
@@ -45,7 +47,12 @@ export function ReceiptConfirm({ photoUrl, analysis, onRetake, onSubmit }: Props
   const [description, setDescription] = useState('');
 
   const uncertain = new Set(analysis?.uncertainFields ?? []);
-  const ready = merchant.trim() !== '' && amount.trim() !== '' && receiptDate.trim() !== '' && description.trim() !== '';
+  const ready =
+    duplicateOf === null &&
+    merchant.trim() !== '' &&
+    amount.trim() !== '' &&
+    receiptDate.trim() !== '' &&
+    description.trim() !== '';
 
   return (
     <div className="flex flex-col gap-4">
@@ -79,6 +86,17 @@ export function ReceiptConfirm({ photoUrl, analysis, onRetake, onSubmit }: Props
       {failed ? (
         <p className="text-body text-wait">
           Couldn&rsquo;t read this receipt. Enter the details manually.
+        </p>
+      ) : null}
+
+      {duplicateOf ? (
+        <p className="rounded-card border border-wait-line bg-wait-soft p-4 text-caption text-wait">
+          <span className="font-medium">This receipt has been claimed before.</span>{' '}
+          <span className="text-ink-2">
+            The same image is already attached to claim{' '}
+            <span className="font-mono">{duplicateOf.slice(0, 8)}</span>, so this one cannot be
+            submitted. Photograph a different receipt.
+          </span>
         </p>
       ) : null}
 
@@ -156,7 +174,7 @@ export function ReceiptConfirm({ photoUrl, analysis, onRetake, onSubmit }: Props
         })}
         className="btn btn--primary btn--block btn--lg mt-2"
       >
-        Submit claim
+        {duplicateOf ? 'Already claimed' : 'Submit claim'}
       </button>
     </div>
   );
