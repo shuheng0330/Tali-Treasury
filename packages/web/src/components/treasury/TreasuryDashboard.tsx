@@ -11,6 +11,7 @@ import { event } from '@/lib/mock/data';
 import { reviewQueue, settledClaims } from '@/lib/mock/api';
 import { settledFrom, toReviewQueue } from '@/lib/queue';
 import { useClaims } from '@/lib/api/useClaims';
+import { tryProcessClaim } from '@/lib/api/demo';
 import { DataNotice } from '@/components/DataNotice';
 import { ClaimRow } from './ClaimRow';
 import { MandateHeader } from './MandateHeader';
@@ -38,13 +39,15 @@ export function TreasuryDashboard({ apiEnabled, initialMandate: mandate, readErr
   const [tab, setTab] = useState<Tab>('review');
   const [confirming, setConfirming] = useState(false);
   const [resolved, setResolved] = useState<string[]>([]);
+  const [processingId, setProcessingId] = useState<string | null>(null);
+  const [processError, setProcessError] = useState<string | null>(null);
 
   const live = useClaims(apiEnabled);
 
   const queue = useMemo(() => {
     const items =
       live.source === 'live' && mandate !== null
-        ? toReviewQueue(live.claims, mandate)
+        ? toReviewQueue(live.claims)
         : reviewQueue();
     return items.filter((item) => !resolved.includes(item.claim.id));
   }, [live.source, live.claims, resolved, mandate]);
@@ -66,6 +69,18 @@ export function TreasuryDashboard({ apiEnabled, initialMandate: mandate, readErr
 
   function resolve(id: string) {
     setResolved((current) => [...current, id]);
+  }
+
+  async function process(id: string) {
+    setProcessingId(id);
+    setProcessError(null);
+    const result = await tryProcessClaim(id);
+    setProcessingId(null);
+    if (result.data === null) {
+      setProcessError(result.reason ?? 'claim processing failed');
+      return;
+    }
+    live.reload();
   }
 
   if (mandate === null) {
@@ -120,8 +135,13 @@ export function TreasuryDashboard({ apiEnabled, initialMandate: mandate, readErr
             source={live.source}
             reason={live.reason}
             live="The claim queue"
-            simulated="Each claim is still scored locally and approving one changes nothing on chain."
+            simulated="Server policy decisions are persisted; review buttons and payment remain demo-only."
           />
+          {processError ? (
+            <p className="mt-3 rounded-control border border-no-line bg-no-soft p-3 text-caption text-no" role="alert">
+              Could not evaluate the claim: {processError}.
+            </p>
+          ) : null}
         </div>
         <div className="flex flex-wrap items-center gap-1 border-b border-rule px-3 py-2">
           {TABS.map((entry) => (
@@ -161,7 +181,14 @@ export function TreasuryDashboard({ apiEnabled, initialMandate: mandate, readErr
           ) : (
             <ul className="flex flex-col divide-y divide-rule">
               {queue.map((item) => (
-                <ClaimRow key={item.claim.id} item={item} onApprove={resolve} onReject={resolve} />
+                <ClaimRow
+                  key={item.claim.id}
+                  item={item}
+                  processing={processingId === item.claim.id}
+                  onProcess={process}
+                  onApprove={resolve}
+                  onReject={resolve}
+                />
               ))}
             </ul>
           )
@@ -178,7 +205,7 @@ export function TreasuryDashboard({ apiEnabled, initialMandate: mandate, readErr
                     <span className="text-caption text-ink-3">{claim.submitterName}</span>
                   </span>
                 </div>
-                <Money amount={claim.amount} size="row" />
+                <Money amount={claim.amount} unit={claim.analysis?.currency ?? 'USDC'} size="row" />
               </li>
             ))}
           </ul>

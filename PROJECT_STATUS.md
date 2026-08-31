@@ -15,7 +15,10 @@ Last updated: 31 August 2026 (MYT)
   explainable `auto_pay`, `review` and `reject` outcomes;
 - treasurer-only `POST /api/claims/:id/process` integration with live read-only Sui
   mandate snapshots, idempotent decisions and atomic Supabase state transitions;
-- 126 passing web Vitest tests, including 32 focused policy tests, plus 14 Sui
+- live treasury queue action for invoking the server policy endpoint and rendering
+  its persisted decision instead of a browser-side duplicate;
+- non-USDC receipts fail closed to review until an explicit USDC quote exists;
+- 135 passing web Vitest tests, including currency and malformed-input coverage, plus 14 Sui
   integration tests;
 - 42 passing pgTAP database assertions on a clean disposable PostgreSQL 17
   database;
@@ -47,6 +50,7 @@ not needed.
 - configure server-only Gemini and Supabase credentials in the deployment;
 - add wallet-signature authentication;
 - bind analysis to claim confirmation through a signed token or persisted draft;
+- add trusted MYR-to-USDC quote capture, expiry and converted payout storage;
 - implement treasurer review actions and backend Sui signing;
 - run the hosted receipt flow end to end after authenticated identity is available.
 
@@ -61,4 +65,6 @@ not needed.
   disables them until authenticated identity replaces the demo address.
 - Claim processing stores decisions and states but intentionally returns
   `payment: null`; approved claims are not yet paid.
+- MYR and other non-USDC receipts are preserved but cannot auto-pay until the
+  conversion-quote increment is implemented.
 - No backend code in this increment can sign or broadcast a Sui transaction.

@@ -12,7 +12,7 @@ export {
 export { formatDecimalAmount, formatUsdc, parseDecimalAmount, parseUsdc } from './amounts.js';
 export { taliUsdcDemo } from './demo.js';
 export { createTestnetClient, readMandate, TESTNET_GRPC_URL } from './client.js';
-export { parseTreasuryError, treasuryErrorFromCode } from './errors.js';
+export { TREASURY_ABORT_CODE, parseTreasuryError, treasuryErrorFromCode } from './errors.js';
 export {
   buildCreateMandateTransaction,
   buildRevokeTransaction,

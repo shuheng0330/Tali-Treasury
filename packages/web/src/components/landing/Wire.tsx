@@ -2,6 +2,7 @@
 
 import { Fragment, useCallback, useEffect, useState } from 'react';
 import { compare, toBaseUnits, toDisplay } from '@tali/shared';
+import { TREASURY_ABORT_CODE } from '@tali/treasury-sui';
 import { mandate } from '@/lib/mock/data';
 
 /** The contract compares against the mandate's own balance. It has no notion of
@@ -51,23 +52,23 @@ interface Gate {
  *  order the contract evaluates them. The three omitted here — wrong agent cap
  *  (3), zero amount (4) and expiry (8) — cannot be triggered from this panel. */
 const GATES: Gate[] = [
-  { key: 'mandate_active', label: 'The mandate is live', code: 9, detail: () => 'not revoked' },
+  { key: 'mandate_active', label: 'The mandate is live', code: TREASURY_ABORT_CODE.MANDATE_REVOKED, detail: () => 'not revoked' },
   {
     key: 'per_claim_max',
     label: 'Under the per-claim cap',
-    code: 5,
+    code: TREASURY_ABORT_CODE.AMOUNT_ABOVE_LIMIT,
     detail: (base) => `${toDisplay(base)} vs ${toDisplay(CAP)}`,
   },
   {
     key: 'total_budget',
     label: 'Inside the remaining budget',
-    code: 6,
+    code: TREASURY_ABORT_CODE.INSUFFICIENT_BUDGET,
     detail: (base) => `${toDisplay(base)} of ${toDisplay(BUDGET)}`,
   },
   {
     key: 'recipient_allowlist',
     label: 'Recipient is on the list',
-    code: 7,
+    code: TREASURY_ABORT_CODE.RECIPIENT_NOT_APPROVED,
     detail: () => 'added by the treasurer',
   },
 ];

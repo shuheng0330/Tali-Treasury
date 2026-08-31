@@ -28,9 +28,10 @@ Status words are intentionally precise:
 | TypeScript Sui integration | **Complete locally** | Reads, PTB builders, amount helpers, error mapping |
 | Treasurer mandate dashboard | **Live** (read-only) | Server reads the current mandate from Sui Testnet |
 | Claim receipt submission UI | **Complete locally** | Real analyze, create, and list API calls; Production remains fail-closed pending wallet auth |
+| Claim policy processing | **Complete locally** | Treasurer action invokes the server evaluator and persists the decision |
 | Review, revoke, payment, and Safety Test interactions | **Mocked** | Clearly labelled; no signing or state changes |
-| Gemini receipt analysis and Supabase claims | **Hosted schema ready** | 72 web tests, 42 pgTAP assertions, API-backed UI integration, and all three active team members verified |
-| Deterministic policy and backend agent signing | **Pending** | Separate payment-orchestration slice |
+| Gemini receipt analysis and Supabase claims | **Hosted schema ready** | 135 web tests, 42 pgTAP assertions, API-backed UI integration, and all three active team members verified |
+| Backend agent signing | **Pending** | Separate payment-orchestration slice |
 | Wallet connection and live UI writes | **Pending** | Add after backend/signing boundary is agreed |
 | Web hosting | **Live** | [`tali-treasury.vercel.app`](https://tali-treasury.vercel.app) |
 | Submission pack | **Pending** | Final hackathon phase |
@@ -59,7 +60,10 @@ Member receipt UI (real analyze, create, and list API calls)
 Gemini receipt + private Supabase claims (hosted; auth-gated; team verified)
              |
              v
-Deterministic policy + signer (pending)
+Deterministic policy + persisted decision (complete locally)
+             |
+             v
+USDC conversion quote for non-USDC receipts (pending)
              |
              v
 @tali/treasury-sui (readers and unsigned transaction builders)
@@ -116,8 +120,9 @@ npm run dev
 
 Then open `http://localhost:3000/treasury`. The page should say **Live from Sui
 Testnet** and display the current mandate state. `/claim` uses the real receipt
-and claim APIs when demo identity is explicitly enabled; policy, review, payment,
-revoke, and Safety Test writes remain clearly marked simulations or previews.
+and claim APIs when demo identity is explicitly enabled. The treasury can persist
+a server policy decision; review, payment, revoke, and Safety Test writes remain
+clearly marked simulations or previews.
 
 Run Move tests separately:
 
@@ -224,6 +229,7 @@ Immediate next vertical slice:
 ## Documentation index
 
 - [`docs/PROGRESS.md`](docs/PROGRESS.md) — authoritative team status and next work.
+- [`docs/NEXT_STEPS.md`](docs/NEXT_STEPS.md) — production implementation order and acceptance criteria.
 - [`docs/HOSTED_SUPABASE_VERIFICATION.md`](docs/HOSTED_SUPABASE_VERIFICATION.md) — hosted schema verification scope and reproducible checks.
 - [`docs/OWNERSHIP.md`](docs/OWNERSHIP.md) — path ownership and coordination rules.
 - [`docs/DESIGN.md`](docs/DESIGN.md) — binding UI design rules.

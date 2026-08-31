@@ -162,8 +162,9 @@ export function ReceiptConfirm({ photoUrl, analysis, duplicateOf, onRetake, onSu
       </div>
 
       <p className="text-body text-ink-2">
-        Prototype simplification: the extracted {currency} number is reimbursed as the same
-        numeric amount in Testnet USDC; no currency conversion is performed.
+        {currency === 'USDC'
+          ? 'The confirmed amount can be checked directly against the USDC mandate.'
+          : `The original ${currency} amount will be stored. An explicit USDC conversion quote is required before any payment.`}
       </p>
 
       <button

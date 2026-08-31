@@ -3,9 +3,10 @@ import type {
   Claim,
   CreateClaimRequest,
   CreateClaimResponse,
+  ProcessClaimResponse,
 } from '@tali/shared';
-import { analyzeReceipt, createClaim, listClaims, TaliApiError } from '@/lib/api/client';
-import { DEMO_EVENT_ID, DEMO_SUBMITTER } from '@/lib/demo-config';
+import { analyzeReceipt, createClaim, listClaims, processClaim, TaliApiError } from '@/lib/api/client';
+import { DEMO_EVENT_ID, DEMO_SUBMITTER, DEMO_TREASURER } from '@/lib/demo-config';
 import { recentClaims } from '@/lib/mock/api';
 
 export type Source = 'live' | 'mock';
@@ -75,5 +76,16 @@ export async function tryListClaims(): Promise<Sourced<Claim[]>> {
     return { data: body.claims, source: 'live', reason: null };
   } catch (error) {
     return { data: recentClaims, source: 'mock', reason: describe(error) };
+  }
+}
+
+export async function tryProcessClaim(
+  claimId: string,
+): Promise<Sourced<ProcessClaimResponse | null>> {
+  try {
+    const data = await processClaim(claimId, DEMO_TREASURER);
+    return { data, source: 'live', reason: null };
+  } catch (error) {
+    return { data: null, source: 'mock', reason: describe(error) };
   }
 }

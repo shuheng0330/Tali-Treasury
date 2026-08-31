@@ -2,24 +2,21 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import type {
+  Claim,
   DraftClaim,
   MandateView,
-  PaymentResult,
-  PolicyDecision,
   ReceiptAnalysis,
 } from '@tali/shared';
 import { mandate as sampleMandate } from '@/lib/mock/data';
-import { evaluate, pay } from '@/lib/mock/api';
 import { tryAnalyzeReceipt, tryCreateClaim, type Source } from '@/lib/api/demo';
 import { useClaims } from '@/lib/api/useClaims';
 import { DEMO_EVENT_ID, DEMO_EVENT_NAME, DEMO_SUBMITTER } from '@/lib/demo-config';
 import { DataNotice } from '@/components/DataNotice';
 import { ClaimHome } from './ClaimHome';
 import { ReceiptConfirm } from './ReceiptConfirm';
-import { RuleCheck } from './RuleCheck';
-import { Held, Paid } from './Outcome';
+import { Submitted } from './Outcome';
 
-type Step = 'home' | 'reading' | 'confirm' | 'checking' | 'paid' | 'held';
+type Step = 'home' | 'reading' | 'confirm' | 'submitting' | 'submitted';
 
 interface Props {
   apiEnabled: boolean;
@@ -27,7 +24,7 @@ interface Props {
   mandateReadError?: string;
 }
 
-function Reading({ photoUrl }: { photoUrl: string }) {
+function Reading({ photoUrl, message = 'Reading your receipt…' }: { photoUrl: string; message?: string }) {
   return (
     <div className="flex flex-col items-center gap-5 pt-6">
       <div className="relative w-full overflow-hidden rounded-card border border-rule bg-raised">
@@ -36,7 +33,7 @@ function Reading({ photoUrl }: { photoUrl: string }) {
         <span className="absolute inset-0 animate-breathe bg-accent/10" aria-hidden />
       </div>
       <p className="text-subhead text-ink-2" aria-live="polite">
-        Reading your receipt…
+        {message}
       </p>
     </div>
   );
@@ -48,9 +45,7 @@ export function ClaimFlow({ apiEnabled, mandate, mandateReadError }: Props) {
   const [analysis, setAnalysis] = useState<ReceiptAnalysis | null>(null);
   const [storagePath, setStoragePath] = useState<string | null>(null);
   const [duplicateOf, setDuplicateOf] = useState<string | null>(null);
-  const [draft, setDraft] = useState<DraftClaim | null>(null);
-  const [decision, setDecision] = useState<PolicyDecision | null>(null);
-  const [payment, setPayment] = useState<PaymentResult | null>(null);
+  const [submittedClaim, setSubmittedClaim] = useState<Claim | null>(null);
 
   /** Where this receipt's analysis came from, which decides whether the claim
    *  can be persisted: without a live read there is no uploaded image, so the
@@ -97,59 +92,42 @@ export function ClaimFlow({ apiEnabled, mandate, mandateReadError }: Props) {
   }, []);
 
   const onSubmit = useCallback(
-    (next: DraftClaim) => {
-      setDraft(next);
-      setDecision(evaluate(next, budget, chainLive ? '0' : undefined));
-      setStep('checking');
-
+    async (next: DraftClaim) => {
       if (source !== 'live' || analysis === null || storagePath === null) {
         setSaveError('This claim was not saved: the receipt was never uploaded.');
         return;
       }
 
       setSaveError(null);
-      tryCreateClaim({
+      setStep('submitting');
+      const created = await tryCreateClaim({
         eventId: DEMO_EVENT_ID,
         submitter: DEMO_SUBMITTER,
         amount: next.amount,
-        merchant: next.merchant,
+        merchant: next.merchant.trim(),
         receiptDate: next.receiptDate,
         category: next.category,
-        description: next.description,
+        description: next.description.trim(),
         storagePath,
         analysis,
-      }).then((created) => {
-        if (created.data !== null) {
-          reloadClaims();
-          return;
-        }
+      });
+      if (created.data === null) {
         setSaveError(`This claim was not saved: ${created.reason}.`);
-      });
+        setStep('confirm');
+        return;
+      }
+      setSubmittedClaim(created.data.claim);
+      reloadClaims();
+      setStep('submitted');
     },
-    [source, analysis, storagePath, reloadClaims, budget, chainLive],
+    [source, analysis, storagePath, reloadClaims],
   );
-
-  const onSettled = useCallback(() => {
-    if (!decision || !draft) return;
-
-    if (decision.outcome === 'auto_pay') {
-      pay(draft.amount).then((result) => {
-        setPayment(result);
-        setStep('paid');
-      });
-      return;
-    }
-
-    setStep('held');
-  }, [decision, draft]);
 
   const reset = useCallback(() => {
     setAnalysis(null);
     setStoragePath(null);
     setDuplicateOf(null);
-    setDraft(null);
-    setDecision(null);
-    setPayment(null);
+    setSubmittedClaim(null);
     setSource('mock');
     setNotice(null);
     setSaveError(null);
@@ -180,7 +158,7 @@ export function ClaimFlow({ apiEnabled, mandate, mandateReadError }: Props) {
             reason={home ? homeReason : notice}
             live={home ? homeLabel : 'Receipt reading and storage'}
             plural={home && homeLabel.includes(' and ')}
-            simulated="Policy, payment and wallet signing still run locally — nothing is signed or broadcast."
+            simulated="Policy runs from the treasury after submission; review, payment and wallet signing remain unavailable."
           />
         </div>
       )}
@@ -209,16 +187,12 @@ export function ClaimFlow({ apiEnabled, mandate, mandateReadError }: Props) {
         />
       ) : null}
 
-      {step === 'checking' && decision ? (
-        <RuleCheck decision={decision} onSettled={onSettled} />
+      {step === 'submitting' && photoUrl ? (
+        <Reading photoUrl={photoUrl} message="Submitting your claim…" />
       ) : null}
 
-      {step === 'paid' && draft && payment ? (
-        <Paid amount={draft.amount} payment={payment} saveError={saveError} onDone={reset} />
-      ) : null}
-
-      {step === 'held' && draft && decision ? (
-        <Held amount={draft.amount} decision={decision} saveError={saveError} onDone={reset} />
+      {step === 'submitted' && submittedClaim ? (
+        <Submitted claim={submittedClaim} onDone={reset} />
       ) : null}
     </div>
   );

@@ -21,7 +21,7 @@ const claim: Pick<
   analysis: {
     merchant: 'Campus Print Shop',
     amount: '4500000',
-    currency: 'MYR',
+    currency: 'USDC',
     receiptDate: '2026-08-30',
     category: 'printing',
     confidence: 0.96,
@@ -100,6 +100,49 @@ describe('evaluatePolicy', () => {
       'not_expired',
     ]);
     expect(decision.reason).toContain('eligible for automatic payment');
+  });
+
+  it('routes a non-USDC receipt to review until it has an explicit conversion quote', () => {
+    const decision = evaluate({
+      claim: {
+        ...claim,
+        amount: '88000000',
+        analysis: { ...claim.analysis!, currency: 'MYR' },
+      },
+    });
+
+    expect(decision.outcome).toBe('review');
+    expect(
+      decision.checks.find(({ rule }) => rule === 'confidence_sufficient'),
+    ).toMatchObject({
+      passed: false,
+      detail: 'MYR receipt requires an explicit USDC conversion quote',
+    });
+    expect(
+      decision.checks
+        .filter(({ rule }) => ['per_claim_max', 'total_budget'].includes(rule))
+        .every(({ passed }) => passed),
+    ).toBe(true);
+  });
+
+  it('fails closed when persisted analysis arrays are malformed', () => {
+    const malformed = {
+      ...claim.analysis!,
+      uncertainFields: null,
+      warnings: null,
+    } as unknown as NonNullable<Claim['analysis']>;
+    const decision = evaluate({ claim: { ...claim, analysis: malformed } });
+
+    expect(decision.outcome).toBe('review');
+    expect(
+      decision.checks.find(({ rule }) => rule === 'confidence_sufficient')?.passed,
+    ).toBe(false);
+  });
+
+  it('does not put a confidence percentage in user-visible rule details', () => {
+    const decision = evaluate();
+
+    expect(decision.checks.map(({ detail }) => detail).join(' ')).not.toMatch(/\d+%/);
   });
 
   it.each<

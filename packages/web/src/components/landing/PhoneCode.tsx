@@ -20,7 +20,6 @@ export function PhoneCode({ path = '/claim' }: { path?: string }) {
       // scanners get unreliable, which is the whole point of this thing.
       margin: 4,
       errorCorrectionLevel: 'M',
-      color: { dark: '#101519', light: '#FFFFFF' },
     })
       .then((result) => {
         if (live) setSvg(result);
@@ -36,7 +35,7 @@ export function PhoneCode({ path = '/claim' }: { path?: string }) {
 
   return (
     <div className="flex items-center gap-4">
-      <div className="h-36 w-36 shrink-0 rounded-card bg-white p-3">
+      <div className="h-36 w-36 shrink-0 rounded-card bg-surface p-3">
         {svg ? (
           <div
             className="h-full w-full [&>svg]:h-full [&>svg]:w-full"
@@ -44,7 +43,7 @@ export function PhoneCode({ path = '/claim' }: { path?: string }) {
             dangerouslySetInnerHTML={{ __html: svg }}
           />
         ) : (
-          <div className="h-full w-full rounded-sm bg-neutral-100" aria-hidden />
+          <div className="h-full w-full rounded-card bg-raised" aria-hidden />
         )}
       </div>
       <div className="flex min-w-0 flex-col gap-1">

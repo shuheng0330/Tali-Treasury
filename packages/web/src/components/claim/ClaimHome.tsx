@@ -95,7 +95,7 @@ export function ClaimHome({
                     </span>
                   </span>
                 </div>
-                <Money amount={claim.amount} size="row" />
+                <Money amount={claim.amount} unit={claim.analysis?.currency ?? 'USDC'} size="row" />
               </li>
             ))}
           </ul>

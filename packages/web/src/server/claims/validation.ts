@@ -114,26 +114,10 @@ const createClaimRequestSchema = z
       });
     }
 
-    const matchingFields = [
-      ['amount', request.amount, request.analysis.amount],
-      ['merchant', request.merchant, request.analysis.merchant],
-      ['receiptDate', request.receiptDate, request.analysis.receiptDate],
-      ['category', request.category, request.analysis.category],
-    ] as const;
-    for (const [field, claimValue, analysisValue] of matchingFields) {
-      if (claimValue !== analysisValue) {
-        context.addIssue({
-          code: 'custom',
-          path: [field],
-          message: `${field} must match receipt analysis`,
-        });
-      }
-    }
-
     const expectedFuzzyKey = [
-      request.merchant.toLowerCase().replace(/\s+/g, ' '),
-      request.receiptDate,
-      request.amount,
+      request.analysis.merchant?.toLowerCase().replace(/\s+/g, ' ').trim() ?? '',
+      request.analysis.receiptDate ?? '',
+      request.analysis.amount ?? '',
     ].join('|');
     if (request.analysis.fuzzyKey !== expectedFuzzyKey) {
       context.addIssue({
