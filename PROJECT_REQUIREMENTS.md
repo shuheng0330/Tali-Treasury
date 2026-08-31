@@ -50,7 +50,7 @@ The server policy evaluator must:
 The evaluator mirrors on-chain rules for early routing. The Sui Move contract is
 still the final payment authority.
 
-## Implemented claim-processing scope
+## Implemented claim-processing and testnet-payment scope
 
 The claim-processing endpoint must:
 
@@ -64,16 +64,28 @@ The claim-processing endpoint must:
 - persist exactly one decision through a compare-and-set update;
 - map `auto_pay` to `approved`, `review` to `awaiting_review`, and `reject` to
   `rejected`;
-- return a concurrent winner's stored decision rather than overwriting it; and
-- return `payment: null` without constructing, signing or broadcasting a
-  transaction.
+- return a concurrent winner's stored decision rather than overwriting it;
+- attempt payment only for an `auto_pay` decision and only when the treasurer
+  invokes the process endpoint;
+- validate server-only testnet credentials lazily and re-evaluate the live mandate
+  immediately before payment;
+- reserve signing through an atomic `approved -> paying` transition so only one
+  concurrent request may submit;
+- persist every confirmed outcome as terminal `paid` or `payment_failed` data;
+- return stored terminal decisions and payment results idempotently without
+  rereading Sui or signing again; and
+- leave transport-uncertain submissions in `paying`, return a safe error, and
+  prohibit automatic retry until reconciliation.
 
-An `approved` claim is ready for a later payment step; it is not paid.
+The backend signer is restricted to Sui Testnet. Its private key and owned
+`AgentCap` ID are server-only values and must never enter a client bundle.
 
 ## Security and business rules
 
 - Gemini and Supabase credentials are server-only and must never use a
   `NEXT_PUBLIC_` prefix.
+- The backend-agent private key is server-only, testnet-only, loaded only when an
+  eligible payment is requested, and must never be logged or persisted.
 - Application tables use Row Level Security with no browser policies and no
   `anon` or `authenticated` table privileges.
 - Only the server role may access application tables and private receipt objects.
@@ -97,7 +109,10 @@ An `approved` claim is ready for a later payment step; it is not paid.
 - wallet-signature authentication;
 - cryptographic or one-time binding between analysis and claim creation;
 - treasurer review actions and review-driven claim-state transitions;
-- agent private-key use, Sui transaction construction, signing or payment;
+- automatic reconciliation of a `paying` claim after an uncertain submission;
+- Sui Mainnet signing or any real-value payment;
+- a live funded smoke transaction for this increment (automated verification uses
+  injected fake operations and never broadcasts);
 - frontend replacement of remaining mock policy and payment data;
 - production readiness; the schema is hosted, but real identity, deployed API
   configuration and end-to-end verification remain pending.

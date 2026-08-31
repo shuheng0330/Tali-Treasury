@@ -15,8 +15,14 @@ Last updated: 31 August 2026 (MYT)
   explainable `auto_pay`, `review` and `reject` outcomes;
 - treasurer-only `POST /api/claims/:id/process` integration with live read-only Sui
   mandate snapshots, idempotent decisions and atomic Supabase state transitions;
-- 126 passing web Vitest tests, including 32 focused policy tests, plus 14 Sui
-  integration tests;
+- testnet-only backend-agent payment execution for `auto_pay` claims, including a
+  fresh policy preflight, atomic `approved -> paying` reservation, confirmed
+  terminal persistence and reconciliation-safe uncertain submissions;
+- lazy server-only Ed25519 and `AgentCap` configuration with preparation separated
+  from submission and fake-operation verification that never broadcasts;
+- 146 web Vitest tests and 14 Sui integration tests passing, including 32 focused
+  policy tests and dedicated payment concurrency, sanitization and idempotency
+  coverage;
 - 42 passing pgTAP database assertions on a clean disposable PostgreSQL 17
   database;
 - web TypeScript check passing at the API checkpoint.
@@ -45,9 +51,12 @@ not needed.
 ## Pending integration
 
 - configure server-only Gemini and Supabase credentials in the deployment;
+- configure a funded testnet backend signer and its owned `AgentCap`, then run one
+  separately authorized small live smoke payment;
 - add wallet-signature authentication;
 - bind analysis to claim confirmation through a signed token or persisted draft;
-- implement treasurer review actions and backend Sui signing;
+- implement treasurer review actions and automatic reconciliation for uncertain
+  payment submissions;
 - run the hosted receipt flow end to end after authenticated identity is available.
 
 ## Known limitations
@@ -59,6 +68,10 @@ not needed.
   bound to one another.
 - The frontend is wired to the hosted receipt APIs, but Production intentionally
   disables them until authenticated identity replaces the demo address.
-- Claim processing stores decisions and states but intentionally returns
-  `payment: null`; approved claims are not yet paid.
-- No backend code in this increment can sign or broadcast a Sui transaction.
+- Review and reject decisions still return `payment: null`; only `auto_pay` enters
+  the backend payment path.
+- Payment code can prepare and submit on Sui Testnet when valid server credentials
+  are supplied, but no real transaction was broadcast during this increment.
+- A claim left in `paying` requires manual reconciliation before retry; automatic
+  digest recovery is not implemented.
+- Mainnet signing and real-value payments remain out of scope.
