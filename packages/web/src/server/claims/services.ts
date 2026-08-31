@@ -2,15 +2,22 @@ import type {
   AnalyzeReceiptResponse,
   CreateClaimResponse,
   ListClaimsResponse,
+  PolicyOutcome,
   ProcessClaimResponse,
 } from '@tali/shared';
 import { ZodError } from 'zod';
 
 import { ServerError, isServerError } from '../errors';
+import { evaluatePolicy } from '../policy/evaluate';
 import type { ReceiptAnalyzer } from '../receipts/gemini';
 import { hashReceipt, type ReceiptMimeType } from '../receipts/hash';
 import { toReceiptAnalysis } from '../receipts/schema';
-import type { ClaimRepository, MandateReader, ReceiptStore } from './ports';
+import type {
+  ClaimRepository,
+  MandateReader,
+  ProcessedClaimState,
+  ReceiptStore,
+} from './ports';
 import {
   eventIdSchema,
   parseCreateClaimRequest,
@@ -193,8 +200,9 @@ export function createProcessClaimService(deps: {
   now?: () => number;
 }): (input: unknown) => Promise<ProcessClaimResponse> {
   return async (input) => {
+    let request: { claimId: string; processor: string };
     try {
-      parseProcessClaimInput(input);
+      request = parseProcessClaimInput(input);
     } catch (error) {
       if (error instanceof ZodError) {
         throw new ServerError('invalid_request', 400, 'Invalid claim process request', {
@@ -204,10 +212,86 @@ export function createProcessClaimService(deps: {
       throw error;
     }
 
-    throw new ServerError(
-      'processing_conflict',
-      409,
-      'Claim processing is not available',
-    );
+    let context;
+    try {
+      context = await deps.claims.getProcessContext(request.claimId);
+    } catch (error) {
+      throw databaseError(error);
+    }
+
+    if (request.processor.toLowerCase() !== context.event.treasurer.toLowerCase()) {
+      throw new ServerError(
+        'processor_forbidden',
+        403,
+        'Only the event treasurer may process claims',
+      );
+    }
+
+    if (context.claim.decision) {
+      return {
+        claim: context.claim,
+        decision: context.claim.decision,
+        payment: null,
+      };
+    }
+    if (context.claim.state !== 'submitted') {
+      throw new ServerError(
+        'processing_conflict',
+        409,
+        'Claim is not available for processing',
+      );
+    }
+
+    let mandate;
+    try {
+      mandate = await deps.mandates.read(context.event.mandateId);
+      if (mandate.id.toLowerCase() !== context.event.mandateId.toLowerCase()) {
+        throw new Error('Mandate object ID does not match the event');
+      }
+    } catch (error) {
+      throw new ServerError(
+        'mandate_read_failed',
+        502,
+        'The current Sui mandate could not be read',
+        { cause: error },
+      );
+    }
+
+    const decision = evaluatePolicy({
+      claim: context.claim,
+      event: context.event,
+      mandate,
+      exactDuplicate: false,
+      nowMs: deps.now?.() ?? Date.now(),
+    });
+    const stateByOutcome: Record<PolicyOutcome, ProcessedClaimState> = {
+      auto_pay: 'approved',
+      review: 'awaiting_review',
+      reject: 'rejected',
+    };
+
+    let saved;
+    try {
+      saved = await deps.claims.saveDecision({
+        claimId: request.claimId,
+        decision,
+        state: stateByOutcome[decision.outcome],
+      });
+    } catch (error) {
+      throw databaseError(error);
+    }
+    if (!saved.claim.decision) {
+      throw new ServerError(
+        'processing_conflict',
+        409,
+        'Claim processing did not store a decision',
+      );
+    }
+
+    return {
+      claim: saved.claim,
+      decision: saved.claim.decision,
+      payment: null,
+    };
   };
 }

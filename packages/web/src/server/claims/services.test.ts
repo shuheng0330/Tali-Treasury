@@ -1,6 +1,8 @@
 import type {
   Claim,
   CreateClaimRequest,
+  MandateView,
+  PolicyDecision,
   ReceiptAnalysis,
 } from '@tali/shared';
 import { describe, expect, it, vi } from 'vitest';
@@ -16,6 +18,9 @@ import {
 
 const eventId = 'ba7e50e2-7e7b-4a67-a505-9e3a329739ae';
 const submitter = `0x${'a'.repeat(64)}`;
+const treasurer = `0x${'b'.repeat(64)}`;
+const mandateId = `0x${'1'.repeat(64)}`;
+const nowMs = Date.UTC(2026, 7, 31, 7);
 const receiptHash =
   '2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824';
 const storagePath = `${eventId}/${receiptHash}.png`;
@@ -51,6 +56,30 @@ const claim: Claim = {
   payment: null,
   createdAtMs: 1_788_048_000_000,
   updatedAtMs: 1_788_048_000_000,
+};
+
+const mandate: MandateView = {
+  id: mandateId,
+  coinType: '0xa1::usdc::USDC',
+  initialBudget: '100000000',
+  remainingBudget: '80000000',
+  amountSpent: '20000000',
+  maxPerClaim: '5000000',
+  expiryMs: Date.UTC(2026, 8, 5),
+  revoked: false,
+  approvedRecipients: [submitter],
+  fetchedAtMs: nowMs,
+};
+
+const processContext = {
+  claim,
+  event: {
+    treasurer,
+    mandateId,
+    allowedCategories: ['printing'] as const,
+    startsAtMs: Date.UTC(2026, 7, 29),
+    expiresAtMs: Date.UTC(2026, 8, 5),
+  },
 };
 
 function createRequest(): CreateClaimRequest {
@@ -308,5 +337,179 @@ describe('createProcessClaimService', () => {
     ).rejects.toMatchObject({ code: 'invalid_request', status: 400 });
     expect(claims.getProcessContext).not.toHaveBeenCalled();
     expect(mandates.read).not.toHaveBeenCalled();
+  });
+
+  it('allows only the configured treasurer before reading Sui or saving', async () => {
+    const claims = createRepository({
+      getProcessContext: vi.fn(async () => processContext),
+    });
+    const mandates = { read: vi.fn() };
+    const processClaim = createProcessClaimService({ claims, mandates });
+
+    await expect(
+      processClaim({ claimId: claim.id, processor: submitter }),
+    ).rejects.toMatchObject({ code: 'processor_forbidden', status: 403 });
+    expect(mandates.read).not.toHaveBeenCalled();
+    expect(claims.saveDecision).not.toHaveBeenCalled();
+  });
+
+  it('returns a stored decision idempotently without reading Sui', async () => {
+    const storedDecision: PolicyDecision = {
+      outcome: 'review',
+      checks: [],
+      reason: 'Treasurer review required.',
+      evaluatedAtMs: nowMs,
+    };
+    const storedClaim: Claim = {
+      ...claim,
+      state: 'awaiting_review',
+      decision: storedDecision,
+    };
+    const claims = createRepository({
+      getProcessContext: vi.fn(async () => ({
+        ...processContext,
+        claim: storedClaim,
+      })),
+    });
+    const mandates = { read: vi.fn() };
+    const processClaim = createProcessClaimService({ claims, mandates });
+
+    await expect(
+      processClaim({ claimId: claim.id, processor: treasurer }),
+    ).resolves.toEqual({
+      claim: storedClaim,
+      decision: storedDecision,
+      payment: null,
+    });
+    expect(mandates.read).not.toHaveBeenCalled();
+    expect(claims.saveDecision).not.toHaveBeenCalled();
+  });
+
+  it('rejects an undecided claim outside the submitted state', async () => {
+    const claims = createRepository({
+      getProcessContext: vi.fn(async () => ({
+        ...processContext,
+        claim: { ...claim, state: 'approved' as const },
+      })),
+    });
+    const mandates = { read: vi.fn() };
+    const processClaim = createProcessClaimService({ claims, mandates });
+
+    await expect(
+      processClaim({ claimId: claim.id, processor: treasurer }),
+    ).rejects.toMatchObject({ code: 'processing_conflict', status: 409 });
+    expect(mandates.read).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['auto_pay', processContext, mandate, 'approved'],
+    [
+      'review',
+      {
+        ...processContext,
+        event: { ...processContext.event, allowedCategories: ['food'] },
+      },
+      mandate,
+      'awaiting_review',
+    ],
+    ['reject', processContext, { ...mandate, revoked: true }, 'rejected'],
+  ] as const)(
+    'maps %s policy outcome to %s state',
+    async (expectedOutcome, context, mandateSnapshot, expectedState) => {
+      const saveDecision = vi.fn(async (input) => ({
+        status: 'saved' as const,
+        claim: {
+          ...claim,
+          state: input.state,
+          decision: input.decision,
+        },
+      }));
+      const claims = createRepository({
+        getProcessContext: vi.fn(async () => context),
+        saveDecision,
+      });
+      const mandates = { read: vi.fn(async () => mandateSnapshot) };
+      const processClaim = createProcessClaimService({
+        claims,
+        mandates,
+        now: () => nowMs,
+      });
+
+      const response = await processClaim({
+        claimId: claim.id,
+        processor: treasurer,
+      });
+
+      expect(response.decision.outcome).toBe(expectedOutcome);
+      expect(response.claim.state).toBe(expectedState);
+      expect(response.payment).toBeNull();
+      expect(saveDecision).toHaveBeenCalledWith({
+        claimId: claim.id,
+        decision: response.decision,
+        state: expectedState,
+      });
+    },
+  );
+
+  it('returns the stored winner when another processor wins the save race', async () => {
+    const winningDecision: PolicyDecision = {
+      outcome: 'review',
+      checks: [],
+      reason: 'Stored winner',
+      evaluatedAtMs: nowMs,
+    };
+    const winningClaim: Claim = {
+      ...claim,
+      state: 'awaiting_review',
+      decision: winningDecision,
+    };
+    const claims = createRepository({
+      getProcessContext: vi.fn(async () => processContext),
+      saveDecision: vi.fn(async () => ({
+        status: 'lost_race' as const,
+        claim: winningClaim,
+      })),
+    });
+    const processClaim = createProcessClaimService({
+      claims,
+      mandates: { read: vi.fn(async () => mandate) },
+      now: () => nowMs,
+    });
+
+    await expect(
+      processClaim({ claimId: claim.id, processor: treasurer }),
+    ).resolves.toEqual({
+      claim: winningClaim,
+      decision: winningDecision,
+      payment: null,
+    });
+  });
+
+  it('sanitizes Sui failures and rejects a mismatched mandate object', async () => {
+    const claims = createRepository({
+      getProcessContext: vi.fn(async () => processContext),
+    });
+    const rawFailure = new Error('raw provider endpoint detail');
+    const failing = createProcessClaimService({
+      claims,
+      mandates: { read: vi.fn(async () => Promise.reject(rawFailure)) },
+    });
+
+    const failure = failing({ claimId: claim.id, processor: treasurer });
+    await expect(failure).rejects.toMatchObject({
+      code: 'mandate_read_failed',
+      status: 502,
+    });
+    await expect(failure).rejects.not.toThrow('raw provider endpoint detail');
+
+    const mismatched = createProcessClaimService({
+      claims,
+      mandates: {
+        read: vi.fn(async () => ({ ...mandate, id: `0x${'2'.repeat(64)}` })),
+      },
+    });
+    await expect(
+      mismatched({ claimId: claim.id, processor: treasurer }),
+    ).rejects.toMatchObject({ code: 'mandate_read_failed', status: 502 });
   });
 });
