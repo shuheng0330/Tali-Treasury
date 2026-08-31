@@ -14,7 +14,7 @@ whole product flow is live.
 | Sui TypeScript boundary | ✅ Ready | Reads, builders, config, USDC helpers, abort mapping | Backend signer integration |
 | Shared contracts | ✅ Ready | Claim, event, policy, audit, mandate and endpoint types | Evolve only with team agreement |
 | Web dashboard | ✅ Live read-only | Current mandate state comes from Sui Testnet | Signed actions and backend claim totals |
-| Receipt and claim backend | ✅ Hosted schema ready | Gemini validation, private storage adapter, persistence, duplicate checks, guarded API routes, 72 web tests, 42 database assertions, hosted event and Kian Xiang | Apply the prepared Shu Heng/Lim membership migration and add signed identity verification |
+| Receipt and claim backend | ✅ Hosted schema ready | Gemini validation, private storage adapter, persistence, duplicate checks, guarded API routes, 72 web tests, 42 database assertions, and all three active team members verified | Configure the deployed API and add signed identity verification |
 | Claim and review UX | 🟡 Mixed | Real receipt analyze/create/list flow; mock review queue remains | Wallet auth and payment orchestration |
 | Safety Test UI | 🟡 Mocked with live evidence links | Local preview plus links to two real rejected transactions | Interactive signed attempts and revocation scenario |
 | Deployment | ✅ Live | Vercel production and live Sui dashboard verified | Enable receipt writes only after wallet auth |

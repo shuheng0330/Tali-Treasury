@@ -29,7 +29,7 @@ Status words are intentionally precise:
 | Treasurer mandate dashboard | **Live** (read-only) | Server reads the current mandate from Sui Testnet |
 | Claim receipt submission UI | **Complete locally** | Real analyze, create, and list API calls; Production remains fail-closed pending wallet auth |
 | Review, revoke, payment, and Safety Test interactions | **Mocked** | Clearly labelled; no signing or state changes |
-| Gemini receipt analysis and Supabase claims | **Hosted schema ready** | 72 web tests and 42 pgTAP assertions; API-backed UI integration complete |
+| Gemini receipt analysis and Supabase claims | **Hosted schema ready** | 72 web tests, 42 pgTAP assertions, API-backed UI integration, and all three active team members verified |
 | Deterministic policy and backend agent signing | **Pending** | Separate payment-orchestration slice |
 | Wallet connection and live UI writes | **Pending** | Add after backend/signing boundary is agreed |
 | Web hosting | **Live** | [`tali-treasury.vercel.app`](https://tali-treasury.vercel.app) |
@@ -56,7 +56,7 @@ has paid `3 USDC`, and has `17 USDC` remaining.
 Member receipt UI (real analyze, create, and list API calls)
              |
              v
-Gemini receipt + private Supabase claims (hosted; auth-gated)
+Gemini receipt + private Supabase claims (hosted; auth-gated; team verified)
              |
              v
 Deterministic policy + signer (pending)
@@ -215,7 +215,7 @@ Backend:
 
 Immediate next vertical slice:
 
-1. Apply the prepared Shu Heng and Lim Wey Cheng membership migration.
+1. Configure server-only Gemini and Supabase credentials in the deployment.
 2. Add wallet-signature authentication and bind analysis to claim creation.
 3. Add deterministic policy routing and return uncertain claims to review.
 4. Sign one valid `buildSpendTransaction` call from the backend agent.
