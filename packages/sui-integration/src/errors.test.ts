@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseTreasuryError, treasuryErrorFromCode } from './errors.js';
+import { PAYROLL_ABORT_CODE, parseTreasuryError, treasuryErrorFromCode } from './errors.js';
 
 describe('treasury error mapping', () => {
   it('maps every published Move abort code', () => {
@@ -37,5 +37,44 @@ describe('treasury error mapping', () => {
       retryable: true,
       rawMessage: 'network unavailable',
     });
+  });
+});
+
+describe('payroll error mapping', () => {
+  it('maps every payroll abort code the module can raise', () => {
+    for (let code = 20; code <= 30; code += 1) {
+      const error = treasuryErrorFromCode(code);
+      expect(error.code).toBe(code);
+      expect(error.key).not.toBe('UNKNOWN_MOVE_ABORT');
+      expect(error.message.length).toBeGreaterThan(10);
+    }
+  });
+
+  it('leaves the gap between the two modules unclaimed', () => {
+    // Payroll starts at 20 so that one table can serve both modules. Codes 12
+    // to 19 belong to neither, and claiming them would put a confident wrong
+    // message on a refusal we do not understand.
+    for (let code = 12; code <= 19; code += 1) {
+      expect(treasuryErrorFromCode(code).key).toBe('UNKNOWN_MOVE_ABORT');
+    }
+  });
+
+  it('explains an underpaid contribution as nobody being paid', () => {
+    const error = parseTreasuryError(
+      "MoveAbort(MoveLocation { function_name: Some('run_payroll') }, 24) in command 0",
+    );
+    expect(error).toMatchObject({
+      code: PAYROLL_ABORT_CODE.STATUTORY_SHORT,
+      key: 'STATUTORY_SHORT',
+      retryable: false,
+    });
+    expect(error.message).toContain('Nobody was paid');
+  });
+
+  it('does not invite a retry after a refusal, however it arrives', () => {
+    const codes = Object.values(PAYROLL_ABORT_CODE);
+    for (const code of codes) {
+      expect(treasuryErrorFromCode(code).retryable).toBe(false);
+    }
   });
 });

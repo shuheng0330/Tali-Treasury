@@ -12,7 +12,31 @@ export {
 export { formatDecimalAmount, formatUsdc, parseDecimalAmount, parseUsdc } from './amounts.js';
 export { taliUsdcDemo } from './demo.js';
 export { createTestnetClient, readMandate, TESTNET_GRPC_URL } from './client.js';
-export { TREASURY_ABORT_CODE, parseTreasuryError, treasuryErrorFromCode } from './errors.js';
+export {
+  PAYROLL_ABORT_CODE,
+  TREASURY_ABORT_CODE,
+  parseTreasuryError,
+  treasuryErrorFromCode,
+} from './errors.js';
+export {
+  buildCreatePayrollMandateTransaction,
+  buildOpenStreamTransaction,
+  buildRevokePayrollTransaction,
+  buildRunPayrollTransaction,
+  buildWithdrawEarnedTransaction,
+  readPayrollMandate,
+  readSalaryStream,
+} from './payroll.js';
+export type {
+  CreatePayrollMandateInput,
+  OpenStreamInput,
+  PayrollMandateState,
+  RevokePayrollInput,
+  RunPayrollInput,
+  SalaryStreamState,
+  StatutoryFloor,
+  WithdrawEarnedInput,
+} from './payroll.js';
 export {
   buildCreateMandateTransaction,
   buildRevokeTransaction,

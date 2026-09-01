@@ -1,5 +1,6 @@
 import { SuiGrpcClient } from '@mysten/sui/grpc';
 import { normalizeAddress, normalizeConfig } from './config.js';
+import { asBigInt, asBoolean, asRecord, asStringVector, balanceValue } from './parse.js';
 import type { MandateState, TreasuryConfig } from './types.js';
 
 export const TESTNET_GRPC_URL = 'https://fullnode.testnet.sui.io:443';
@@ -9,28 +10,6 @@ export function createTestnetClient(baseUrl = TESTNET_GRPC_URL): SuiGrpcClient {
 }
 
 type ObjectReader = Pick<SuiGrpcClient, 'getObject'>;
-
-function asRecord(value: unknown, label: string): Record<string, unknown> {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) {
-    throw new Error(`Invalid ${label} returned by Sui`);
-  }
-  return value as Record<string, unknown>;
-}
-
-function asBigInt(value: unknown, label: string): bigint {
-  if (typeof value !== 'string' && typeof value !== 'number' && typeof value !== 'bigint') {
-    throw new Error(`Invalid ${label} returned by Sui`);
-  }
-  return BigInt(value);
-}
-
-function balanceValue(value: unknown): bigint {
-  if (typeof value === 'string' || typeof value === 'number' || typeof value === 'bigint') {
-    return BigInt(value);
-  }
-  const balance = asRecord(value, 'mandate budget');
-  return asBigInt(balance.value ?? balance.balance, 'mandate budget');
-}
 
 function parseCoinType(objectType: string): string {
   const match = objectType.match(/::Mandate<(.+)>$/);
@@ -56,23 +35,17 @@ export async function readMandate(
   }
 
   const fields = asRecord(object.json, 'mandate data');
-  const approved = fields.approved_recipients;
-  if (!Array.isArray(approved) || !approved.every((value) => typeof value === 'string')) {
-    throw new Error('Invalid approved recipient list returned by Sui');
-  }
-  if (typeof fields.revoked !== 'boolean') {
-    throw new Error('Invalid revoked flag returned by Sui');
-  }
+  const approved = asStringVector(fields.approved_recipients, 'approved recipient list');
 
   return {
     id: object.objectId,
     coinType: parseCoinType(object.type),
     initialBudget: asBigInt(fields.initial_budget, 'initial budget'),
-    remainingBudget: balanceValue(fields.budget),
+    remainingBudget: balanceValue(fields.budget, 'mandate budget'),
     amountSpent: asBigInt(fields.amount_spent, 'amount spent'),
     maxPerClaim: asBigInt(fields.max_per_claim, 'maximum per claim'),
     expiryMs: asBigInt(fields.expiry_ms, 'expiry'),
-    revoked: fields.revoked,
+    revoked: asBoolean(fields.revoked, 'revoked flag'),
     approvedRecipients: approved.map((address) => normalizeAddress(address)),
   };
 }
