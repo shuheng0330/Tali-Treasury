@@ -14,9 +14,10 @@ import { DEMO_EVENT_ID, DEMO_EVENT_NAME, DEMO_SUBMITTER } from '@/lib/demo-confi
 import { DataNotice } from '@/components/DataNotice';
 import { ClaimHome } from './ClaimHome';
 import { ReceiptConfirm } from './ReceiptConfirm';
+import { tryResubmitClaim } from '@/lib/api/resubmit';
 import { Submitted } from './Outcome';
 
-type Step = 'home' | 'reading' | 'confirm' | 'submitting' | 'submitted';
+type Step = 'home' | 'reading' | 'confirm' | 'correcting' | 'submitting' | 'submitted';
 
 interface Props {
   apiEnabled: boolean;
@@ -46,6 +47,7 @@ export function ClaimFlow({ apiEnabled, mandate, mandateReadError }: Props) {
   const [storagePath, setStoragePath] = useState<string | null>(null);
   const [duplicateOf, setDuplicateOf] = useState<string | null>(null);
   const [submittedClaim, setSubmittedClaim] = useState<Claim | null>(null);
+  const [correcting, setCorrecting] = useState<Claim | null>(null);
 
   /** Where this receipt's analysis came from, which decides whether the claim
    *  can be persisted: without a live read there is no uploaded image, so the
@@ -123,8 +125,42 @@ export function ClaimFlow({ apiEnabled, mandate, mandateReadError }: Props) {
     [source, analysis, storagePath, reloadClaims],
   );
 
+  const onCorrect = useCallback((claim: Claim) => {
+    setCorrecting(claim);
+    setSaveError(null);
+    setStep('correcting');
+  }, []);
+
+  const onResubmit = useCallback(
+    async (next: DraftClaim) => {
+      if (correcting === null) return;
+
+      setSaveError(null);
+      setStep('submitting');
+      const saved = await tryResubmitClaim({
+        claimId: correcting.id,
+        merchant: next.merchant.trim(),
+        amount: next.amount,
+        receiptDate: next.receiptDate,
+        category: next.category,
+        description: next.description.trim(),
+      });
+      if (saved.data === null) {
+        setSaveError(`This correction was not saved: ${saved.reason}.`);
+        setStep('correcting');
+        return;
+      }
+      setSubmittedClaim(saved.data.claim);
+      setCorrecting(null);
+      reloadClaims();
+      setStep('submitted');
+    },
+    [correcting, reloadClaims],
+  );
+
   const reset = useCallback(() => {
     setAnalysis(null);
+    setCorrecting(null);
     setStoragePath(null);
     setDuplicateOf(null);
     setSubmittedClaim(null);
@@ -172,6 +208,7 @@ export function ClaimFlow({ apiEnabled, mandate, mandateReadError }: Props) {
           claimsLoading={claims.loading}
           captureDisabled={!apiEnabled}
           onCapture={onCapture}
+          onCorrect={onCorrect}
         />
       ) : null}
 
@@ -184,6 +221,25 @@ export function ClaimFlow({ apiEnabled, mandate, mandateReadError }: Props) {
           duplicateOf={duplicateOf}
           onRetake={reset}
           onSubmit={onSubmit}
+        />
+      ) : null}
+
+      {step === 'correcting' && correcting ? (
+        <ReceiptConfirm
+          photoUrl={correcting.receiptUrl ?? ''}
+          analysis={correcting.analysis}
+          duplicateOf={null}
+          returnedReason={correcting.review?.reason ?? null}
+          initial={{
+            merchant: correcting.merchant,
+            amount: correcting.amount,
+            receiptDate: correcting.receiptDate,
+            category: correcting.category,
+            description: correcting.description,
+          }}
+          submitLabel="Resubmit this claim"
+          onRetake={reset}
+          onSubmit={onResubmit}
         />
       ) : null}
 

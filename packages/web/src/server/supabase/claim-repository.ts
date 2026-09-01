@@ -454,6 +454,44 @@ export function createSupabaseClaimRepository(
      * applies to. A claim the engine already settled, or that another
      * treasurer reached first, fails the guard rather than being overwritten.
      */
+    /*
+     * Clears `decision` but keeps `review`. The policy decision was made about
+     * figures that no longer exist and `saveDecision` refuses to run while one
+     * is present, so it has to go. The treasurer's note stays: it is why the
+     * claim came back, and the next review overwrites it anyway.
+     */
+    async resubmit(input) {
+      await ensureReviewColumn();
+
+      const { data, error } = await query(client, 'claims')
+        .update({
+          merchant: input.corrections.merchant,
+          amount: input.corrections.amount,
+          receipt_date: input.corrections.receiptDate,
+          category: input.corrections.category,
+          description: input.corrections.description,
+          state: 'submitted',
+          decision: null,
+        })
+        .eq('id', input.claimId)
+        .eq('state', 'needs_correction')
+        .select(claimColumns())
+        .maybeSingle();
+
+      if (error && error.code !== 'PGRST116') {
+        throw databaseFailure(error);
+      }
+      if (data) {
+        return { status: 'saved', claim: mapClaimRow(data).claim };
+      }
+
+      const current = await getProcessContext(input.claimId);
+      if (current.claim.state !== 'needs_correction') {
+        return { status: 'lost_race', claim: current.claim };
+      }
+      throw databaseFailure(null);
+    },
+
     async saveReview(input) {
       await ensureReviewColumn();
 

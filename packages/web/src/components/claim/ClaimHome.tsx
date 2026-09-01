@@ -9,6 +9,7 @@ interface Props {
   budget: string;
   claims: Claim[];
   claimsLoading?: boolean;
+  onCorrect: (claim: Claim) => void;
   captureDisabled?: boolean;
   onCapture: (file: File) => void;
 }
@@ -28,6 +29,7 @@ export function ClaimHome({
   budget,
   claims,
   claimsLoading = false,
+  onCorrect,
   captureDisabled = false,
   onCapture,
 }: Props) {
@@ -72,6 +74,32 @@ export function ClaimHome({
       </label>
 
       <section className="flex flex-col gap-3">
+        {claims
+          .filter((claim) => claim.state === 'needs_correction')
+          .map((claim) => (
+            <div
+              key={claim.id}
+              className="mb-5 flex flex-col gap-3 rounded-card border border-wait-line bg-wait-soft p-4"
+            >
+              <div className="flex flex-col gap-1">
+                <span className="text-body font-medium text-wait">
+                  {claim.merchant} needs a correction
+                </span>
+                <p className="text-caption text-ink-2">
+                  {claim.review?.reason ??
+                    'The treasurer sent this back. Check the details against the receipt.'}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => onCorrect(claim)}
+                className="btn btn--primary h-9 w-fit px-5 text-label"
+              >
+                Fix and resubmit
+              </button>
+            </div>
+          ))}
+
         <h2 className="eyebrow">My claims</h2>
 
         {claimsLoading ? (

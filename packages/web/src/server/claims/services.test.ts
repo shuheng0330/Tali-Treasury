@@ -139,6 +139,7 @@ function createRepository(overrides: Partial<ClaimRepository> = {}): ClaimReposi
     create: vi.fn(async () => claim),
     listByEvent: vi.fn(async () => []),
     saveReview: vi.fn(async () => ({ status: 'saved' as const, claim })),
+    resubmit: vi.fn(async () => ({ status: 'saved' as const, claim })),
     getProcessContext: vi.fn(),
     saveDecision: vi.fn(),
     reservePayment: vi.fn(),

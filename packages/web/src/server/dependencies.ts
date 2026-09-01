@@ -5,6 +5,7 @@ import {
   createProcessClaimService,
 } from './claims/services';
 import { createReviewClaimService } from './claims/review';
+import { createResubmitClaimService } from './claims/resubmit';
 import { createGoogleGeminiReceiptAnalyzer } from './receipts/gemini';
 import { createSupabaseClaimRepository } from './supabase/claim-repository';
 import { createServerSupabaseClient } from './supabase/client';
@@ -18,6 +19,7 @@ export interface BackendServices {
   listClaims: ReturnType<typeof createListClaimsService>;
   processClaim: ReturnType<typeof createProcessClaimService>;
   reviewClaim: ReturnType<typeof createReviewClaimService>;
+  resubmitClaim: ReturnType<typeof createResubmitClaimService>;
 }
 
 let services: BackendServices | undefined;
@@ -44,6 +46,7 @@ export function getBackendServices(): BackendServices {
     listClaims: createListClaimsService({ claims, receipts }),
     processClaim: createProcessClaimService({ claims, mandates, payments }),
     reviewClaim: createReviewClaimService({ claims, now: () => Date.now() }),
+    resubmitClaim: createResubmitClaimService({ claims }),
   };
   return services;
 }

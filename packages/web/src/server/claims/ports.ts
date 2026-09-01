@@ -3,6 +3,7 @@ import type {
   Claim,
   ClaimReview,
   CreateClaimRequest,
+  ExpenseCategory,
   MandateView,
   ObjectId,
   PaymentResult,
@@ -36,6 +37,19 @@ export type ProcessedClaimState = 'approved' | 'awaiting_review' | 'rejected';
 
 /** Where a treasurer's decision can leave a claim. */
 export type ReviewedClaimState = 'approved' | 'rejected' | 'needs_correction';
+
+export interface ClaimCorrections {
+  merchant: string;
+  amount: string;
+  receiptDate: string;
+  category: ExpenseCategory;
+  description: string;
+}
+
+export type ResubmitResult =
+  | { status: 'saved'; claim: Claim }
+  /** Somebody moved it on first. The correction does not apply any more. */
+  | { status: 'lost_race'; claim: Claim };
 
 export type SaveReviewResult =
   | { status: 'saved'; claim: Claim }
@@ -86,6 +100,10 @@ export interface ClaimRepository {
     decision: PolicyDecision;
     state: ProcessedClaimState;
   }): Promise<SaveDecisionResult>;
+  resubmit(input: {
+    claimId: string;
+    corrections: ClaimCorrections;
+  }): Promise<ResubmitResult>;
   saveReview(input: {
     claimId: string;
     review: ClaimReview;

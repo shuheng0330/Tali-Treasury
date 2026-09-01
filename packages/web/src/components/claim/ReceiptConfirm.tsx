@@ -9,6 +9,22 @@ interface Props {
   analysis: ReceiptAnalysis | null;
   /** Set when the backend recognised this exact image on an existing claim. */
   duplicateOf: string | null;
+  /** Set when the treasurer sent this back, carrying what they asked for. */
+  returnedReason?: string | null;
+  /**
+   * What the claim currently says, when correcting one. The analysis holds the
+   * original extraction, which is not the same thing: the member may already
+   * have fixed a field before submitting, and showing them the old reading
+   * would ask them to correct it a second time.
+   */
+  initial?: {
+    merchant: string;
+    amount: string;
+    receiptDate: string;
+    category: ExpenseCategory;
+    description: string;
+  } | null;
+  submitLabel?: string;
   onRetake: () => void;
   onSubmit: (draft: DraftClaim) => void;
 }
@@ -37,14 +53,30 @@ function Field({
   );
 }
 
-export function ReceiptConfirm({ photoUrl, analysis, duplicateOf, onRetake, onSubmit }: Props) {
-  const failed = analysis === null;
+export function ReceiptConfirm({
+  photoUrl,
+  analysis,
+  duplicateOf,
+  returnedReason = null,
+  initial = null,
+  submitLabel = 'Submit claim',
+  onRetake,
+  onSubmit,
+}: Props) {
+  const failed = analysis === null && initial === null;
   const [zoomed, setZoomed] = useState(false);
-  const [merchant, setMerchant] = useState(analysis?.merchant ?? '');
-  const [amount, setAmount] = useState(analysis?.amount ? toDisplay(analysis.amount) : '');
-  const [receiptDate, setReceiptDate] = useState(analysis?.receiptDate ?? '');
-  const [category, setCategory] = useState<ExpenseCategory>(analysis?.category ?? 'other');
-  const [description, setDescription] = useState('');
+  const [merchant, setMerchant] = useState(initial?.merchant ?? analysis?.merchant ?? '');
+  const [amount, setAmount] = useState(() => {
+    const source = initial?.amount ?? analysis?.amount;
+    return source ? toDisplay(source) : '';
+  });
+  const [receiptDate, setReceiptDate] = useState(
+    initial?.receiptDate ?? analysis?.receiptDate ?? '',
+  );
+  const [category, setCategory] = useState<ExpenseCategory>(
+    initial?.category ?? analysis?.category ?? 'other',
+  );
+  const [description, setDescription] = useState(initial?.description ?? '');
 
   const currency = analysis?.currency ?? 'MYR';
   const uncertain = new Set(analysis?.uncertainFields ?? []);
@@ -61,8 +93,19 @@ export function ReceiptConfirm({ photoUrl, analysis, duplicateOf, onRetake, onSu
 
   return (
     <div className="flex flex-col gap-4">
+      {returnedReason ? (
+        <div className="flex flex-col gap-1 rounded-card border border-wait-line bg-wait-soft p-4">
+          <span className="text-caption font-medium text-wait">
+            The treasurer sent this back
+          </span>
+          <p className="text-body text-ink-2">{returnedReason}</p>
+        </div>
+      ) : null}
+
       <div className="flex items-center justify-between">
-        <h1 className="text-heading">Check the details</h1>
+        <h1 className="text-heading">
+          {returnedReason ? 'Correct the details' : 'Check the details'}
+        </h1>
         <button
           type="button"
           onClick={onRetake}
@@ -72,21 +115,31 @@ export function ReceiptConfirm({ photoUrl, analysis, duplicateOf, onRetake, onSu
         </button>
       </div>
 
-      <button
-        type="button"
-        onClick={() => setZoomed((open) => !open)}
-        className="overflow-hidden rounded-card border border-rule bg-raised"
-        aria-label={zoomed ? 'Shrink receipt' : 'Zoom receipt'}
-      >
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={photoUrl}
-          alt="The receipt you photographed"
-          className={`w-full object-contain transition-[max-height] duration-200 ease-pop ${
-            zoomed ? 'max-h-[70vh]' : 'max-h-40'
-          }`}
-        />
-      </button>
+      {photoUrl ? (
+        <button
+          type="button"
+          onClick={() => setZoomed((open) => !open)}
+          className="overflow-hidden rounded-card border border-rule bg-raised"
+          aria-label={zoomed ? 'Shrink receipt' : 'Zoom receipt'}
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={photoUrl}
+            alt="The receipt you photographed"
+            className={`w-full object-contain transition-[max-height] duration-200 ease-pop ${
+              zoomed ? 'max-h-[70vh]' : 'max-h-40'
+            }`}
+          />
+        </button>
+      ) : (
+        /* A stored receipt is fetched behind a signed URL that can expire. An
+           empty <img> would render as a broken-image icon beside the figures,
+           which reads as the receipt itself being lost. */
+        <p className="rounded-card border border-dashed border-rule bg-surface p-4 text-caption text-ink-3">
+          The receipt image is not available on this screen. The figures below are
+          what the claim says.
+        </p>
+      )}
 
       {failed ? (
         <p className="text-body text-wait">
@@ -181,7 +234,7 @@ export function ReceiptConfirm({ photoUrl, analysis, duplicateOf, onRetake, onSu
         })}
         className="btn btn--primary btn--block btn--lg mt-2"
       >
-        {duplicateOf ? 'Already claimed' : 'Submit claim'}
+        {duplicateOf ? 'Already claimed' : submitLabel}
       </button>
     </div>
   );
