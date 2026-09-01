@@ -38,19 +38,18 @@ export function TreasuryDashboard({ apiEnabled, initialMandate: mandate, readErr
   const [refreshing, startRefresh] = useTransition();
   const [tab, setTab] = useState<Tab>('review');
   const [confirming, setConfirming] = useState(false);
-  const [resolved, setResolved] = useState<string[]>([]);
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [processError, setProcessError] = useState<string | null>(null);
 
   const live = useClaims(apiEnabled);
 
-  const queue = useMemo(() => {
-    const items =
+  const queue = useMemo(
+    () =>
       live.source === 'live' && mandate !== null
         ? toReviewQueue(live.claims)
-        : reviewQueue();
-    return items.filter((item) => !resolved.includes(item.claim.id));
-  }, [live.source, live.claims, resolved, mandate]);
+        : reviewQueue(),
+    [live.source, live.claims, mandate],
+  );
 
   const paid = useMemo(
     () => (live.source === 'live' ? settledFrom(live.claims) : settledClaims()),
@@ -66,10 +65,6 @@ export function TreasuryDashboard({ apiEnabled, initialMandate: mandate, readErr
   );
 
   const counts = { review: queue.length, paid: paid.length, all: everything.length };
-
-  function resolve(id: string) {
-    setResolved((current) => [...current, id]);
-  }
 
   async function process(id: string) {
     setProcessingId(id);
@@ -135,7 +130,7 @@ export function TreasuryDashboard({ apiEnabled, initialMandate: mandate, readErr
             source={live.source}
             reason={live.reason}
             live="The claim queue"
-            simulated="Server policy decisions are persisted; review buttons and payment remain demo-only."
+            simulated="Evaluating a claim runs the real policy engine and is persisted. Approving, rejecting and paying are not built yet, and their controls say so."
           />
           {processError ? (
             <p className="mt-3 rounded-control border border-no-line bg-no-soft p-3 text-caption text-no" role="alert">
@@ -186,8 +181,6 @@ export function TreasuryDashboard({ apiEnabled, initialMandate: mandate, readErr
                   item={item}
                   processing={processingId === item.claim.id}
                   onProcess={process}
-                  onApprove={resolve}
-                  onReject={resolve}
                 />
               ))}
             </ul>
@@ -218,9 +211,7 @@ export function TreasuryDashboard({ apiEnabled, initialMandate: mandate, readErr
           remaining={mandate.remainingBudget}
           pendingCount={queue.length}
           onCancel={() => setConfirming(false)}
-          onConfirm={() => {
-            setConfirming(false);
-          }}
+          onConfirm={() => setConfirming(false)}
         />
       ) : null}
     </div>

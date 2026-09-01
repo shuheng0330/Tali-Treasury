@@ -1,11 +1,13 @@
 import Link from 'next/link';
 import { EXPLORER, toDisplay } from '@tali/shared';
 import { mandate } from '@/lib/mock/data';
+import { sampleStaff } from '@/lib/mock/payroll';
 import { TALI_TESTNET_PACKAGE_ID } from '@tali/treasury-sui';
 import { SPEND_CHECKS } from '@/lib/checks';
 import { CheckMarquee } from '@/components/landing/CheckMarquee';
 import { Evidence } from '@/components/landing/Evidence';
 import { PhoneCode } from '@/components/landing/PhoneCode';
+import { PayrollSplit } from '@/components/landing/PayrollSplit';
 import { REFUSED_AMOUNT, Wire } from '@/components/landing/Wire';
 
 const PACKAGE_SHORT = `${TALI_TESTNET_PACKAGE_ID.slice(0, 6)}…${TALI_TESTNET_PACKAGE_ID.slice(-4)}`;
@@ -22,7 +24,7 @@ export default function Page() {
           </span>
           <div className="flex items-center gap-5">
             <span className="eyebrow hidden sm:inline-flex">Sui testnet</span>
-            <Link href="/claim" className="btn btn--primary h-10 px-5">
+            <Link href="/payroll" className="btn btn--primary h-10 px-5">
               Open the app
             </Link>
           </div>
@@ -32,41 +34,71 @@ export default function Page() {
       <section className="mx-auto flex w-full max-w-6xl flex-col gap-10 px-5 pt-20 pb-16 sm:px-8 md:pt-32 md:pb-24">
         <p className="eyebrow">
           <span aria-hidden className="h-1.5 w-1.5 rounded-badge bg-accent" />
-          Club and event treasury
+          Payroll for Malaysian teams
         </p>
 
         <h1 className="font-display text-hero">
-          Set the rules once.
-          <span className="block text-accent-ink">The money enforces them.</span>
+          Wages and EPF leave together.
+          <span className="block text-accent-ink">Or neither of them moves.</span>
         </h1>
 
         <p className="max-w-2xl text-lead text-ink-2">
-          Members should not front club expenses for weeks. Tali reads a receipt, checks the
-          rules, and reimburses while Move — not our backend — holds the limits.
+          Unpaid statutory contributions are the quietest way a payroll goes wrong: the salary
+          lands, the EPF does not, and nobody finds out for months. Tali pays both in one
+          transaction, and the contract will not settle one without the other.
         </p>
 
         <div className="flex flex-wrap items-center gap-3">
-          <Link href="/safety" className="btn btn--accent btn--lg">
-            Try to break it
+          <Link href="/payroll" className="btn btn--accent btn--lg">
+            Run a payroll
           </Link>
-          <Link href="/claim" className="btn btn--ghost btn--lg">
-            Submit a claim
+          <Link href="/payroll/proof" className="btn btn--ghost btn--lg">
+            Try underpaying EPF
           </Link>
         </div>
+      </section>
 
+      <section className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-5 pb-20 sm:px-8 md:pb-28">
+        <div className="flex flex-col gap-4">
+          <p className="eyebrow">One salary, one transaction</p>
+          <h2 className="max-w-3xl text-title">
+            {sampleStaff[0]!.name} earns {toDisplay(sampleStaff[0]!.breakdown.gross)} a month.
+            Four payments have to leave at once.
+          </h2>
+          <p className="max-w-2xl text-body-lg text-ink-2">
+            Figures follow the EPF Third Schedule bands and the RM6,000 SOCSO and EIS ceilings.
+            The mandate holds a minimum for each body, measured against the wage — so paying
+            EPF a single sen fails the same check as paying it nothing.
+          </p>
+        </div>
+
+        <PayrollSplit />
+
+        <p className="max-w-3xl text-body text-ink-2">
+          Underpay any one of them and{' '}
+          <span className="font-mono">run_payroll</span> aborts on code{' '}
+          <span className="tnum">24</span> before a single coin moves. The wage does not go out
+          and get corrected later; the whole run reverts.{' '}
+          <Link href="/payroll/proof" className="link">
+            Take the EPF money and see
+          </Link>
+          .
+        </p>
       </section>
 
       <CheckMarquee />
 
       <section className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-5 py-20 sm:px-8 md:py-28">
         <div className="flex flex-col gap-4">
-          <p className="eyebrow">The apparatus</p>
+          <p className="eyebrow">The same mandate, for expenses</p>
           <h2 className="max-w-3xl text-title">
-            The cap is {toDisplay(mandate.maxPerClaim)}. Watch it refuse {REFUSED_AMOUNT}.
+            Reimbursements answer to a cap of {toDisplay(mandate.maxPerClaim)}. Watch it refuse{' '}
+            {REFUSED_AMOUNT}.
           </h2>
           <p className="max-w-2xl text-body-lg text-ink-2">
-            Either claim, whenever you like. This one is a drawing of the rules — the three
-            transactions under it are not.
+            Staff claim expenses against the same treasury, and an agent reads the receipt and
+            pays it. Either claim below, whenever you like. This one is a drawing of the rules —
+            the three transactions under it are not.
           </p>
         </div>
         <Wire />
@@ -119,18 +151,20 @@ export default function Page() {
           <p className="eyebrow">Why this needs Move</p>
           <h2 className="text-title">The backend is the part you should not have to trust</h2>
           <p className="text-body text-ink-2">
-            The mandate is an object, not a row in our database. When a claim is too large,{' '}
-            <span className="font-mono">spend()</span> aborts on code <span className="tnum">5</span> before it ever reaches
-            the coin, and Move rolls the entire transaction back atomically — so there is no
-            state where the check failed but half the transfer went out anyway. That gap is
-            where most custody bugs live.
+            A payroll run that pays the wage and then fails to pay EPF is the ordinary failure,
+            and it is a failure of ordering: two transfers, one succeeded. In Move there is one
+            transaction. If the EPF amount is below the mandate&rsquo;s floor,{' '}
+            <span className="font-mono">run_payroll</span> aborts on code{' '}
+            <span className="tnum">24</span> before any coin is split, and the whole thing rolls
+            back atomically — so no state exists where the worker was paid and the statutory
+            bodies were not.
           </p>
           <p className="text-body text-ink-2">
-            The agent holds an <span className="font-mono">AgentCap</span>, which lets it call{' '}
-            <span className="font-mono">spend()</span> and nothing else. It cannot raise its own
-            cap, add a recipient, or move the budget. The treasurer keeps the{' '}
-            <span className="font-mono">AdminCap</span> and can revoke in one transaction, after
-            which every further call from the agent aborts on code 9.
+            The mandate is an object, not a row in our database. It names the staff it may pay
+            and the minimum each body must receive, and the agent holding the capability cannot
+            change either — it cannot add itself as an employee, lower a floor, or move the
+            budget. The employer can revoke in one transaction, after which new runs abort while
+            wages already earned can still be withdrawn.
           </p>
         </div>
 
@@ -161,7 +195,9 @@ export default function Page() {
 
       <section className="mx-auto w-full max-w-6xl px-5 pb-20 sm:px-8 md:pb-28">
         <p className="mb-6 text-body text-ink-2">
-          Look around as a <Link href="/claim" className="link">member</Link>, as the{' '}
+          Look around as the <Link href="/payroll" className="link">employer</Link>, as{' '}
+          <Link href="/earnings" className="link">someone being paid</Link>, as a{' '}
+          <Link href="/claim" className="link">member claiming an expense</Link>, as the{' '}
           <Link href="/treasury" className="link">treasurer</Link>, or in the{' '}
           <Link href="/safety" className="link">safety test</Link>.
         </p>
@@ -173,11 +209,13 @@ export default function Page() {
       <footer className="mt-auto border-t border-rule">
         <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-5 py-12 text-caption text-ink-3 sm:px-8">
           <p className="max-w-2xl">
-            The contract and its mandate are live on Sui testnet, and the treasurer view reads
-            them straight off the chain rather than from a copy we keep. Receipt submission and
-            server policy processing are connected when demo identity is enabled; review,
-            safety controls, and payment are not yet signed transactions. No mainnet, no real funds,
-            and nothing here is a custody service.
+            The claims contract and its mandate are live on Sui testnet, and the treasurer view
+            reads them straight off the chain rather than from a copy we keep. The payroll module
+            is written and tested but not yet published, so payroll screens compute the split the
+            contract will enforce and say so on every screen. Receipt submission and server policy
+            processing are connected when demo identity is enabled; review, safety controls, and
+            payment are not yet signed transactions. No mainnet, no real funds, and nothing here
+            is a custody service.
           </p>
           <div className="flex flex-wrap items-end justify-between gap-x-8 gap-y-4 border-t border-rule pt-6">
             <p className="max-w-xl">

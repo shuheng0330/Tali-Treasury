@@ -42,6 +42,24 @@ export {
 export { isAllowedRecipient, mandateStatus, toMandateView } from './mandate.js';
 export type { MandateStatus, MandateView } from './mandate.js';
 
+export {
+  STATUTORY_BODIES,
+  STATUTORY_BODY_LABEL,
+  accruedAt,
+  availableAt,
+  toSalaryStreamView,
+} from './payroll.js';
+export type {
+  PayrollBreakdown,
+  PayrollRunStatus,
+  PayrollRunView,
+  SalaryStreamView,
+  StatutoryBody,
+  StatutoryBodyAmount,
+  StatutorySplit,
+  WithdrawEarnedResult,
+} from './payroll.js';
+
 export { EXPLORER, SAFETY_ATTACKS, isApiError } from './api.js';
 export type {
   AnalyzeReceiptResponse,

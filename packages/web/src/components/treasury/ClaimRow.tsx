@@ -45,11 +45,9 @@ interface Props {
   item: ReviewQueueItem;
   processing: boolean;
   onProcess: (id: string) => void;
-  onApprove: (id: string) => void;
-  onReject: (id: string) => void;
 }
 
-export function ClaimRow({ item, processing, onProcess, onApprove, onReject }: Props) {
+export function ClaimRow({ item, processing, onProcess }: Props) {
   const { claim, decision, agentNote, reason } = item;
   const immutableFailure = decision.checks.some((check) => check.onChain && !check.passed);
   const awaitingPolicy = claim.state === 'submitted' && claim.decision === null;
@@ -114,22 +112,29 @@ export function ClaimRow({ item, processing, onProcess, onApprove, onReject }: P
           </button>
         ) : (
           <>
+            {/* Disabled rather than wired to a local hide. A button that made
+                the row disappear, and let it return on the next read, would be
+                claiming a decision nobody recorded. */}
             <button
               type="button"
-              disabled={immutableFailure}
-              onClick={() => onApprove(claim.id)}
+              disabled
               className="btn btn--primary h-9 px-5 text-label"
-              title={immutableFailure ? 'This claim violates an immutable on-chain rule' : undefined}
+              title={
+                immutableFailure
+                  ? 'This claim violates an immutable on-chain rule'
+                  : undefined
+              }
             >
-              {immutableFailure ? 'Cannot approve' : 'Approve demo'}
+              {immutableFailure ? 'Cannot approve' : 'Approve'}
             </button>
-            <button
-              type="button"
-              onClick={() => onReject(claim.id)}
-              className="btn btn--ghost h-9 px-5 text-label"
-            >
-              Reject demo
+            <button type="button" disabled className="btn btn--ghost h-9 px-5 text-label">
+              Reject
             </button>
+            <p className="text-caption text-ink-3">
+              {immutableFailure
+                ? 'A rule the contract enforces already refuses this claim.'
+                : 'Recording a decision needs the review endpoint, which is not built yet.'}
+            </p>
           </>
         )}
       </div>
