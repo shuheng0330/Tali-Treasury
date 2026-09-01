@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 
 const TABS = [
   { href: '/claim', label: 'Claim', full: 'Submit a claim' },
+  { href: '/earnings', label: 'Earn', full: 'Your earnings' },
   { href: '/treasury', label: 'Treasury', full: 'Treasurer view' },
   { href: '/safety', label: 'Safety', full: 'Safety test' },
 ];
@@ -25,7 +26,7 @@ export function AppNav({ className = '' }: { className?: string }) {
             href={tab.href}
             aria-current={active ? 'page' : undefined}
             title={tab.full}
-            className={`flex-1 rounded-badge px-2.5 py-2 text-center font-display text-label uppercase transition-colors duration-150 sm:flex-none sm:px-4 ${
+            className={`flex-1 rounded-badge px-2 py-2 text-center font-display text-label uppercase transition-colors duration-150 sm:flex-none sm:px-4 ${
               active
                 ? 'bg-ink text-canvas'
                 : 'text-ink-3 hover:bg-raised hover:text-ink'
