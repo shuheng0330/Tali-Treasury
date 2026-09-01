@@ -4,7 +4,12 @@ export type StatutoryRecipientConfig = Record<StatutoryBody, Address>;
 
 export type PayrollSubmission =
   | { status: 'paid'; digest: string }
-  | { status: 'refused'; abortCode: number; message: string };
+  /**
+   * `abortCode` is null when the transaction failed without a Move abort, such
+   * as running out of gas. The run is already persisted as pending by then, so
+   * it has to be recordable as failed rather than left looking in flight.
+   */
+  | { status: 'refused'; abortCode: number | null; message: string };
 
 export interface PayrollChainPort {
   /** Throws when the payroll module or its credentials are not configured. */

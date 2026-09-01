@@ -15,7 +15,13 @@ interface RunState {
   message?: string;
 }
 
-export function PayrollDesk({ staff }: { staff: SampleEmployee[] }) {
+export function PayrollDesk({
+  staff,
+  runsAreLive,
+}: {
+  staff: SampleEmployee[];
+  runsAreLive: boolean;
+}) {
   const [selected, setSelected] = useState(staff[0]);
   const [breakdown, setBreakdown] = useState<PayrollBreakdown>(staff[0].breakdown);
   const [source, setSource] = useState<Source>('mock');
@@ -83,7 +89,11 @@ export function PayrollDesk({ staff }: { staff: SampleEmployee[] }) {
         source={source}
         reason={reason}
         live="The statutory split"
-        simulated="Figures follow the EPF Third Schedule bands and the RM6,000 SOCSO and EIS ceilings. Paying a run still needs the payroll module on chain."
+        simulated={`Figures follow the EPF Third Schedule bands and the RM6,000 SOCSO and EIS ceilings. ${
+          runsAreLive
+            ? 'Running payroll signs a real transaction on Sui testnet.'
+            : 'Paying a run still needs the payroll module on chain.'
+        }`}
       />
 
       <div className="flex flex-col gap-3">

@@ -1,5 +1,7 @@
 import { CIRCLE_TESTNET_USDC_TYPE } from '@tali/treasury-sui';
+import type { EnvLike } from '../env';
 
+import { createSuiStreamChain } from '../sui/stream-chain';
 import { createStreamService, type StreamService } from './service';
 import type { SalaryStreamState, StreamChainPort, WithdrawSubmission } from './ports';
 
@@ -61,18 +63,22 @@ let service: StreamService | undefined;
 
 export function getStreamService(): StreamService {
   if (!service) {
-    service = createStreamService({ chain: sampleChain(), now: () => Date.now() });
+    service = createStreamService({
+      chain: streamsAreLive() ? createSuiStreamChain() : sampleChain(),
+      now: () => Date.now(),
+    });
   }
   return service;
 }
 
 /**
- * True once the stream reads and withdrawals go to Sui rather than the sample.
- * Flips on its own when the stream id is configured and the chain adapter above
- * is swapped for the real one.
+ * True once stream reads and withdrawals go to Sui rather than the sample.
+ * Both the published stream and a signer are required: a stream id on its own
+ * would read real figures under a withdraw button that cannot pay.
  */
-export function streamsAreLive(): boolean {
-  return false;
+export function streamsAreLive(env: EnvLike = process.env): boolean {
+  const streamId = env.DEMO_STREAM_ID?.trim() || env.NEXT_PUBLIC_DEMO_STREAM_ID?.trim();
+  return Boolean(env.AGENT_PRIVATE_KEY?.trim() && env.PAYROLL_PACKAGE_ID?.trim() && streamId);
 }
 
 export const DEMO_STREAM_ID =

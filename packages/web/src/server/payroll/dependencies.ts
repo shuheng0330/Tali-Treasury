@@ -1,6 +1,8 @@
 import type { PayrollBreakdown, PayrollRunView } from '@tali/shared';
 
 import { ServerError } from '../errors';
+import type { EnvLike } from '../env';
+import { createSuiPayrollExecutor } from '../sui/payroll-executor';
 import { createPayrollService, type PayrollService } from './service';
 import type {
   PayrollChainPort,
@@ -79,6 +81,22 @@ function unconfiguredChain(): PayrollChainPort {
   };
 }
 
+/**
+ * The signing path is used once the module is published and its ids are set.
+ * Everything up to that point stays on the refusal above, so a half-configured
+ * deployment cannot quietly sign anything.
+ */
+export function payrollIsLive(env: EnvLike = process.env): boolean {
+  return Boolean(
+    env.AGENT_PRIVATE_KEY?.trim() &&
+      env.PAYROLL_CAP_ID?.trim() &&
+      env.PAYROLL_MANDATE_ID?.trim() &&
+      env.PAYROLL_EPF_ADDRESS?.trim() &&
+      env.PAYROLL_SOCSO_ADDRESS?.trim() &&
+      env.PAYROLL_EIS_ADDRESS?.trim(),
+  );
+}
+
 function recipients(): StatutoryRecipientConfig {
   return {
     epf: process.env.PAYROLL_EPF_ADDRESS ?? '',
@@ -93,7 +111,7 @@ export function getPayrollService(): PayrollService {
   if (!service) {
     service = createPayrollService({
       runs: memoryRepository(),
-      chain: unconfiguredChain(),
+      chain: payrollIsLive() ? createSuiPayrollExecutor() : unconfiguredChain(),
       recipients: recipients(),
     });
   }

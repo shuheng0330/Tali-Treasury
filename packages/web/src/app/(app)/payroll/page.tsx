@@ -1,10 +1,15 @@
 import Link from 'next/link';
 import { PayrollDesk } from '@/components/payroll/PayrollDesk';
 import { sampleStaff } from '@/lib/mock/payroll';
+import { payrollIsLive } from '@/server/payroll/dependencies';
 
 export const metadata = {
   title: 'Payroll · Tali Treasury',
 };
+
+/* Whether a run can be signed is read from the environment, so this cannot be
+   settled at build time and baked into a static page. */
+export const dynamic = 'force-dynamic';
 
 export default function PayrollPage() {
   return (
@@ -17,7 +22,7 @@ export default function PayrollPage() {
         </p>
       </header>
 
-      <PayrollDesk staff={sampleStaff} />
+      <PayrollDesk staff={sampleStaff} runsAreLive={payrollIsLive()} />
 
       <Link href="/payroll/proof" className="btn btn--ghost btn--block">
         Try underpaying EPF
