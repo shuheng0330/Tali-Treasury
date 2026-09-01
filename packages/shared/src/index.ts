@@ -60,7 +60,8 @@ export type {
   WithdrawEarnedResult,
 } from './payroll.js';
 
-export { EXPLORER, SAFETY_ATTACKS, isApiError } from './api.js';
+export { EXPLORER, BROADCASTABLE_ATTACKS,
+  SAFETY_ATTACKS, isApiError } from './api.js';
 export type {
   AnalyzeReceiptResponse,
   ApiError,
@@ -77,6 +78,8 @@ export type {
   ReviewClaimResponse,
   ReviewQueueItem,
   SafetyAttackId,
+  SafetyAttackRequest,
+  SafetyAttackResponse,
   SafetyAttackSpec,
   SafetyPreviewInput,
   SafetyAttemptRequest,

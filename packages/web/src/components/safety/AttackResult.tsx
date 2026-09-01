@@ -25,14 +25,24 @@ function Mark({ passed }: { passed: boolean }) {
 interface Props {
   attempted: string;
   payment: PaymentResult;
+  /** Whether the contract answered, or this is the local model's guess. */
+  delivery: { broadcast: true } | { broadcast: false; reason: string };
   checks: RuleCheck[];
   onAgain: () => void;
   onCounterfactual: () => void;
 }
 
-export function AttackResult({ attempted, payment, checks, onAgain, onCounterfactual }: Props) {
+export function AttackResult({
+  attempted,
+  payment,
+  delivery,
+  checks,
+  onAgain,
+  onCounterfactual,
+}: Props) {
   const blocked = !payment.ok;
   const failed = checks.filter((check) => !check.passed);
+  const real = delivery.broadcast;
 
   return (
     <div className="flex flex-col gap-5">
@@ -48,11 +58,23 @@ export function AttackResult({ attempted, payment, checks, onAgain, onCounterfac
           </svg>
         )}
 
-        <h2 className="text-title">{blocked ? 'Predicted to be blocked' : 'Predicted to pass'}</h2>
+        <h2 className="text-title">
+          {real
+            ? blocked
+              ? 'The contract refused it'
+              : 'The contract allowed it'
+            : blocked
+              ? 'Predicted to be blocked'
+              : 'Predicted to pass'}
+        </h2>
         <p className="max-w-md text-body text-ink-2">
-          {blocked
-            ? `A ${toDisplay(attempted)} transfer violates the simulated mandate rules. No transaction was submitted.`
-            : 'The local policy model predicts that this input is inside the mandate rules. No payment was submitted.'}
+          {real
+            ? blocked
+              ? `The transaction was signed and submitted. Sui aborted it on code ${payment.abortCode ?? '—'}, gas was spent refusing it, and the balance did not move.`
+              : `A ${toDisplay(attempted)} transfer was inside every rule, so the contract settled it.`
+            : blocked
+              ? `A ${toDisplay(attempted)} transfer violates the mandate rules. Nothing was submitted, because ${delivery.reason}.`
+              : `The local model puts this inside the mandate rules. Nothing was submitted, because ${delivery.reason}.`}
         </p>
       </div>
 

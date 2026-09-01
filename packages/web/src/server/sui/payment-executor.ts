@@ -11,6 +11,7 @@ import {
 } from '@tali/treasury-sui';
 
 import type { PaymentExecutor } from '../claims/ports';
+import { ServerError } from '../errors';
 import {
   moveAbortCode,
   netGasUsed,
@@ -20,9 +21,18 @@ import {
   type PreparedTransaction,
 } from './transaction';
 
-export class PaymentConfigurationError extends Error {
+/**
+ * A ServerError, so a deployment without a signing key answers 503 under its
+ * own code. Left as a plain Error it became the generic 500 every unrecognised
+ * throw becomes, which tells the caller nothing about what to fix.
+ */
+export class PaymentConfigurationError extends ServerError {
   constructor() {
-    super('Backend payment configuration requires valid Sui testnet credentials');
+    super(
+      'payment_configuration_failed',
+      503,
+      'Backend payment configuration requires valid Sui testnet credentials',
+    );
     this.name = 'PaymentConfigurationError';
   }
 }

@@ -3,6 +3,7 @@ import type {
   Amount,
   AuditEvent,
   Claim,
+  Digest,
   Event,
   EventMember,
   ExpenseCategory,
@@ -181,6 +182,32 @@ export interface SafetySimulateResponse {
   predictedAbortKey: string | null;
   predictedMessage: string;
   simulatedInMs: number;
+}
+
+/**
+ * Which attacks can genuinely be submitted to the chain.
+ *
+ * The other two need mandate state nobody is going to create for a demo: one
+ * needs the mandate revoked, and one needs the budget already spent below the
+ * per-claim cap. Those stay predictions, and the screen says which is which.
+ */
+export const BROADCASTABLE_ATTACKS: readonly SafetyAttackId[] = [
+  'overspend',
+  'unknown_recipient',
+  'custom',
+];
+
+export interface SafetyAttackRequest {
+  attack: SafetyAttackId;
+  amount: Amount;
+  recipient: Address;
+}
+
+export interface SafetyAttackResponse {
+  /** The contract's own answer. Never a prediction. */
+  payment: PaymentResult;
+  /** The transaction this produced, if it reached the chain. */
+  digest: Digest | null;
 }
 
 /** UI-only input for the explicitly simulated safety preview. */
