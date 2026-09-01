@@ -1,6 +1,7 @@
 import type { PayrollBreakdown, PayrollRunView, StatutoryBody } from '@tali/shared';
 import { STATUTORY_BODIES } from '@tali/shared';
 
+import { ServerError } from '../errors';
 import { computeStatutory, type StatutoryInput } from './statutory';
 import type {
   PayrollChainPort,
@@ -40,6 +41,19 @@ export function createPayrollService(deps: {
     preview: build,
 
     async run(request) {
+      /* The mandate carries one set of floors, and those describe one class of
+         worker. A worker at 60 or over pays no EIS at all and a quarter of the
+         EPF rate, so a correct split for them is refused by floors written for
+         staff under 60 — abort 24, blaming the arithmetic for a mismatch in
+         who the mandate is for. Preview still answers for any class. */
+      if (request.age >= 60 || request.citizenship === 'foreign') {
+        throw new ServerError(
+          'invalid_request',
+          400,
+          'This mandate covers local staff under 60. Another class of worker needs its own mandate, with its own statutory floors.',
+        );
+      }
+
       deps.chain.assertReady();
 
       const breakdown = build(request);

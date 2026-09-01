@@ -19,9 +19,20 @@ import {
   type PreparedTransaction,
 } from './transaction';
 
-export class PayrollSubmissionUncertainError extends Error {
+/**
+ * A ServerError, so the route answers 502 with its own code rather than the
+ * generic 500 every unrecognised throw becomes. The difference matters: the
+ * generic path renders as "Nothing was paid", which is the one thing nobody
+ * can say about a transaction that may have landed.
+ */
+export class PayrollSubmissionUncertainError extends ServerError {
   constructor(options?: ErrorOptions) {
-    super('Payroll submission status is uncertain', options);
+    super(
+      'payment_submission_uncertain',
+      502,
+      'The payroll transaction was sent and its outcome is unknown. Check the chain before running it again.',
+      options,
+    );
     this.name = 'PayrollSubmissionUncertainError';
   }
 }

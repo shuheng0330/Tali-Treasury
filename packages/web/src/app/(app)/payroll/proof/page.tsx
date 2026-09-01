@@ -1,12 +1,17 @@
 import Link from 'next/link';
 import { EnforcementProof } from '@/components/payroll/EnforcementProof';
 import { sampleStaff } from '@/lib/mock/payroll';
+import { readEpfFloor } from '@/server/payroll/floors';
 
 export const metadata = {
   title: 'Underpaying EPF · Tali Treasury',
 };
 
-export default function PayrollProofPage() {
+export const dynamic = 'force-dynamic';
+
+export default async function PayrollProofPage() {
+  const floor = await readEpfFloor();
+
   return (
     <div className="mx-auto flex w-full max-w-md flex-col gap-6 px-5 py-6">
       <header className="flex flex-col gap-2">
@@ -18,12 +23,16 @@ export default function PayrollProofPage() {
         </p>
       </header>
 
-      <EnforcementProof person={sampleStaff[0]} />
+      <EnforcementProof
+        person={sampleStaff[0]}
+        epfFloorBps={floor.epfBps.toString()}
+      />
 
       <p className="text-caption text-ink-3">
-        Both outcomes become real testnet transactions once the payroll module is
-        published. Until then the screen shows the decision the contract will make, and
-        says so when nothing was submitted.
+        {floor.source === 'chain'
+          ? 'The minimum above was read from the mandate itself, so it is the figure the contract will actually enforce.'
+          : 'The minimum above is the floor this mandate is created with. It has not been read off the chain, because the payroll module is not published yet.'}{' '}
+        Both outcomes become real testnet transactions once it is.
       </p>
 
       <Link href="/payroll" className="link self-start">

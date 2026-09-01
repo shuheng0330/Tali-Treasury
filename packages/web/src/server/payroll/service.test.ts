@@ -130,6 +130,31 @@ describe('createPayrollService', () => {
     expect(run).toHaveBeenCalledOnce();
   });
 
+  it('refuses a worker class this mandate was not written for', async () => {
+    // The floors describe staff under 60. A correct split for anyone else is
+    // refused on abort 24, which blames the arithmetic for a mismatch in who
+    // the mandate covers.
+    const runs = repo();
+    const { port, run } = chain({ status: 'paid', digest: '0xd' });
+    const service = createPayrollService({ runs: runs.impl, chain: port, recipients: RECIPIENTS });
+
+    await expect(service.run({ ...request, age: 61 })).rejects.toThrow('under 60');
+    await expect(service.run({ ...request, citizenship: 'foreign' })).rejects.toThrow(
+      'its own mandate',
+    );
+
+    expect(run).not.toHaveBeenCalled();
+    expect(runs.impl.create).not.toHaveBeenCalled();
+  });
+
+  it('still previews any worker class, because the arithmetic is not in doubt', () => {
+    const runs = repo();
+    const { port } = chain({ status: 'paid', digest: '0xd' });
+    const service = createPayrollService({ runs: runs.impl, chain: port, recipients: RECIPIENTS });
+
+    expect(() => service.preview({ ...request, age: 61 })).not.toThrow();
+  });
+
   it('refuses to run at all when the payroll module is not configured', async () => {
     const runs = repo();
     const { port } = chain({ status: 'paid', digest: '0xd' }, false);

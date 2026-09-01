@@ -60,13 +60,21 @@ export async function tryPreviewPayroll(
   }
 }
 
-export async function tryRunPayroll(
-  request: RunRequest,
-): Promise<Sourced<PayrollRunView | null>> {
+export interface RunAttempt extends Sourced<PayrollRunView | null> {
+  /**
+   * True when the transaction was sent and nobody knows whether it landed.
+   * The screen must not say the wages stayed put.
+   */
+  uncertain: boolean;
+}
+
+export async function tryRunPayroll(request: RunRequest): Promise<RunAttempt> {
   try {
     const data = await post<PayrollRunView>('/api/payroll/runs', request);
-    return { data, source: 'live', reason: null };
+    return { data, source: 'live', reason: null, uncertain: false };
   } catch (error) {
-    return { data: null, source: 'mock', reason: describe(error) };
+    const uncertain =
+      error instanceof TaliApiError && error.code === 'payment_submission_uncertain';
+    return { data: null, source: 'mock', reason: describe(error), uncertain };
   }
 }

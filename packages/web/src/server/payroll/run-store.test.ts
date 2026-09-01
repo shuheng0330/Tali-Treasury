@@ -108,6 +108,16 @@ describe('fallbackStore', () => {
   });
 });
 
+describe('fallbackStore before anything has been asked of it', () => {
+  it('claims nothing until a database call has actually succeeded', () => {
+    // Otherwise the banner depends on the order the page calls things in: read
+    // the flag before the query and it reports durability never demonstrated.
+    const store = fallbackStore(repository(), repository());
+
+    expect(store.persisted()).toBe(false);
+  });
+});
+
 describe('memoryOnlyStore', () => {
   it('never claims to have persisted anything', async () => {
     const store = memoryOnlyStore(repository(), 'Supabase is not configured');

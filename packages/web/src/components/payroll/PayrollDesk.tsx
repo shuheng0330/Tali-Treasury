@@ -10,7 +10,7 @@ import { DataNotice } from '@/components/DataNotice';
 import { Breakdown } from './Breakdown';
 
 interface RunState {
-  status: 'idle' | 'running' | 'paid' | 'refused';
+  status: 'idle' | 'running' | 'paid' | 'refused' | 'unknown';
   digest?: string | null;
   message?: string;
 }
@@ -70,7 +70,10 @@ export function PayrollDesk({
     });
 
     if (result.data === null) {
-      setRun({ status: 'refused', message: result.reason ?? 'the run did not complete' });
+      setRun({
+        status: result.uncertain ? 'unknown' : 'refused',
+        message: result.reason ?? 'the run did not complete',
+      });
       return;
     }
     setRun({
@@ -79,7 +82,7 @@ export function PayrollDesk({
       message:
         result.data.abortCode !== null
           ? `The contract refused this run on abort ${result.data.abortCode}.`
-          : undefined,
+          : 'The run did not go through.',
     });
   }
 
@@ -175,6 +178,12 @@ export function PayrollDesk({
         {run.status === 'refused' ? (
           <p className="text-caption text-wait">
             Nothing was paid: {run.message}
+          </p>
+        ) : null}
+
+        {run.status === 'unknown' ? (
+          <p className="text-caption text-no">
+            {run.message} Do not run it again until you have checked.
           </p>
         ) : null}
 

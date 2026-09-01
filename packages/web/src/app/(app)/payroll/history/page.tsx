@@ -23,8 +23,8 @@ export default async function PayrollHistoryPage() {
         <p className="eyebrow">Payroll</p>
         <h1 className="text-display">What has been run</h1>
         <p className="text-body text-ink-2">
-          Every run is written down before it is signed, so a refusal leaves the same
-          trail as a payment.
+          A run that reaches the contract is written down before it is signed, so a
+          refusal leaves the same trail as a payment.
         </p>
       </header>
 

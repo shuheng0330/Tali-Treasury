@@ -42,7 +42,9 @@ function memoryRepository(): PayrollRunRepository {
 
   const update = (id: string, patch: Partial<PayrollRunView>): PayrollRunView => {
     const existing = runs.get(id);
-    if (!existing) throw new ServerError('claim_not_found', 404, 'Payroll run not found');
+    if (!existing) {
+      throw new ServerError('payroll_run_not_found', 404, 'Payroll run not found');
+    }
     const next = { ...existing, ...patch };
     runs.set(id, next);
     return next;

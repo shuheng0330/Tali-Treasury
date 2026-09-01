@@ -6,9 +6,6 @@ import { tryRunPayroll } from '@/lib/api/payroll';
 import type { SampleEmployee } from '@/lib/mock/payroll';
 import { Breakdown } from './Breakdown';
 
-/** The EPF floor S5 registers on the mandate, in basis points. */
-const EPF_FLOOR_BPS = 2300n;
-
 type Outcome =
   | { kind: 'none' }
   | { kind: 'running' }
@@ -21,12 +18,19 @@ type Outcome =
  * demonstration underpays EPF rather than removing it. The payment still
  * carries an EPF line; the contract still refuses it.
  */
-export function EnforcementProof({ person }: { person: SampleEmployee }) {
+export function EnforcementProof({
+  person,
+  epfFloorBps,
+}: {
+  person: SampleEmployee;
+  /** Read from the mandate when one exists. Base points, as a string. */
+  epfFloorBps: string;
+}) {
   const [shortEpf, setShortEpf] = useState(false);
   const [outcome, setOutcome] = useState<Outcome>({ kind: 'none' });
 
   const epf = person.breakdown.bodies.find((body) => body.body === 'epf');
-  const required = (BigInt(person.breakdown.gross) * EPF_FLOOR_BPS) / 10000n;
+  const required = (BigInt(person.breakdown.gross) * BigInt(epfFloorBps)) / 10000n;
 
   async function submit() {
     setOutcome({ kind: 'running' });

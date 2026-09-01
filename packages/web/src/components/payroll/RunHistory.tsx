@@ -71,7 +71,7 @@ function Row({ run }: { run: PayrollRunView }) {
       {run.status === 'failed' ? (
         <p className="text-caption text-no">
           {run.abortCode === null
-            ? 'Nothing was paid. The run never reached the chain.'
+            ? 'Nothing was paid. The run did not reach a decision from the contract.'
             : `Nothing was paid. The contract refused this run on abort ${run.abortCode}.`}
         </p>
       ) : null}
@@ -90,8 +90,10 @@ export function RunHistory({ runs }: { runs: PayrollRunView[] }) {
   if (runs.length === 0) {
     return (
       <p className="rounded-card border border-dashed border-rule bg-surface p-5 text-body text-ink-3">
-        No payroll has been run yet. Every run is recorded here before it is signed, so
-        this list shows what was attempted, not only what succeeded.
+        Nothing has reached the contract yet. A run is recorded here before it is
+        signed, so this list shows what was attempted, not only what succeeded.
+        Attempts refused before that point — an unpublished module, missing
+        credentials — never get this far.
       </p>
     );
   }

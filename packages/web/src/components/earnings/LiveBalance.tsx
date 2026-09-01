@@ -1,8 +1,10 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { SalaryStreamView, WithdrawEarnedResult } from '@tali/shared';
+import type { ApiError, SalaryStreamView, WithdrawEarnedResult } from '@tali/shared';
 import { accruedAt, availableAt, toDisplay } from '@tali/shared';
+
+type WithdrawOutcome = WithdrawEarnedResult | { ok: 'unreachable'; message: string };
 
 const CORRECTION_INTERVAL_MS = 15_000;
 
@@ -33,7 +35,7 @@ export function LiveBalance({ initial }: { initial: SalaryStreamView }) {
   const [stream, setStream] = useState(initial);
   const [now, setNow] = useState(() => initial.startedAtMs);
   const [withdrawing, setWithdrawing] = useState(false);
-  const [result, setResult] = useState<WithdrawEarnedResult | null>(null);
+  const [result, setResult] = useState<WithdrawOutcome | null>(null);
   const [mounted, setMounted] = useState(false);
 
   const reduced = usePrefersReducedMotion();
@@ -90,6 +92,18 @@ export function LiveBalance({ initial }: { initial: SalaryStreamView }) {
       const response = await fetch(`/api/streams/${stream.id}/withdraw`, {
         method: 'POST',
       });
+      /* A non-2xx body is an ApiError, not a result. Casting it anyway left
+         `ok` undefined, so neither branch below rendered and the button just
+         went quiet. */
+      if (!response.ok) {
+        const failure = (await response.json().catch(() => null)) as ApiError | null;
+        setResult({
+          ok: 'unreachable',
+          message: failure?.message ?? 'The withdrawal could not be sent.',
+        });
+        return;
+      }
+
       const body = (await response.json()) as WithdrawEarnedResult;
       setResult(body);
       /* Reset from a fresh read, never by subtracting locally: the chain is
@@ -144,6 +158,12 @@ export function LiveBalance({ initial }: { initial: SalaryStreamView }) {
       {finished ? (
         <p className="rounded-card border border-rule bg-raised p-4 text-caption text-ink-2">
           This pay period has ended. The figure above is final.
+        </p>
+      ) : null}
+
+      {result?.ok === 'unreachable' ? (
+        <p className="rounded-card border border-no-line bg-no-soft p-4 text-caption text-no">
+          <span className="font-medium">Nothing was withdrawn.</span> {result.message}
         </p>
       ) : null}
 

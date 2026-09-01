@@ -7,6 +7,7 @@ import {
   type PayrollOperations,
 } from './payroll-executor';
 import type { ConfirmedTransaction } from './transaction';
+import { toApiError } from '../errors';
 
 const keypair = Ed25519Keypair.generate();
 const env = {
@@ -124,5 +125,23 @@ describe('createSuiPayrollExecutor', () => {
     const executor = createSuiPayrollExecutor({ env, operations: ops });
 
     await expect(executor.run(run)).rejects.toBeInstanceOf(PayrollSubmissionUncertainError);
+  });
+
+  it('answers 502 under its own code, never the generic failure', async () => {
+    // A generic throw becomes database_failed/500, which the screen renders as
+    // "Nothing was paid" — the one claim nobody can make about a transaction
+    // that may have landed.
+    const ops = operations({
+      submit: vi.fn(async () => {
+        throw new Error('connection reset');
+      }),
+    });
+    const executor = createSuiPayrollExecutor({ env, operations: ops });
+
+    const error = await executor.run(run).catch((thrown: unknown) => thrown);
+    expect(toApiError(error)).toMatchObject({
+      status: 502,
+      body: { error: 'payment_submission_uncertain' },
+    });
   });
 });

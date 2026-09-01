@@ -35,6 +35,10 @@ export function fallbackStore(
   const missing = 'the payroll_runs table has not been created yet';
   let latched = false;
   let usedBackup = false;
+  /* Nothing has been demonstrated until something has actually been asked of
+     the database. Reporting persistence before the first call would make the
+     banner depend on the order the page happens to call things in. */
+  let proven = false;
 
   async function attempt<T>(
     action: (repository: PayrollRunRepository) => Promise<T>,
@@ -45,6 +49,7 @@ export function fallbackStore(
     try {
       const result = await action(primary);
       usedBackup = false;
+      proven = true;
       return result;
     } catch (error) {
       if (!(error instanceof PayrollRunsTableMissingError)) throw error;
@@ -61,7 +66,7 @@ export function fallbackStore(
     markFailed: (runId, abortCode) =>
       attempt((repository) => repository.markFailed(runId, abortCode), true),
     listRecent: (limit) => attempt((repository) => repository.listRecent(limit), false),
-    persisted: () => !latched && !usedBackup,
+    persisted: () => proven && !latched && !usedBackup,
     reason: () => (latched || usedBackup ? missing : null),
   };
 }
