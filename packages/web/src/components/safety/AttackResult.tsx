@@ -1,5 +1,5 @@
 import type { PaymentResult, RuleCheck } from '@tali/shared';
-import { toDisplay } from '@tali/shared';
+import { EXPLORER, toDisplay } from '@tali/shared';
 
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -79,13 +79,29 @@ export function AttackResult({
       </div>
 
       <section className="flex flex-col overflow-hidden rounded-card border border-rule bg-surface">
-        <h3 className="eyebrow border-b border-rule px-5 py-3.5">Simulated result</h3>
+        <h3 className="eyebrow border-b border-rule px-5 py-3.5">
+          {real ? 'What the contract did' : 'Predicted result'}
+        </h3>
         <div className="flex flex-col px-4 py-3">
-          <Row label="Status">{blocked ? 'WOULD FAIL' : 'WOULD PASS'}</Row>
+          <Row label="Status">
+            {real ? (blocked ? 'ABORTED' : 'SETTLED') : blocked ? 'WOULD FAIL' : 'WOULD PASS'}
+          </Row>
           {blocked ? <Row label="Abort">{payment.abortKey}</Row> : null}
           {blocked ? <Row label="Message">{payment.message}</Row> : null}
-          <Row label="Network">Not submitted</Row>
-          <Row label="Gas">None</Row>
+          <Row label="Network">{real ? 'Sui testnet' : 'Not submitted'}</Row>
+          <Row label="Gas">{real ? (payment.gasUsed ?? 'Unknown') : 'None'}</Row>
+          {real && payment.digest ? (
+            <Row label="Digest">
+              <a
+                className="link font-mono"
+                href={EXPLORER.tx(payment.digest).suiscan}
+                target="_blank"
+                rel="noreferrer"
+              >
+                {payment.digest.slice(0, 10)}…
+              </a>
+            </Row>
+          ) : null}
           {payment.rawError ? (
             <details className="pt-2">
               <summary className="cursor-pointer text-caption text-ink-3">Raw abort</summary>
@@ -120,7 +136,9 @@ export function AttackResult({
       </section>
 
       <section className="flex flex-col gap-2 rounded-card border border-rule bg-surface p-4">
-        <h3 className="eyebrow">Simulated treasury before → after</h3>
+        <h3 className="eyebrow">
+          {real ? 'Treasury before → after' : 'Predicted treasury before → after'}
+        </h3>
         <div className="flex items-baseline justify-between gap-4">
           <span className="text-caption text-ink-3">before</span>
           <span className="tnum text-subhead">{toDisplay(payment.budgetBefore)}</span>

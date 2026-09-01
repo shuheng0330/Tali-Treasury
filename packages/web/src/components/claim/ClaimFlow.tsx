@@ -194,7 +194,7 @@ export function ClaimFlow({ apiEnabled, mandate, mandateReadError }: Props) {
             reason={home ? homeReason : notice}
             live={home ? homeLabel : 'Receipt reading and storage'}
             plural={home && homeLabel.includes(' and ')}
-            simulated="Policy runs from the treasury after submission; review, payment and wallet signing remain unavailable."
+            simulated="A claim is evaluated, reviewed and paid from the treasury screen. Signing in with a wallet is not built, so this screen speaks for one fixed member."
           />
         </div>
       )}

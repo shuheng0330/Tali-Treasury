@@ -114,7 +114,16 @@ export function ClaimRow({
       ) : null}
 
       <div className="ml-7 flex flex-wrap items-center gap-3">
-        {claim.state === 'approved' ? (
+        {claim.state === 'paying' ? (
+          <p className="text-caption text-wait">
+            The payment was submitted and has not confirmed yet. Do not send it again
+            until the chain says what happened to it.
+          </p>
+        ) : claim.state === 'needs_correction' ? (
+          <p className="text-caption text-ink-3">
+            Sent back to {claim.submitterName}. It returns here once they resubmit it.
+          </p>
+        ) : claim.state === 'approved' ? (
           <>
             <button
               type="button"

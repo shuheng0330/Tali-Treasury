@@ -4,10 +4,18 @@ import type { Claim, PolicyDecision, ReviewQueueItem } from '@tali/shared';
  * What a treasurer still has to look at. New claims land in `submitted`, and
  * the two review states are what the server policy engine can move them to.
  */
+/**
+ * Everything still waiting on the treasurer, which includes `approved`: the
+ * decision is made but the transfer is a separate step, so an approved claim
+ * that dropped out of this list would leave the payment with nowhere to be
+ * released from.
+ */
 const REVIEW_STATES: ReadonlySet<Claim['state']> = new Set([
   'submitted',
   'awaiting_review',
   'needs_correction',
+  'approved',
+  'paying',
 ]);
 
 /** Nothing tracks committed-but-unsettled claims yet, so the reserve is zero. */
@@ -41,6 +49,13 @@ export function toReviewQueue(claims: readonly Claim[]): ReviewQueueItem[] {
     });
 }
 
+/** Everything that has finished, however it finished. */
+const SETTLED_STATES: ReadonlySet<Claim['state']> = new Set([
+  'paid',
+  'payment_failed',
+  'rejected',
+]);
+
 export function settledFrom(claims: readonly Claim[]): Claim[] {
-  return claims.filter((claim) => claim.state === 'paid');
+  return claims.filter((claim) => SETTLED_STATES.has(claim.state));
 }
