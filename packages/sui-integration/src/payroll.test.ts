@@ -36,6 +36,7 @@ function createInput(overrides: Record<string, unknown> = {}) {
   return {
     sender,
     capRecipient,
+    approvedEmployees: [employee],
     budget: 100_000_000000n,
     floors,
     netMinBps: 7000n,
@@ -92,15 +93,17 @@ describe('buildCreatePayrollMandateTransaction', () => {
       createInput(),
     );
 
-    const recipients = addressVector(transaction, 0);
+    expect(addressVector(transaction, 0).map((a) => BigInt(a))).toEqual([BigInt(employee)]);
+
+    const recipients = addressVector(transaction, 1);
     expect(recipients).toHaveLength(3);
     expect(recipients.map((address) => BigInt(address))).toEqual([
       BigInt(epf),
       BigInt(socso),
       BigInt(eis),
     ]);
-    expect(u64Vector(transaction, 1)).toEqual([2300n, 225n, 40n]);
-    expect(u64Vector(transaction, 2)).toEqual([0n, 6_000_000000n, 6_000_000000n]);
+    expect(u64Vector(transaction, 2)).toEqual([2300n, 225n, 40n]);
+    expect(u64Vector(transaction, 3)).toEqual([0n, 6_000_000000n, 6_000_000000n]);
   });
 
   it('refuses a floor of zero basis points', () => {
@@ -268,6 +271,7 @@ function objectClient(type: string, json: unknown) {
 const mandateJson = {
   budget: '100000000000',
   employer: '0x1',
+  approved_employees: [employee],
   statutory_recipients: [epf, socso, eis],
   statutory_min_bps: ['2300', '225', '40'],
   statutory_wage_cap: ['0', '6000000000', '6000000000'],

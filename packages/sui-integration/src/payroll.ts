@@ -31,6 +31,8 @@ export interface StatutoryFloor {
 
 export interface CreatePayrollMandateInput {
   sender: string;
+  /** The only addresses this mandate may ever pay a wage to. */
+  approvedEmployees: string[];
   /**
    * Receives the PayrollCap. Payroll has a single capability, unlike the claims
    * treasury: whoever holds it can both run payroll and revoke the mandate.
@@ -77,6 +79,7 @@ export interface PayrollMandateState {
   id: string;
   coinType: string;
   employer: string;
+  approvedEmployees: string[];
   budget: bigint;
   /** Reserved by open streams, and not spendable by a run. */
   committed: bigint;
@@ -127,6 +130,16 @@ export function buildCreatePayrollMandateTransaction(
   normalizeAddress(input.sender, 'sender');
   const capRecipient = normalizeAddress(input.capRecipient, 'PayrollCap recipient');
 
+  if (input.approvedEmployees.length === 0) {
+    throw new Error('At least one approved employee is required');
+  }
+  const employees = input.approvedEmployees.map((employee) =>
+    normalizeAddress(employee, 'approved employee'),
+  );
+  if (new Set(employees).size !== employees.length) {
+    throw new Error('Approved employees must not contain duplicates');
+  }
+
   requirePositive(input.budget, 'Budget');
   requirePositive(input.maxPerRun, 'Maximum per run');
   requireBps(input.netMinBps, 'Net minimum');
@@ -164,6 +177,7 @@ export function buildCreatePayrollMandateTransaction(
     typeArguments: [config.coinType],
     arguments: [
       fundingCoin,
+      tx.pure.vector('address', employees),
       tx.pure.vector('address', recipients),
       tx.pure.vector(
         'u64',
@@ -275,6 +289,30 @@ export function buildWithdrawEarnedTransaction(
   return tx;
 }
 
+/**
+ * Returns whatever no stream has claimed to the employer.
+ *
+ * Takes no recipient. The contract sends it to the address that funded the
+ * mandate, because the same capability runs payroll: a recipient argument would
+ * let whoever holds it withdraw the budget to themselves.
+ */
+export function buildWithdrawPayrollRemainingTransaction(
+  configInput: TreasuryConfig,
+  input: RevokePayrollInput,
+): Transaction {
+  const config = normalizeConfig(configInput);
+  const tx = new Transaction();
+  tx.moveCall({
+    target: target(config.packageId, 'withdraw_payroll_remaining'),
+    typeArguments: [config.coinType],
+    arguments: [
+      tx.object(normalizeAddress(input.payrollCapId, 'PayrollCap ID')),
+      tx.object(normalizeAddress(input.mandateId, 'payroll mandate ID')),
+    ],
+  });
+  return tx;
+}
+
 export function buildRevokePayrollTransaction(
   configInput: TreasuryConfig,
   input: RevokePayrollInput,
@@ -343,6 +381,7 @@ export async function readPayrollMandate(
     'payroll mandate',
   );
 
+  const employees = asStringVector(fields.approved_employees, 'approved employee list');
   const recipients = asStringVector(fields.statutory_recipients, 'statutory recipient list');
   const minBps = asBigIntVector(fields.statutory_min_bps, 'statutory minimum list');
   const wageCaps = asBigIntVector(fields.statutory_wage_cap, 'statutory wage cap list');
@@ -364,6 +403,9 @@ export async function readPayrollMandate(
     id: objectId,
     coinType: parseCoinType(type, 'PayrollMandate'),
     employer: asAddress(fields.employer, 'employer address'),
+    approvedEmployees: employees.map((employee) =>
+      normalizeAddress(employee, 'approved employee'),
+    ),
     budget,
     committed,
     spendable: budget - committed,

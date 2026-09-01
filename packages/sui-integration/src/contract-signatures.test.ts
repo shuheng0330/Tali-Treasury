@@ -9,6 +9,7 @@ import {
   buildRevokePayrollTransaction,
   buildRunPayrollTransaction,
   buildWithdrawEarnedTransaction,
+  buildWithdrawPayrollRemainingTransaction,
 } from './payroll.js';
 
 /**
@@ -67,6 +68,7 @@ function readSignatures(): Map<string, string[]> {
 const EXPECTED: Record<string, string[]> = {
   create_payroll_mandate: [
     'coin',
+    'approved_employees',
     'statutory_recipients',
     'statutory_min_bps',
     'statutory_wage_cap',
@@ -93,6 +95,7 @@ const EXPECTED: Record<string, string[]> = {
   ],
   withdraw_earned: ['stream', 'mandate', 'clock'],
   revoke_payroll: ['cap', 'mandate'],
+  withdraw_payroll_remaining: ['cap', 'mandate'],
 };
 
 function argumentCount(transaction: Transaction, functionName: string): number {
@@ -111,6 +114,7 @@ const transactions: Record<string, Transaction> = {
   create_payroll_mandate: buildCreatePayrollMandateTransaction(taliTestnetSuiConfig, {
     sender: '0x1',
     capRecipient: '0x2',
+    approvedEmployees: ['0x3'],
     budget: 100_000_000000n,
     floors: [{ recipient: '0xe9f', minBps: 2300n, wageCap: 0n }],
     netMinBps: 7000n,
@@ -141,6 +145,10 @@ const transactions: Record<string, Transaction> = {
     payrollCapId: '0x5',
     mandateId: '0x4',
   }),
+  withdraw_payroll_remaining: buildWithdrawPayrollRemainingTransaction(
+    taliTestnetSuiConfig,
+    { payrollCapId: '0x5', mandateId: '0x4' },
+  ),
 };
 
 describe('payroll builders against the Move source', () => {

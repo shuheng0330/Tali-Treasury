@@ -16,6 +16,10 @@ const E_PAYROLL_EXPIRED: u64 = 27;
 const E_NOTHING_ACCRUED: u64 = 28;
 const E_WRONG_STREAM_MANDATE: u64 = 29;
 const E_INVALID_STREAM_PERIOD: u64 = 30;
+const E_EMPLOYEE_NOT_APPROVED: u64 = 31;
+const E_NET_ABOVE_GROSS: u64 = 32;
+const E_INVALID_PAYROLL_TERMS: u64 = 33;
+const E_NO_PAYROLL_FUNDS: u64 = 34;
 
 const BPS_DENOMINATOR: u128 = 10_000;
 
@@ -23,6 +27,9 @@ public struct PayrollMandate<phantom T> has key {
     id: UID,
     budget: Balance<T>,
     employer: address,
+    /// Who this mandate may pay. Without it the floors are the only limit on
+    /// where wages go, and a floor says nothing about the destination.
+    approved_employees: vector<address>,
     statutory_recipients: vector<address>,
     /// Minimum share of the basis each body must receive, in basis points.
     statutory_min_bps: vector<u64>,
@@ -83,6 +90,7 @@ public struct StreamOpened has copy, drop {
 
 public fun create_payroll_mandate<T>(
     coin: Coin<T>,
+    approved_employees: vector<address>,
     statutory_recipients: vector<address>,
     statutory_min_bps: vector<u64>,
     statutory_wage_cap: vector<u64>,
@@ -93,12 +101,30 @@ public fun create_payroll_mandate<T>(
 ): PayrollCap {
     let funded = coin::value(&coin);
     assert!(funded > 0, E_PAYROLL_ZERO_AMOUNT);
-    assert!(max_per_run > 0 && max_per_run <= funded, E_ABOVE_RUN_LIMIT);
+    assert!(max_per_run > 0 && max_per_run <= funded, E_INVALID_PAYROLL_TERMS);
+    assert!(!approved_employees.is_empty(), E_INVALID_PAYROLL_TERMS);
+    assert!(!statutory_recipients.is_empty(), E_INVALID_PAYROLL_TERMS);
+    assert!(
+        net_min_bps > 0 && (net_min_bps as u128) <= BPS_DENOMINATOR,
+        E_INVALID_PAYROLL_TERMS,
+    );
     assert!(
         statutory_recipients.length() == statutory_min_bps.length()
             && statutory_recipients.length() == statutory_wage_cap.length(),
         E_LENGTH_MISMATCH,
     );
+
+    // A zero floor reads as enforcement and accepts one base unit, and nothing
+    // can tell the two apart once the mandate exists.
+    let mut k = 0;
+    while (k < statutory_min_bps.length()) {
+        assert!(
+            statutory_min_bps[k] > 0
+                && (statutory_min_bps[k] as u128) <= BPS_DENOMINATOR,
+            E_INVALID_PAYROLL_TERMS,
+        );
+        k = k + 1;
+    };
 
     let mandate_uid = object::new(ctx);
     let mandate_id = mandate_uid.to_inner();
@@ -107,6 +133,7 @@ public fun create_payroll_mandate<T>(
         id: mandate_uid,
         budget: coin::into_balance(coin),
         employer: ctx.sender(),
+        approved_employees,
         statutory_recipients,
         statutory_min_bps,
         statutory_wage_cap,
@@ -153,7 +180,19 @@ public fun run_payroll<T>(
         statutory_amounts.length() == mandate.statutory_recipients.length(),
         E_LENGTH_MISMATCH,
     );
+    assert!(
+        mandate.approved_employees.contains(&employee),
+        E_EMPLOYEE_NOT_APPROVED,
+    );
     assert!(net > 0, E_PAYROLL_ZERO_AMOUNT);
+
+    /* Gross is supplied by the caller and every floor is measured against it,
+       so an understated gross satisfies all of them at once: a gross of zero
+       turns each floor into `amount >= 0`. Net can never exceed gross in
+       payroll — it is gross minus the worker's own deductions — and holding
+       that line means shrinking gross shrinks what the caller can take. */
+    assert!(gross > 0, E_PAYROLL_ZERO_AMOUNT);
+    assert!(net <= gross, E_NET_ABOVE_GROSS);
     assert!(
         meets_floor(net, (gross as u128), mandate.net_min_bps),
         E_STATUTORY_SHORT,
@@ -222,8 +261,17 @@ public fun open_stream<T>(
 ) {
     assert!(cap.mandate_id == mandate.id.to_inner(), E_WRONG_PAYROLL_CAP);
     assert!(!mandate.revoked, E_PAYROLL_REVOKED);
+    assert!(
+        mandate.approved_employees.contains(&employee),
+        E_EMPLOYEE_NOT_APPROVED,
+    );
     assert!(ends_at_ms > started_at_ms, E_INVALID_STREAM_PERIOD);
     assert!(total_amount > 0, E_PAYROLL_ZERO_AMOUNT);
+
+    /* A stream is a promise to pay, so it answers to the same ceiling a run
+       does. Without this a one-millisecond stream releases the whole budget in
+       a single withdrawal and never meets a floor. */
+    assert!(total_amount <= mandate.max_per_run, E_ABOVE_RUN_LIMIT);
 
     let spendable = balance::value(&mandate.budget) - mandate.committed;
     assert!(total_amount <= spendable, E_PAYROLL_INSUFFICIENT);
@@ -280,7 +328,10 @@ public fun withdraw_earned<T>(
     ctx: &mut TxContext,
 ) {
     assert!(stream.mandate_id == mandate.id.to_inner(), E_WRONG_STREAM_MANDATE);
-    assert!(!mandate.revoked, E_PAYROLL_REVOKED);
+
+    /* Deliberately allowed after revocation. Revoking stops new runs and new
+       streams; it cannot un-earn wages already worked for, and the approved
+       list means a stream only ever pays staff the employer named. */
 
     let earned = accrued(stream, clock.timestamp_ms());
     assert!(earned > stream.withdrawn, E_NOTHING_ACCRUED);
@@ -311,6 +362,27 @@ public fun revoke_payroll<T>(cap: &PayrollCap, mandate: &mut PayrollMandate<T>) 
     mandate.revoked = true;
 }
 
+/// Returns everything not already promised to a stream, to the employer.
+///
+/// The recipient is the address that funded the mandate, never one the caller
+/// names: the same capability runs payroll, so a recipient parameter would let
+/// whoever holds it withdraw the budget to themselves.
+public fun withdraw_payroll_remaining<T>(
+    cap: &PayrollCap,
+    mandate: &mut PayrollMandate<T>,
+    ctx: &mut TxContext,
+) {
+    assert!(cap.mandate_id == mandate.id.to_inner(), E_WRONG_PAYROLL_CAP);
+
+    let spendable = balance::value(&mandate.budget) - mandate.committed;
+    assert!(spendable > 0, E_NO_PAYROLL_FUNDS);
+
+    transfer::public_transfer(
+        coin::from_balance(mandate.budget.split(spendable), ctx),
+        mandate.employer,
+    );
+}
+
 public fun payroll_budget<T>(mandate: &PayrollMandate<T>): u64 {
     balance::value(&mandate.budget)
 }
@@ -333,6 +405,10 @@ public fun payroll_run_count<T>(mandate: &PayrollMandate<T>): u64 {
 
 public fun payroll_revoked<T>(mandate: &PayrollMandate<T>): bool {
     mandate.revoked
+}
+
+public fun payroll_approved_employees<T>(mandate: &PayrollMandate<T>): vector<address> {
+    mandate.approved_employees
 }
 
 public fun payroll_mandate_id<T>(mandate: &PayrollMandate<T>): ID {

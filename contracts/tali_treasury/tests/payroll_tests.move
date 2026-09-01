@@ -46,6 +46,7 @@ fun open_mandate(scenario: &mut test_scenario::Scenario) {
     let funding = coin::mint_for_testing<SUI>(FUNDING, scenario.ctx());
     let cap = payroll::create_payroll_mandate<SUI>(
         funding,
+        vector[WORKER],
         vector[EPF, SOCSO, EIS],
         vector[EPF_BPS, SOCSO_BPS, EIS_BPS],
         vector[0, WAGE_CAP, WAGE_CAP],
@@ -422,8 +423,11 @@ fun a_run_cannot_spend_what_a_stream_reserved() {
     open_mandate(&mut scenario);
     scenario.next_tx(EMPLOYER);
 
-    // Reserve all but a little of the budget.
-    open_stream_for(&mut scenario, 19_000 * RM, 1_000, 1_000 + 3_600_000);
+    // Reserve all but a little of the budget. Two streams, because a single
+    // one may not exceed the per-run ceiling.
+    open_stream_for(&mut scenario, 9_500 * RM, 1_000, 1_000 + 3_600_000);
+    scenario.next_tx(EMPLOYER);
+    open_stream_for(&mut scenario, 9_500 * RM, 1_000, 1_000 + 3_600_000);
     scenario.next_tx(EMPLOYER);
 
     let cap = scenario.take_from_sender<PayrollCap>();
@@ -438,6 +442,219 @@ fun a_run_cannot_spend_what_a_stream_reserved() {
     payroll::run_payroll(
         &cap, &mut mandate, WORKER, GROSS, NET, statutory(), &watch, scenario.ctx(),
     );
+
+    abort 0
+}
+
+// ------------------------------------------------------ where the money goes
+
+#[test]
+#[expected_failure(abort_code = 31)]
+fun payroll_cannot_be_run_to_an_unapproved_address() {
+    let mut scenario = test_scenario::begin(EMPLOYER);
+    open_mandate(&mut scenario);
+    scenario.next_tx(EMPLOYER);
+
+    let cap = scenario.take_from_sender<PayrollCap>();
+    let mut mandate = scenario.take_shared<PayrollMandate<SUI>>();
+    let mut watch = clock::create_for_testing(scenario.ctx());
+    watch.set_for_testing(1_000);
+
+    payroll::run_payroll(
+        &cap, &mut mandate, STRANGER, GROSS, NET, statutory(), &watch, scenario.ctx(),
+    );
+
+    abort 0
+}
+
+#[test]
+#[expected_failure(abort_code = 31)]
+fun a_stream_cannot_be_opened_to_an_unapproved_address() {
+    let mut scenario = test_scenario::begin(EMPLOYER);
+    open_mandate(&mut scenario);
+    scenario.next_tx(EMPLOYER);
+
+    let cap = scenario.take_from_sender<PayrollCap>();
+    let mut mandate = scenario.take_shared<PayrollMandate<SUI>>();
+
+    payroll::open_stream(
+        &cap, &mut mandate, STRANGER, GROSS, 0, 1_000, scenario.ctx(),
+    );
+
+    abort 0
+}
+
+/// Every floor is measured against a caller-supplied gross, so a gross of zero
+/// would turn all four of them into `amount >= 0` at once.
+#[test]
+#[expected_failure(abort_code = 23)]
+fun an_understated_gross_cannot_unlock_the_budget() {
+    let mut scenario = test_scenario::begin(EMPLOYER);
+    open_mandate(&mut scenario);
+    scenario.next_tx(EMPLOYER);
+
+    let cap = scenario.take_from_sender<PayrollCap>();
+    let mut mandate = scenario.take_shared<PayrollMandate<SUI>>();
+    let mut watch = clock::create_for_testing(scenario.ctx());
+    watch.set_for_testing(1_000);
+
+    payroll::run_payroll(
+        &cap,
+        &mut mandate,
+        WORKER,
+        0,
+        MAX_PER_RUN - 3,
+        vector[1, 1, 1],
+        &watch,
+        scenario.ctx(),
+    );
+
+    abort 0
+}
+
+#[test]
+#[expected_failure(abort_code = 32)]
+fun a_worker_cannot_be_paid_more_than_the_wage_they_earned() {
+    let mut scenario = test_scenario::begin(EMPLOYER);
+    open_mandate(&mut scenario);
+    scenario.next_tx(EMPLOYER);
+
+    let cap = scenario.take_from_sender<PayrollCap>();
+    let mut mandate = scenario.take_shared<PayrollMandate<SUI>>();
+    let mut watch = clock::create_for_testing(scenario.ctx());
+    watch.set_for_testing(1_000);
+
+    payroll::run_payroll(
+        &cap,
+        &mut mandate,
+        WORKER,
+        1 * RM,
+        5_000 * RM,
+        vector[1 * RM, 1 * RM, 1 * RM],
+        &watch,
+        scenario.ctx(),
+    );
+
+    abort 0
+}
+
+#[test]
+#[expected_failure(abort_code = 25)]
+fun a_stream_cannot_exceed_the_per_run_ceiling() {
+    let mut scenario = test_scenario::begin(EMPLOYER);
+    open_mandate(&mut scenario);
+    scenario.next_tx(EMPLOYER);
+
+    let cap = scenario.take_from_sender<PayrollCap>();
+    let mut mandate = scenario.take_shared<PayrollMandate<SUI>>();
+
+    payroll::open_stream(
+        &cap, &mut mandate, WORKER, FUNDING, 0, 1, scenario.ctx(),
+    );
+
+    abort 0
+}
+
+// --------------------------------------------------------- getting funds out
+
+#[test]
+fun the_employer_can_take_back_what_no_stream_has_claimed() {
+    let mut scenario = test_scenario::begin(EMPLOYER);
+    open_mandate(&mut scenario);
+    scenario.next_tx(EMPLOYER);
+
+    let cap = scenario.take_from_sender<PayrollCap>();
+    let mut mandate = scenario.take_shared<PayrollMandate<SUI>>();
+
+    payroll::open_stream(
+        &cap, &mut mandate, WORKER, 3_000 * RM, 0, 1_000, scenario.ctx(),
+    );
+    payroll::withdraw_payroll_remaining(&cap, &mut mandate, scenario.ctx());
+
+    assert!(payroll::payroll_budget(&mandate) == 3_000 * RM);
+    assert!(payroll::payroll_spendable(&mandate) == 0);
+
+    test_scenario::return_shared(mandate);
+    scenario.return_to_sender(cap);
+    scenario.next_tx(EMPLOYER);
+
+    assert!(balance_of(&scenario, EMPLOYER) == FUNDING - 3_000 * RM);
+
+    scenario.end();
+}
+
+/// Revoking stops new payments. It cannot un-earn wages already worked for.
+#[test]
+fun revoking_still_lets_a_worker_draw_what_they_already_earned() {
+    let mut scenario = test_scenario::begin(EMPLOYER);
+    open_mandate(&mut scenario);
+    scenario.next_tx(EMPLOYER);
+
+    let cap = scenario.take_from_sender<PayrollCap>();
+    let mut mandate = scenario.take_shared<PayrollMandate<SUI>>();
+    payroll::open_stream(
+        &cap, &mut mandate, WORKER, 3_000 * RM, 0, 1_000, scenario.ctx(),
+    );
+    payroll::revoke_payroll(&cap, &mut mandate);
+    test_scenario::return_shared(mandate);
+    scenario.return_to_sender(cap);
+
+    scenario.next_tx(WORKER);
+    let mut mandate = scenario.take_shared<PayrollMandate<SUI>>();
+    let mut stream = scenario.take_shared<SalaryStream<SUI>>();
+    let mut watch = clock::create_for_testing(scenario.ctx());
+    watch.set_for_testing(500);
+
+    payroll::withdraw_earned(&mut stream, &mut mandate, &watch, scenario.ctx());
+
+    assert!(payroll::stream_withdrawn(&stream) == 1_500 * RM);
+
+    watch.destroy_for_testing();
+    test_scenario::return_shared(stream);
+    test_scenario::return_shared(mandate);
+    scenario.end();
+}
+
+#[test]
+#[expected_failure(abort_code = 33)]
+fun a_mandate_cannot_be_created_with_a_floor_of_zero() {
+    let mut scenario = test_scenario::begin(EMPLOYER);
+    let funding = coin::mint_for_testing<SUI>(FUNDING, scenario.ctx());
+
+    let cap = payroll::create_payroll_mandate<SUI>(
+        funding,
+        vector[WORKER],
+        vector[EPF, SOCSO, EIS],
+        vector[0, SOCSO_BPS, EIS_BPS],
+        vector[0, WAGE_CAP, WAGE_CAP],
+        NET_BPS,
+        MAX_PER_RUN,
+        EXPIRY_MS,
+        scenario.ctx(),
+    );
+    transfer::public_transfer(cap, EMPLOYER);
+
+    abort 0
+}
+
+#[test]
+#[expected_failure(abort_code = 33)]
+fun a_mandate_cannot_be_created_with_nobody_to_pay() {
+    let mut scenario = test_scenario::begin(EMPLOYER);
+    let funding = coin::mint_for_testing<SUI>(FUNDING, scenario.ctx());
+
+    let cap = payroll::create_payroll_mandate<SUI>(
+        funding,
+        vector[],
+        vector[EPF, SOCSO, EIS],
+        vector[EPF_BPS, SOCSO_BPS, EIS_BPS],
+        vector[0, WAGE_CAP, WAGE_CAP],
+        NET_BPS,
+        MAX_PER_RUN,
+        EXPIRY_MS,
+        scenario.ctx(),
+    );
+    transfer::public_transfer(cap, EMPLOYER);
 
     abort 0
 }

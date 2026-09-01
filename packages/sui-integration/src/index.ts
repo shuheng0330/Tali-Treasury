@@ -24,6 +24,7 @@ export {
   buildRevokePayrollTransaction,
   buildRunPayrollTransaction,
   buildWithdrawEarnedTransaction,
+  buildWithdrawPayrollRemainingTransaction,
   readPayrollMandate,
   readSalaryStream,
 } from './payroll.js';

@@ -32,6 +32,10 @@ export const PAYROLL_ABORT_CODE = {
   NOTHING_ACCRUED: 28,
   WRONG_STREAM_MANDATE: 29,
   INVALID_STREAM_PERIOD: 30,
+  EMPLOYEE_NOT_APPROVED: 31,
+  NET_ABOVE_GROSS: 32,
+  INVALID_PAYROLL_TERMS: 33,
+  NO_PAYROLL_FUNDS: 34,
 } as const;
 
 const ERROR_DEFINITIONS = {
@@ -58,6 +62,10 @@ const ERROR_DEFINITIONS = {
   [PAYROLL_ABORT_CODE.NOTHING_ACCRUED]: ['NOTHING_ACCRUED', 'Nothing has accrued on this salary stream since the last withdrawal.'],
   [PAYROLL_ABORT_CODE.WRONG_STREAM_MANDATE]: ['WRONG_STREAM_MANDATE', 'This salary stream belongs to a different payroll mandate.'],
   [PAYROLL_ABORT_CODE.INVALID_STREAM_PERIOD]: ['INVALID_STREAM_PERIOD', 'A salary stream must end after it starts.'],
+  [PAYROLL_ABORT_CODE.EMPLOYEE_NOT_APPROVED]: ['EMPLOYEE_NOT_APPROVED', 'This mandate is not allowed to pay that address.'],
+  [PAYROLL_ABORT_CODE.NET_ABOVE_GROSS]: ['NET_ABOVE_GROSS', 'Take-home pay cannot be larger than the wage it comes from.'],
+  [PAYROLL_ABORT_CODE.INVALID_PAYROLL_TERMS]: ['INVALID_PAYROLL_TERMS', 'These mandate terms would not enforce anything. Check the floors, the run limit and the staff list.'],
+  [PAYROLL_ABORT_CODE.NO_PAYROLL_FUNDS]: ['NO_PAYROLL_FUNDS', 'Every remaining ringgit is already promised to an open salary stream.'],
 } as const satisfies Record<number, readonly [string, string]>;
 
 function errorText(error: unknown): string {
