@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { toDisplay } from '@tali/shared';
+import { EXPLORER, toDisplay } from '@tali/shared';
+import { tryRevokeMandate, type RevokeOutcome } from '@/lib/api/mandate';
 
 interface Props {
   eventName: string;
@@ -13,7 +14,17 @@ interface Props {
 
 export function RevokeDialog({ eventName, remaining, pendingCount, onCancel, onConfirm }: Props) {
   const [typed, setTyped] = useState('');
+  const [sending, setSending] = useState(false);
+  const [outcome, setOutcome] = useState<RevokeOutcome | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  async function confirm() {
+    setSending(true);
+    const result = await tryRevokeMandate({ confirm: typed, expected: eventName });
+    setSending(false);
+    setOutcome(result);
+    if (result.kind === 'revoked') onConfirm();
+  }
 
   useEffect(() => {
     inputRef.current?.focus();
@@ -35,12 +46,8 @@ export function RevokeDialog({ eventName, remaining, pendingCount, onCancel, onC
     >
       <div className="flex w-full max-w-md flex-col gap-4 rounded-modal border border-rule bg-surface p-6 shadow-float">
         <h2 id="revoke-title" className="text-heading">
-          Revocation preview for &ldquo;{eventName}&rdquo;
+          Revoke &ldquo;{eventName}&rdquo;
         </h2>
-
-        <p className="rounded-card border border-wait-line bg-wait-soft p-4 text-caption text-wait">
-          Simulation only. This integration does not sign or submit a revocation transaction.
-        </p>
 
         <div className="flex flex-col gap-3 text-body text-ink-2">
           <p>
@@ -71,21 +78,42 @@ export function RevokeDialog({ eventName, remaining, pendingCount, onCancel, onC
           />
         </label>
 
+        {outcome && outcome.kind !== 'revoked' ? (
+          <p className="rounded-card border border-wait-line bg-wait-soft p-4 text-caption text-wait">
+            <span className="font-medium">The mandate was not revoked.</span>{' '}
+            {outcome.kind === 'refused' ? outcome.message : outcome.reason}
+          </p>
+        ) : null}
+
+        {outcome?.kind === 'revoked' ? (
+          <p className="rounded-card border border-ok-line bg-ok-soft p-4 text-caption text-ok">
+            <span className="font-medium">Revoked.</span>{' '}
+            <a
+              className="link"
+              href={EXPLORER.tx(outcome.digest).suiscan}
+              target="_blank"
+              rel="noreferrer"
+            >
+              View the transaction
+            </a>
+          </p>
+        ) : null}
+
         <div className="flex justify-end gap-3 pt-1">
           <button
             type="button"
             onClick={onCancel}
             className="btn btn--ghost h-10 px-5 text-label"
           >
-            Cancel
+            {outcome ? 'Close' : 'Cancel'}
           </button>
           <button
             type="button"
-            disabled={typed !== eventName}
-            onClick={onConfirm}
+            disabled={typed !== eventName || sending || outcome?.kind === 'revoked'}
+            onClick={confirm}
             className="btn btn--primary h-10 px-5 text-label"
           >
-            Close preview
+            {sending ? 'Revoking…' : 'Revoke this mandate'}
           </button>
         </div>
       </div>

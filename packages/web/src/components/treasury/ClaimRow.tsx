@@ -48,9 +48,17 @@ interface Props {
   reviewing: boolean;
   onProcess: (id: string) => void;
   onReview: (id: string, action: ReviewAction, reason?: string) => void;
+  onPay: (id: string) => void;
 }
 
-export function ClaimRow({ item, processing, onProcess, onReview, reviewing }: Props) {
+export function ClaimRow({
+  item,
+  processing,
+  reviewing,
+  onProcess,
+  onReview,
+  onPay,
+}: Props) {
   const { claim, decision, agentNote, reason } = item;
   const [rejecting, setRejecting] = useState(false);
   const [note, setNote] = useState('');
@@ -106,7 +114,22 @@ export function ClaimRow({ item, processing, onProcess, onReview, reviewing }: P
       ) : null}
 
       <div className="ml-7 flex flex-wrap items-center gap-3">
-        {awaitingPolicy ? (
+        {claim.state === 'approved' ? (
+          <>
+            <button
+              type="button"
+              disabled={reviewing}
+              onClick={() => onPay(claim.id)}
+              className="btn btn--primary h-9 px-5 text-label"
+            >
+              {reviewing ? 'Paying…' : 'Release the payment'}
+            </button>
+            <p className="text-caption text-ink-3">
+              Approved. The transfer is a separate step, so a signing failure never
+              reads as a change of mind.
+            </p>
+          </>
+        ) : awaitingPolicy ? (
           <button
             type="button"
             disabled={processing}

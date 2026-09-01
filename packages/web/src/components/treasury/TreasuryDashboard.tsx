@@ -12,7 +12,7 @@ import { reviewQueue, settledClaims } from '@/lib/mock/api';
 import { settledFrom, toReviewQueue } from '@/lib/queue';
 import type { ReviewAction } from '@tali/shared';
 import { useClaims } from '@/lib/api/useClaims';
-import { tryReviewClaim } from '@/lib/api/review';
+import { tryPayClaim, tryReviewClaim } from '@/lib/api/review';
 import { tryProcessClaim } from '@/lib/api/demo';
 import { DataNotice } from '@/components/DataNotice';
 import { ClaimRow } from './ClaimRow';
@@ -95,6 +95,21 @@ export function TreasuryDashboard({ apiEnabled, initialMandate: mandate, readErr
     }
     /* Re-read rather than dropping the row locally. If the write lost a race
        the queue should show whose decision actually stands. */
+    live.reload();
+  }
+
+  async function pay(id: string) {
+    setReviewingId(id);
+    setFailure(null);
+    const result = await tryPayClaim(id);
+    setReviewingId(null);
+    if (result.data === null) {
+      setFailure({ verb: 'pay', detail: result.reason ?? 'the payment did not complete' });
+      return;
+    }
+    if (!result.data.payment.ok) {
+      setFailure({ verb: 'pay', detail: result.data.payment.message });
+    }
     live.reload();
   }
 
@@ -203,6 +218,7 @@ export function TreasuryDashboard({ apiEnabled, initialMandate: mandate, readErr
                   reviewing={reviewingId === item.claim.id}
                   onProcess={process}
                   onReview={review}
+                  onPay={pay}
                 />
               ))}
             </ul>

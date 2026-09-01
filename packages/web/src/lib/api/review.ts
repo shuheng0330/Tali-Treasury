@@ -1,4 +1,4 @@
-import type { Claim, ReviewAction } from '@tali/shared';
+import type { Claim, PaymentResult, ReviewAction } from '@tali/shared';
 import { TaliApiError, responseJson } from '@/lib/api/client';
 import { DEMO_TREASURER } from '@/lib/demo-config';
 import type { Sourced } from '@/lib/api/demo';
@@ -37,6 +37,24 @@ export async function tryReviewClaim(input: {
       }),
     });
     return { data: await responseJson<ReviewResponse>(response), source: 'live', reason: null };
+  } catch (error) {
+    return { data: null, source: 'mock', reason: describe(error) };
+  }
+}
+
+interface PayResponse {
+  claim: Claim;
+  payment: PaymentResult;
+}
+
+export async function tryPayClaim(claimId: string): Promise<Sourced<PayResponse | null>> {
+  try {
+    const response = await fetch(`/api/claims/${claimId}/pay`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ processor: DEMO_TREASURER }),
+    });
+    return { data: await responseJson<PayResponse>(response), source: 'live', reason: null };
   } catch (error) {
     return { data: null, source: 'mock', reason: describe(error) };
   }
