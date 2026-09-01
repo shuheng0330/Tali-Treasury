@@ -1,0 +1,98 @@
+import type { SuiGrpcClient } from '@mysten/sui/grpc';
+import type { Ed25519Keypair } from '@mysten/sui/keypairs/ed25519';
+import type { Transaction } from '@mysten/sui/transactions';
+
+/**
+ * Signing, submitting and reading the outcome of a Move call.
+ *
+ * Shared by the claims and payroll executors so that both read a refusal the
+ * same way. The abort code is the whole point of this system: a wrong or
+ * missing one turns "the contract refused to underpay EPF" into an unexplained
+ * failure.
+ */
+
+export interface PreparedTransaction {
+  bytes: Uint8Array;
+  signature: string;
+}
+
+export interface ConfirmedTransaction {
+  digest: string;
+  checkpoint: string | null;
+  status: { success: true; error: null } | { success: false; error: unknown };
+  gasUsed: {
+    computationCost: string;
+    storageCost: string;
+    storageRebate: string;
+    nonRefundableStorageFee: string;
+  };
+}
+
+export type ExecutionClient = Pick<
+  SuiGrpcClient,
+  'executeTransaction' | 'waitForTransaction'
+>;
+
+function asRecord(value: unknown): Record<string, unknown> | null {
+  return value !== null && typeof value === 'object' && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : null;
+}
+
+export function moveAbortCode(value: unknown): number | null {
+  const error = asRecord(value);
+  if (!error) return null;
+  const moveAbort = asRecord(error.MoveAbort);
+  if (error.$kind !== 'MoveAbort' || !moveAbort) return null;
+  const code = moveAbort.abortCode;
+  if (typeof code !== 'string' && typeof code !== 'number') return null;
+  const parsed = Number(code);
+  return Number.isSafeInteger(parsed) ? parsed : null;
+}
+
+export function netGasUsed(gas: ConfirmedTransaction['gasUsed']): string {
+  const netGas =
+    BigInt(gas.computationCost) +
+    BigInt(gas.storageCost) +
+    BigInt(gas.nonRefundableStorageFee) -
+    BigInt(gas.storageRebate);
+  return (netGas < 0n ? 0n : netGas).toString();
+}
+
+export async function signTransaction(input: {
+  transaction: Transaction;
+  keypair: Ed25519Keypair;
+  client: SuiGrpcClient;
+}): Promise<PreparedTransaction> {
+  input.transaction.setSenderIfNotSet(input.keypair.toSuiAddress());
+  const bytes = await input.transaction.build({ client: input.client });
+  const { signature } = await input.keypair.signTransaction(bytes);
+  return { bytes, signature };
+}
+
+export async function submitTransaction(
+  client: ExecutionClient,
+  prepared: PreparedTransaction,
+): Promise<ConfirmedTransaction> {
+  const submitted = await client.executeTransaction({
+    transaction: prepared.bytes,
+    signatures: [prepared.signature],
+    include: { effects: true },
+  });
+  const confirmed = await client.waitForTransaction({
+    result: submitted,
+    include: { effects: true },
+  });
+  const transaction =
+    confirmed.$kind === 'Transaction' ? confirmed.Transaction : confirmed.FailedTransaction;
+  if (!transaction.effects) {
+    throw new Error('Confirmed transaction did not include effects');
+  }
+
+  return {
+    digest: transaction.digest,
+    checkpoint: transaction.checkpoint,
+    status: transaction.status,
+    gasUsed: transaction.effects.gasUsed,
+  };
+}

@@ -1,7 +1,8 @@
-import type { ClaimChip, MandateStatus } from '@tali/shared';
+import type { ClaimChip, MandateStatus, PayrollRunStatus } from '@tali/shared';
 import { CLAIM_CHIP_LABEL } from '@tali/shared';
 
-export type ChipStatus = ClaimChip | MandateStatus;
+/** `paid` means the same thing in all three, so the sets overlap by design. */
+export type ChipStatus = ClaimChip | MandateStatus | PayrollRunStatus;
 
 type Glyph = 'disc' | 'ring' | 'pulse' | 'wedge' | 'cross' | 'bar';
 
@@ -11,6 +12,11 @@ interface Style {
   className: string;
   dashed: boolean;
 }
+
+const PAYROLL_LABEL: Record<Exclude<PayrollRunStatus, 'paid'>, string> = {
+  pending: 'In flight',
+  failed: 'Refused',
+};
 
 const MANDATE_LABEL: Record<MandateStatus, string> = {
   active: 'Active',
@@ -28,6 +34,8 @@ const STYLES: Record<ChipStatus, Style> = {
   paid: { label: CLAIM_CHIP_LABEL.paid, glyph: 'disc', className: 'bg-ok-soft text-ok border-ok-line', dashed: false },
   rejected: { label: CLAIM_CHIP_LABEL.rejected, glyph: 'cross', className: 'bg-no-soft text-no border-no-line', dashed: false },
   payment_failed: { label: CLAIM_CHIP_LABEL.payment_failed, glyph: 'cross', className: 'bg-no-soft text-no border-no-line', dashed: false },
+  pending: { label: PAYROLL_LABEL.pending, glyph: 'pulse', className: 'bg-accent-soft text-accent-ink border-accent-line', dashed: false },
+  failed: { label: PAYROLL_LABEL.failed, glyph: 'cross', className: 'bg-no-soft text-no border-no-line', dashed: false },
   active: { label: MANDATE_LABEL.active, glyph: 'disc', className: 'bg-ok-soft text-ok border-ok-line', dashed: false },
   expired: { label: MANDATE_LABEL.expired, glyph: 'bar', className: 'bg-dead-soft text-dead border-dead-line', dashed: false },
   revoked: { label: MANDATE_LABEL.revoked, glyph: 'bar', className: 'bg-dead-soft text-dead border-dead-line', dashed: true },

@@ -12,6 +12,11 @@ export function DataNotice({
   live,
   simulated,
   plural = false,
+  /**
+   * What the fallback actually is, when it is not sample data. Records held in
+   * memory are real; calling them a sample would be its own inaccuracy.
+   */
+  fallbackLabel = 'Sample data.',
 }: {
   source: Source;
   reason: string | null;
@@ -21,6 +26,7 @@ export function DataNotice({
   simulated: string;
   /** Set when `live` names more than one thing. */
   plural?: boolean;
+  fallbackLabel?: string;
 }) {
   const isLive = source === 'live';
 
@@ -39,7 +45,7 @@ export function DataNotice({
         </>
       ) : (
         <>
-          <span className="font-medium">Sample data.</span>{' '}
+          <span className="font-medium">{fallbackLabel}</span>{' '}
           <span className="text-ink-2">
             {reason ? `${live} fell back because ${reason}. ` : ''}
             {simulated}

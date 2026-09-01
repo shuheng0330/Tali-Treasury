@@ -29,10 +29,11 @@ Last updated: 1 September 2026 (MYT)
   terminal persistence and reconciliation-safe uncertain submissions;
 - lazy server-only Ed25519 and `AgentCap` configuration with preparation separated
   from submission and fake-operation verification that never broadcasts;
-- 191 web Vitest tests and 14 Sui integration tests passing, including review,
+- 295 web Vitest tests and 45 Sui integration tests passing after merging PR #17,
+  including review,
   audit mapping, malformed input, concurrency, sanitization and idempotency;
-- 16 new pgTAP review assertions are defined; local execution is pending Docker
-  Desktop availability, alongside the existing 42 passing assertions;
+- all 58 pgTAP assertions pass after replaying the complete local migration chain,
+  including the 16 review persistence, constraint, RLS, grant and trigger checks;
 - web TypeScript check passing at the API checkpoint.
 
 ## Hosted schema verified
@@ -49,12 +50,12 @@ Last updated: 1 September 2026 (MYT)
 
 ## Environment note
 
-Docker Desktop 4.66.1 is operational after resetting its inaccessible Windows
-runtime sockets and data disk. The full local Supabase stack now starts with its
-optional analytics services disabled, avoiding Docker's unauthenticated TCP port
-2375 while retaining Database, Auth, Storage, REST, Realtime, Edge Runtime,
-Mailpit and Studio. Keep at least 20 GB free on C: and stop the stack when it is
-not needed.
+Docker Desktop 4.66.1 is operational after backing up its inaccessible transient
+Windows runtime sockets and explicitly disabling the unused Model Runner feature.
+No images, volumes or project data were removed. The local Supabase stack is
+running and has replayed all migrations through
+`20260901020000_claim_review_actions.sql`. Keep at least 20 GB free on C: and stop
+the stack when it is not needed.
 
 ## Pending integration
 

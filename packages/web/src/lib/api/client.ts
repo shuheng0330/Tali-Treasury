@@ -28,7 +28,7 @@ export class TaliApiError extends Error {
   }
 }
 
-async function responseJson<T>(response: Response): Promise<T> {
+export async function responseJson<T>(response: Response): Promise<T> {
   let body: unknown;
   try {
     body = await response.json();

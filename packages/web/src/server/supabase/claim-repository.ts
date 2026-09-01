@@ -105,16 +105,8 @@ const CLAIM_COLUMNS = `
   event_members!claims_active_member_fk(display_name)
 `;
 
-const PROCESS_COLUMNS = `
-  ${CLAIM_COLUMNS},
-  events!inner(
-    treasurer_wallet,
-    mandate_object_id,
-    allowed_categories,
-    starts_at,
-    expires_at
-  )
-`;
+const EVENT_POLICY_COLUMNS =
+  'treasurer_wallet, mandate_object_id, allowed_categories, starts_at, expires_at';
 
 const CANONICAL_SUI_ID = /^0x[0-9a-f]{64}$/;
 const REVIEW_ACTIONS: readonly ClaimReviewAction[] = [
@@ -234,21 +226,48 @@ function query(client: SupabaseDataClient, table: string): QueryBuilder {
 export function createSupabaseClaimRepository(
   client: SupabaseDataClient,
 ): ClaimRepository {
+  /*
+   * Two reads rather than an embed. `claims.event_id` reaches an event only
+   * through the composite key that ties a claim to a member of that event, so
+   * PostgREST cannot resolve `events!inner(...)` and answers PGRST200, which
+   * surfaced as a blanket 500 on every claim. Fetching the event by id needs no
+   * inferable relationship.
+   */
   async function getProcessContext(claimId: string) {
-    const { data, error } = await query(client, 'claims')
-      .select(PROCESS_COLUMNS)
+    const { data: claimRow, error: claimError } = await query(client, 'claims')
+      .select(CLAIM_COLUMNS)
       .eq('id', claimId)
       .maybeSingle();
 
-    if (error && error.code !== 'PGRST116') {
-      throw databaseFailure(error);
+    if (claimError && claimError.code !== 'PGRST116') {
+      throw databaseFailure(claimError);
     }
-    if (!data) {
+    if (!claimRow) {
       throw new ServerError('claim_not_found', 404, 'Claim not found', {
-        cause: error ?? undefined,
+        cause: claimError ?? undefined,
       });
     }
-    return mapProcessRow(data);
+
+    const eventId = (claimRow as { event_id?: unknown }).event_id;
+    if (typeof eventId !== 'string') {
+      throw databaseFailure(null);
+    }
+
+    const { data: eventRow, error: eventError } = await query(client, 'events')
+      .select(EVENT_POLICY_COLUMNS)
+      .eq('id', eventId)
+      .maybeSingle();
+
+    if (eventError && eventError.code !== 'PGRST116') {
+      throw databaseFailure(eventError);
+    }
+    if (!eventRow) {
+      throw new ServerError('event_not_found', 404, 'Event not found', {
+        cause: eventError ?? undefined,
+      });
+    }
+
+    return mapProcessRow({ ...(claimRow as object), events: eventRow });
   }
 
   async function mutatePayment(input: {

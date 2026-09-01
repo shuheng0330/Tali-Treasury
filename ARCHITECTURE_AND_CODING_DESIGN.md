@@ -42,6 +42,10 @@ and its cap and budget checks remain deferred until a future quote module stores
 explicit converted USDC payout. The original analysis remains unchanged when a
 member corrects the confirmed claim fields.
 
+The claim boundary and database accept three-letter ISO currency codes plus the
+explicit four-letter `USDC` asset symbol. This keeps validation narrow while
+allowing the configured payment asset to persist end to end.
+
 ## Database design
 
 - `events` stores organisation, treasurer, mandate object, allowed categories and
@@ -201,6 +205,11 @@ created the fixed demo event and Kian Xiang membership; migration
 `20260831010000` added Shu Heng and Lim Wey Cheng without rewriting the applied
 seed or deleting other members. Both migrations were applied to the hosted
 project and the three active mappings were catalog-verified on 31 August 2026.
+
+After PR #17, migration `20260901000000` adds the direct claims-to-events
+relationship and `20260901010000` adds payroll runs. Review persistence therefore
+uses `20260901020000_claim_review_actions.sql`, preserving a unique chronological
+migration version.
 
 Local Logflare analytics and its Vector collector are intentionally disabled. On
 Windows the collector otherwise requires Docker Desktop's unauthenticated TCP API

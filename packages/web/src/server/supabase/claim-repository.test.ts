@@ -62,16 +62,20 @@ const row = {
   event_members: { display_name: 'Lim Wey Cheng' },
 };
 
-const processRow = {
-  ...row,
-  events: {
-    treasurer_wallet: treasurer,
-    mandate_object_id: mandateId,
-    allowed_categories: ['printing'],
-    starts_at: '2026-08-29T00:00:00.000Z',
-    expires_at: '2026-09-05T23:59:59.000Z',
-  },
+const eventRow = {
+  treasurer_wallet: treasurer,
+  mandate_object_id: mandateId,
+  allowed_categories: ['printing'],
+  starts_at: '2026-08-29T00:00:00.000Z',
+  expires_at: '2026-09-05T23:59:59.000Z',
 };
+
+/**
+ * The process context is two reads, not an embed: the claim, then its event.
+ * `claims.event_id` reaches an event only through the composite membership key,
+ * so PostgREST cannot resolve `events!inner(...)`.
+ */
+const processRow = { ...row, events: eventRow };
 
 const decision: PolicyDecision = {
   outcome: 'auto_pay',
@@ -225,6 +229,7 @@ describe('createSupabaseClaimRepository', () => {
             },
             error: null,
           },
+          { data: processRow.events, error: null },
         ],
       }),
     );
@@ -266,7 +271,10 @@ describe('createSupabaseClaimRepository', () => {
   it('loads a claim with its trusted event processing context', async () => {
     const repository = createSupabaseClaimRepository(
       scriptedClient({
-        maybeSingle: { data: processRow, error: null },
+        maybeSingles: [
+          { data: row, error: null },
+          { data: eventRow, error: null },
+        ],
       }),
     );
 
@@ -416,9 +424,10 @@ describe('createSupabaseClaimRepository', () => {
         maybeSingles: [
           { data: null, error: null },
           {
-            data: { ...processRow, state: 'paying', decision },
+            data: { ...row, state: 'paying', decision },
             error: null,
           },
+          { data: eventRow, error: null },
         ],
       }),
     );
@@ -435,9 +444,10 @@ describe('createSupabaseClaimRepository', () => {
         maybeSingles: [
           { data: null, error: null },
           {
-            data: { ...processRow, state: 'paid', decision, payment },
+            data: { ...row, state: 'paid', decision, payment },
             error: null,
           },
+          { data: eventRow, error: null },
         ],
       }),
     );
@@ -452,7 +462,7 @@ describe('createSupabaseClaimRepository', () => {
 
   it('returns a stored decision when another processor wins the race', async () => {
     const winningRow = {
-      ...processRow,
+      ...row,
       state: 'awaiting_review',
       decision: { ...decision, outcome: 'review' },
     };
@@ -461,6 +471,7 @@ describe('createSupabaseClaimRepository', () => {
         maybeSingles: [
           { data: null, error: null },
           { data: winningRow, error: null },
+          { data: eventRow, error: null },
         ],
       }),
     );
@@ -487,13 +498,10 @@ describe('createSupabaseClaimRepository', () => {
 
     const malformed = createSupabaseClaimRepository(
       scriptedClient({
-        maybeSingle: {
-          data: {
-            ...processRow,
-            events: { ...processRow.events, starts_at: 'not-a-date' },
-          },
-          error: null,
-        },
+        maybeSingles: [
+          { data: row, error: null },
+          { data: { ...eventRow, starts_at: 'not-a-date' }, error: null },
+        ],
       }),
     );
     await expect(malformed.getProcessContext(row.id)).rejects.toMatchObject({
@@ -508,13 +516,10 @@ describe('createSupabaseClaimRepository', () => {
   ])('rejects a malformed joined %s', async (_label, eventOverrides) => {
     const repository = createSupabaseClaimRepository(
       scriptedClient({
-        maybeSingle: {
-          data: {
-            ...processRow,
-            events: { ...processRow.events, ...eventOverrides },
-          },
-          error: null,
-        },
+        maybeSingles: [
+          { data: row, error: null },
+          { data: { ...eventRow, ...eventOverrides }, error: null },
+        ],
       }),
     );
 
@@ -529,7 +534,8 @@ describe('createSupabaseClaimRepository', () => {
       scriptedClient({
         maybeSingles: [
           { data: null, error: null },
-          { data: processRow, error: null },
+          { data: row, error: null },
+          { data: eventRow, error: null },
         ],
       }),
     );

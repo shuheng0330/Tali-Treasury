@@ -1,4 +1,10 @@
 alter table public.claims
+  drop constraint claims_currency_valid,
+  add constraint claims_currency_valid check (
+    currency is null or currency ~ '^[A-Z]{3}$' or currency = 'USDC'
+  );
+
+alter table public.claims
   add column review_action text,
   add column reviewer_wallet text,
   add column review_reason text,

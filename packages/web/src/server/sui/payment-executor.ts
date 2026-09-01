@@ -11,6 +11,14 @@ import {
 } from '@tali/treasury-sui';
 
 import type { PaymentExecutor } from '../claims/ports';
+import {
+  moveAbortCode,
+  netGasUsed,
+  signTransaction,
+  submitTransaction,
+  type ConfirmedTransaction,
+  type PreparedTransaction,
+} from './transaction';
 
 export class PaymentConfigurationError extends Error {
   constructor() {
@@ -26,24 +34,8 @@ export class PaymentSubmissionUncertainError extends Error {
   }
 }
 
-export interface PreparedPayment {
-  bytes: Uint8Array;
-  signature: string;
-}
-
-export interface ConfirmedPayment {
-  digest: string;
-  checkpoint: string | null;
-  status:
-    | { success: true; error: null }
-    | { success: false; error: unknown };
-  gasUsed: {
-    computationCost: string;
-    storageCost: string;
-    storageRebate: string;
-    nonRefundableStorageFee: string;
-  };
-}
+export type PreparedPayment = PreparedTransaction;
+export type ConfirmedPayment = ConfirmedTransaction;
 
 export interface PaymentOperations {
   prepare(input: {
@@ -70,32 +62,6 @@ interface ExecutorOptions {
   now?: () => number;
 }
 
-function asRecord(value: unknown): Record<string, unknown> | null {
-  return value !== null && typeof value === 'object' && !Array.isArray(value)
-    ? (value as Record<string, unknown>)
-    : null;
-}
-
-function moveAbortCode(value: unknown): number | null {
-  const error = asRecord(value);
-  if (!error) return null;
-  const moveAbort = asRecord(error.MoveAbort);
-  if (error.$kind !== 'MoveAbort' || !moveAbort) return null;
-  const code = moveAbort.abortCode;
-  if (typeof code !== 'string' && typeof code !== 'number') return null;
-  const parsed = Number(code);
-  return Number.isSafeInteger(parsed) ? parsed : null;
-}
-
-function netGasUsed(gas: ConfirmedPayment['gasUsed']): string {
-  const netGas =
-    BigInt(gas.computationCost) +
-    BigInt(gas.storageCost) +
-    BigInt(gas.nonRefundableStorageFee) -
-    BigInt(gas.storageRebate);
-  return (netGas < 0n ? 0n : netGas).toString();
-}
-
 function createDefaultOperations(input: {
   keypair: Ed25519Keypair;
   config: TreasuryConfig;
@@ -105,37 +71,15 @@ function createDefaultOperations(input: {
 
   return {
     async prepare(payment) {
-      const transaction = buildSpendTransaction(input.config, payment);
-      transaction.setSenderIfNotSet(input.keypair.toSuiAddress());
-      const bytes = await transaction.build({ client });
-      const { signature } = await input.keypair.signTransaction(bytes);
-      return { bytes, signature };
+      return signTransaction({
+        transaction: buildSpendTransaction(input.config, payment),
+        keypair: input.keypair,
+        client,
+      });
     },
 
     async submit(payment) {
-      const submitted = await client.executeTransaction({
-        transaction: payment.bytes,
-        signatures: [payment.signature],
-        include: { effects: true },
-      });
-      const confirmed = await client.waitForTransaction({
-        result: submitted,
-        include: { effects: true },
-      });
-      const transaction =
-        confirmed.$kind === 'Transaction'
-          ? confirmed.Transaction
-          : confirmed.FailedTransaction;
-      if (!transaction.effects) {
-        throw new Error('Confirmed transaction did not include effects');
-      }
-
-      return {
-        digest: transaction.digest,
-        checkpoint: transaction.checkpoint,
-        status: transaction.status,
-        gasUsed: transaction.effects.gasUsed,
-      };
+      return submitTransaction(client, payment);
     },
 
     async readBudget(mandateId) {

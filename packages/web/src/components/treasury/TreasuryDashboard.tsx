@@ -50,13 +50,13 @@ export function TreasuryDashboard({ apiEnabled, initialMandate: mandate, readErr
 
   const live = useClaims(apiEnabled);
 
-  const queue = useMemo(() => {
-    const items =
+  const queue = useMemo(
+    () =>
       live.source === 'live' && mandate !== null
         ? toReviewQueue(live.claims)
-        : reviewQueue();
-    return items;
-  }, [live.source, live.claims, mandate]);
+        : reviewQueue(),
+    [live.source, live.claims, mandate],
+  );
 
   const paid = useMemo(
     () => (live.source === 'live' ? settledFrom(live.claims) : settledClaims()),
@@ -254,9 +254,7 @@ export function TreasuryDashboard({ apiEnabled, initialMandate: mandate, readErr
           remaining={mandate.remainingBudget}
           pendingCount={queue.length}
           onCancel={() => setConfirming(false)}
-          onConfirm={() => {
-            setConfirming(false);
-          }}
+          onConfirm={() => setConfirming(false)}
         />
       ) : null}
 

@@ -9,6 +9,8 @@ export type ServerErrorCode =
   | 'processor_forbidden'
   | 'reviewer_forbidden'
   | 'claim_not_found'
+  | 'payroll_run_not_found'
+  | 'stream_not_found'
   | 'processing_conflict'
   | 'mandate_read_failed'
   | 'payment_configuration_failed'
