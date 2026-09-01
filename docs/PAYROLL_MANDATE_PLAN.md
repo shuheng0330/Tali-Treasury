@@ -53,19 +53,30 @@ contribution is always ≥ the plain percentage of gross. The on-chain basis-poi
 therefore never rejects a correctly computed run.
 
 **D. One payment per statutory body, not per leg.** On chain, EPF receives a single amount
-covering both the employee and employer share (11% + 13% = 2400 bps for a local worker under
-60). Same for SOCSO (225 bps) and EIS (40 bps). The employee/employer breakdown is a UI
+covering both the employee and employer share. For a local worker under 60 that is 11% + 13%
+below RM5,000 and 11% + 12% above it. Same for SOCSO (225 bps) and EIS (40 bps). The employee/employer breakdown is a UI
 concern, not a chain concern. This keeps a run to four recipients instead of seven.
 
 **A mandate covers exactly one worker class, because the floors are fixed at creation.**
-A local worker under 60 contributes 2400 bps to EPF; a worker aged 60 or over contributes
-400 bps, and a foreign worker 400 bps. Those cannot share a mandate — the older worker's
+A local worker under 60 contributes 2300 or 2400 bps to EPF depending on the wage; a worker
+aged 60 or over contributes 400 bps, and a foreign worker 400 bps. Those cannot share a mandate — the older worker's
 correct payment would abort against the younger worker's floor.
 
 The demo mandate covers **local workers under 60** and its floors are set for that class.
 Other classes need their own mandate with their own basis points. This is a genuine
 property of the design, not a limitation to hide: the floor is only meaningful because it
 is specific. Say so on the screen rather than letting someone discover it by aborting.
+
+**SOCSO and EIS floors are measured against a capped wage.** Both stop growing at RM6,000
+of wages, so a floor expressed as a share of gross drops below the statutory rate for
+higher earners and refuses correct payroll. The mandate therefore stores a wage ceiling
+per body, and the contract measures each floor against `min(gross, ceiling)`. EPF has no
+ceiling below RM20,000, so its entry is zero.
+
+**The EPF floor is 2300 bps, not 2400.** The employer rate steps down from 13% to 12% above
+RM5,000, so a single mandate spanning that boundary must use the lower figure or it rejects
+every legitimate payroll above RM5,000 on code 24. 2300 bps still refuses a one-cent
+payment by a factor of two thousand, which is the bypass the floor exists to close.
 
 **E. New mandate objects with expiries past the pitch.** The current claim mandate expires
 **5 September 22:30 MYT**, before we present. No public function can extend an expiry, so
@@ -188,8 +199,10 @@ public struct PayrollMandate<phantom T> has key {
     employer: address,
     /// Statutory bodies, in a fixed order agreed at creation.
     statutory_recipients: vector<address>,
-    /// Parallel to statutory_recipients. Minimum share of gross, in basis points.
+    /// Parallel to statutory_recipients. Minimum share of the basis, in basis points.
     statutory_min_bps: vector<u64>,
+    /// Parallel too. Wage ceiling the floor is measured against; 0 means no ceiling.
+    statutory_wage_cap: vector<u64>,
     /// Minimum share of gross the worker must actually receive, in basis points.
     net_min_bps: u64,
     max_per_run: u64,
@@ -226,6 +239,7 @@ public fun create_payroll_mandate<T>(
     coin: Coin<T>,
     statutory_recipients: vector<address>,
     statutory_min_bps: vector<u64>,
+    statutory_wage_cap: vector<u64>,
     net_min_bps: u64,
     max_per_run: u64,
     expiry_ms: u64,
@@ -276,7 +290,8 @@ Exactly this order. The tests and the UI both depend on which code comes back fi
 3. `statutory_amounts.length() == mandate.statutory_recipients.length()` → 22
 4. `net > 0` → 23
 5. `net * 10000 >= gross * mandate.net_min_bps` → 24
-6. for each `i`: `statutory_amounts[i] * 10000 >= gross * mandate.statutory_min_bps[i]` → 24
+6. for each `i`, with `basis = if cap == 0 { gross } else { min(gross, cap) }`:
+   `statutory_amounts[i] * 10000 >= basis * mandate.statutory_min_bps[i]` → 24
 7. `total <= mandate.max_per_run` → 25
 8. `balance::value(&mandate.budget) - mandate.committed >= total` → 26
 9. `clock.timestamp_ms() < mandate.expiry_ms` → 27
@@ -405,7 +420,8 @@ and the contract agree on `available` to the base unit for a stream mid-period.
    record the new package ID and move on.
 3. Create the payroll mandate: expiry **30 September 2026**, `max_per_run` 50 USDC,
    `statutory_recipients` = three testnet addresses standing in for EPF, SOCSO and EIS,
-   `statutory_min_bps` = `[2400, 225, 40]`, `net_min_bps` = `7000`.
+   `statutory_min_bps` = `[2300, 225, 40]`,
+   `statutory_wage_cap` = `[0, 6_000_000000, 6_000_000000]`, `net_min_bps` = `7000`.
 4. Open one salary stream for the demo employee over a short period — an hour, not a month —
    so accrual is visible to the eye during a demo.
 5. **Re-create the claim mandate** with a 30 September expiry.
@@ -480,14 +496,20 @@ Required cases:
 - Rounding: a band producing `X.01` rounds up to `X + 1`
 - `net + sum(employee shares) === gross` for twenty wages across the range
 - Every returned amount is a non-negative `bigint`
-- **Floor conformance, for local workers under 60 only:** for every such wage tested,
-  `epf.total * 10000 >= gross * 2400`, `socso.total * 10000 >= gross * 225`,
-  `eis.total * 10000 >= gross * 40`, and `net * 10000 >= gross * 7000`. These are the exact
-  comparisons the contract makes; if a computed split fails one here, `run_payroll` will
-  abort on 24 in production.
+- **Floor conformance, for local workers under 60 only:** with
+  `socsoBasis = eisBasis = min(gross, RM6,000)` and `epfBasis = gross`, assert
+  `epf.total * 10000 >= epfBasis * 2300`, `socso.total * 10000 >= socsoBasis * 225`,
+  `eis.total * 10000 >= eisBasis * 40`, and `net * 10000 >= gross * 7000`. These are the
+  exact comparisons the contract makes; if a computed split fails one here, `run_payroll`
+  will abort on 24 in production.
+
+  **Measure SOCSO and EIS against the capped basis, not against gross.** Their
+  contributions stop growing at RM6,000 of wages, so a floor taken on gross falls below
+  the rate for anyone earning more — an RM6,800 salary contributes 199 bps of gross to
+  SOCSO against a 225 bps floor and would be refused despite being correct.
 
   **Do not apply this assertion to the age-60 or foreign-worker cases.** They contribute
-  400 bps to EPF, not 2400, and would fail a floor that was never meant for them — see
+  400 bps to EPF, not 2300, and would fail a floor that was never meant for them — see
   decision D. Those classes belong to a different mandate with different basis points, and
   the demo mandate does not accept them. Test their arithmetic, not their floor conformance.
 
@@ -708,9 +730,10 @@ creates the mandate in that order, S4 sends it in that order. If any one of the 
 diverges, money goes to the wrong body and every assert still passes. Fix the order in S1's
 type and do not vary it.
 
-**The basis points on the mandate must match the calculator.** S5 sets
-`[2400, 225, 40]` and `net_min_bps = 7000`; W2 asserts every computed split clears exactly
-those numbers. If either side changes, both change together, and the mandate has to be
+**The basis points and wage caps on the mandate must match the calculator.** S5 sets
+`statutory_min_bps = [2300, 225, 40]`, `statutory_wage_cap = [0, 6_000_000000, 6_000_000000]`
+and `net_min_bps = 7000`; W2 asserts every computed split clears exactly those numbers
+against the same basis. If either side changes, both change together, and the mandate has to be
 re-created because the values are fixed at creation.
 
 ## Checkpoint — Tuesday evening
