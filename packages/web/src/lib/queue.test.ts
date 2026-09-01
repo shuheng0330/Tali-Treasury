@@ -26,6 +26,7 @@ function claim(overrides: Partial<Claim> = {}): Claim {
     receiptHash: 'a'.repeat(64),
     analysis: null,
     decision,
+    review: null,
     payment: null,
     createdAtMs: 1,
     updatedAtMs: 1,

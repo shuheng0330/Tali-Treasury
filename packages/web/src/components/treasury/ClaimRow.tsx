@@ -1,5 +1,6 @@
+import { useState } from 'react';
 import { Money } from '@/components/Money';
-import type { ReviewQueueItem } from '@tali/shared';
+import type { ReviewAction, ReviewQueueItem } from '@tali/shared';
 
 function Verdict({ passed }: { passed: boolean }) {
   return passed ? (
@@ -44,11 +45,15 @@ function relative(atMs: number) {
 interface Props {
   item: ReviewQueueItem;
   processing: boolean;
+  reviewing: boolean;
   onProcess: (id: string) => void;
+  onReview: (id: string, action: ReviewAction, reason?: string) => void;
 }
 
-export function ClaimRow({ item, processing, onProcess }: Props) {
+export function ClaimRow({ item, processing, onProcess, onReview, reviewing }: Props) {
   const { claim, decision, agentNote, reason } = item;
+  const [rejecting, setRejecting] = useState(false);
+  const [note, setNote] = useState('');
   const immutableFailure = decision.checks.some((check) => check.onChain && !check.passed);
   const awaitingPolicy = claim.state === 'submitted' && claim.decision === null;
 
@@ -112,12 +117,10 @@ export function ClaimRow({ item, processing, onProcess }: Props) {
           </button>
         ) : (
           <>
-            {/* Disabled rather than wired to a local hide. A button that made
-                the row disappear, and let it return on the next read, would be
-                claiming a decision nobody recorded. */}
             <button
               type="button"
-              disabled
+              disabled={immutableFailure || reviewing}
+              onClick={() => onReview(claim.id, 'approve')}
               className="btn btn--primary h-9 px-5 text-label"
               title={
                 immutableFailure
@@ -125,19 +128,65 @@ export function ClaimRow({ item, processing, onProcess }: Props) {
                   : undefined
               }
             >
-              {immutableFailure ? 'Cannot approve' : 'Approve'}
+              {immutableFailure ? 'Cannot approve' : reviewing ? 'Recording…' : 'Approve'}
             </button>
-            <button type="button" disabled className="btn btn--ghost h-9 px-5 text-label">
+            <button
+              type="button"
+              disabled={reviewing}
+              onClick={() => setRejecting((open) => !open)}
+              className="btn btn--ghost h-9 px-5 text-label"
+            >
               Reject
             </button>
-            <p className="text-caption text-ink-3">
-              {immutableFailure
-                ? 'A rule the contract enforces already refuses this claim.'
-                : 'Recording a decision needs the review endpoint, which is not built yet.'}
-            </p>
+            {immutableFailure ? (
+              <p className="text-caption text-ink-3">
+                A rule the contract enforces already refuses this claim.
+              </p>
+            ) : null}
           </>
         )}
       </div>
+
+      {rejecting ? (
+        <form
+          className="ml-7 flex flex-col gap-2"
+          onSubmit={(event) => {
+            event.preventDefault();
+            onReview(claim.id, 'reject', note.trim());
+            setRejecting(false);
+            setNote('');
+          }}
+        >
+          <label className="text-caption text-ink-2" htmlFor={`reason-${claim.id}`}>
+            Why is this being rejected? The member reads this.
+          </label>
+          <textarea
+            id={`reason-${claim.id}`}
+            value={note}
+            onChange={(event) => setNote(event.target.value)}
+            rows={2}
+            maxLength={500}
+            required
+            className="w-full rounded-control border border-rule bg-surface px-3 py-2 text-body"
+          />
+          <div className="flex gap-2">
+            <button
+              type="submit"
+              disabled={note.trim().length === 0 || reviewing}
+              className="btn btn--primary h-9 px-5 text-label"
+            >
+              Record the rejection
+            </button>
+            <button
+              type="button"
+              onClick={() => setRejecting(false)}
+              className="btn btn--ghost h-9 px-5 text-label"
+            >
+              Cancel
+            </button>
+          </div>
+        </form>
+      ) : null}
     </li>
   );
 }

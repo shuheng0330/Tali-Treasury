@@ -10,7 +10,9 @@ import { StatusChip } from '@/components/StatusChip';
 import { event } from '@/lib/mock/data';
 import { reviewQueue, settledClaims } from '@/lib/mock/api';
 import { settledFrom, toReviewQueue } from '@/lib/queue';
+import type { ReviewAction } from '@tali/shared';
 import { useClaims } from '@/lib/api/useClaims';
+import { tryReviewClaim } from '@/lib/api/review';
 import { tryProcessClaim } from '@/lib/api/demo';
 import { DataNotice } from '@/components/DataNotice';
 import { ClaimRow } from './ClaimRow';
@@ -39,7 +41,8 @@ export function TreasuryDashboard({ apiEnabled, initialMandate: mandate, readErr
   const [tab, setTab] = useState<Tab>('review');
   const [confirming, setConfirming] = useState(false);
   const [processingId, setProcessingId] = useState<string | null>(null);
-  const [processError, setProcessError] = useState<string | null>(null);
+  const [failure, setFailure] = useState<{ verb: string; detail: string } | null>(null);
+  const [reviewingId, setReviewingId] = useState<string | null>(null);
 
   const live = useClaims(apiEnabled);
 
@@ -68,13 +71,30 @@ export function TreasuryDashboard({ apiEnabled, initialMandate: mandate, readErr
 
   async function process(id: string) {
     setProcessingId(id);
-    setProcessError(null);
+    setFailure(null);
     const result = await tryProcessClaim(id);
     setProcessingId(null);
     if (result.data === null) {
-      setProcessError(result.reason ?? 'claim processing failed');
+      setFailure({ verb: 'evaluate', detail: result.reason ?? 'claim processing failed' });
       return;
     }
+    live.reload();
+  }
+
+  async function review(id: string, action: ReviewAction, reason?: string) {
+    setReviewingId(id);
+    setFailure(null);
+    const result = await tryReviewClaim({ claimId: id, action, reason });
+    setReviewingId(null);
+    if (result.data === null) {
+      setFailure({
+        verb: action === 'approve' ? 'approve' : 'record a decision on',
+        detail: result.reason ?? 'the decision was not recorded',
+      });
+      return;
+    }
+    /* Re-read rather than dropping the row locally. If the write lost a race
+       the queue should show whose decision actually stands. */
     live.reload();
   }
 
@@ -132,9 +152,9 @@ export function TreasuryDashboard({ apiEnabled, initialMandate: mandate, readErr
             live="The claim queue"
             simulated="Evaluating a claim runs the real policy engine and is persisted. Approving, rejecting and paying are not built yet, and their controls say so."
           />
-          {processError ? (
+          {failure ? (
             <p className="mt-3 rounded-control border border-no-line bg-no-soft p-3 text-caption text-no" role="alert">
-              Could not evaluate the claim: {processError}.
+              Could not {failure.verb} the claim: {failure.detail}.
             </p>
           ) : null}
         </div>
@@ -180,7 +200,9 @@ export function TreasuryDashboard({ apiEnabled, initialMandate: mandate, readErr
                   key={item.claim.id}
                   item={item}
                   processing={processingId === item.claim.id}
+                  reviewing={reviewingId === item.claim.id}
                   onProcess={process}
+                  onReview={review}
                 />
               ))}
             </ul>

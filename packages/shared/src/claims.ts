@@ -45,6 +45,22 @@ export type ClaimChip =
   | 'rejected'
   | 'payment_failed';
 
+export type ReviewAction = 'approve' | 'reject' | 'request_correction';
+
+/**
+ * What a treasurer decided about a claim the policy engine sent to review.
+ *
+ * Kept apart from `PolicyDecision`, which is the engine's own output. They are
+ * different authorities, and merging them would lose which one spoke.
+ */
+export interface ClaimReview {
+  action: ReviewAction;
+  reviewer: Address;
+  reviewedAt: string;
+  /** Required for a rejection or a correction request, absent on approval. */
+  reason?: string;
+}
+
 export const CLAIM_CHIP: Record<ClaimState, ClaimChip> = {
   draft: 'draft',
   analysing: 'analysing',
@@ -152,6 +168,7 @@ export interface Claim {
   receiptHash: string;
   analysis: ReceiptAnalysis | null;
   decision: PolicyDecision | null;
+  review: ClaimReview | null;
   payment: PaymentResult | null;
   createdAtMs: number;
   updatedAtMs: number;

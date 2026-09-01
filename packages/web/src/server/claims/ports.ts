@@ -1,6 +1,7 @@
 import type {
   Address,
   Claim,
+  ClaimReview,
   CreateClaimRequest,
   MandateView,
   ObjectId,
@@ -32,6 +33,14 @@ export interface ClaimProcessContext {
 }
 
 export type ProcessedClaimState = 'approved' | 'awaiting_review' | 'rejected';
+
+/** Where a treasurer's decision can leave a claim. */
+export type ReviewedClaimState = 'approved' | 'rejected' | 'needs_correction';
+
+export type SaveReviewResult =
+  | { status: 'saved'; claim: Claim }
+  /** Somebody else reviewed it first. Their decision stands. */
+  | { status: 'lost_race'; claim: Claim };
 
 export type SaveDecisionResult =
   | { status: 'saved'; claim: Claim }
@@ -77,6 +86,11 @@ export interface ClaimRepository {
     decision: PolicyDecision;
     state: ProcessedClaimState;
   }): Promise<SaveDecisionResult>;
+  saveReview(input: {
+    claimId: string;
+    review: ClaimReview;
+    state: ReviewedClaimState;
+  }): Promise<SaveReviewResult>;
   reservePayment(claimId: string): Promise<PaymentMutationResult>;
   failApprovedPayment(input: {
     claimId: string;

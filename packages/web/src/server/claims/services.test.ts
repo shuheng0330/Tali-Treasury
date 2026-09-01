@@ -58,6 +58,7 @@ const claim: Claim = {
   receiptHash,
   analysis,
   decision: null,
+  review: null,
   payment: null,
   createdAtMs: 1_788_048_000_000,
   updatedAtMs: 1_788_048_000_000,
@@ -100,6 +101,7 @@ const approvedClaim: Claim = {
   ...processContext.claim,
   state: 'approved',
   decision: approvedDecision,
+  review: null,
 };
 const payment: PaymentResult = {
   ok: true,
@@ -136,6 +138,7 @@ function createRepository(overrides: Partial<ClaimRepository> = {}): ClaimReposi
     findDuplicateReceipt: vi.fn(async () => null),
     create: vi.fn(async () => claim),
     listByEvent: vi.fn(async () => []),
+    saveReview: vi.fn(async () => ({ status: 'saved' as const, claim })),
     getProcessContext: vi.fn(),
     saveDecision: vi.fn(),
     reservePayment: vi.fn(),
@@ -430,6 +433,7 @@ describe('createProcessClaimService', () => {
       ...claim,
       state: 'awaiting_review',
       decision: storedDecision,
+      review: null,
     };
     const claims = createRepository({
       getProcessContext: vi.fn(async () => ({
@@ -731,6 +735,7 @@ describe('createProcessClaimService', () => {
           ...claim,
           state: input.state,
           decision: input.decision,
+          review: null,
         },
       }));
       const claims = createRepository({
@@ -772,6 +777,7 @@ describe('createProcessClaimService', () => {
       ...claim,
       state: 'awaiting_review',
       decision: winningDecision,
+      review: null,
     };
     const claims = createRepository({
       getProcessContext: vi.fn(async () => processContext),
