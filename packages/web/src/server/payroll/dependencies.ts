@@ -3,7 +3,10 @@ import type { PayrollBreakdown, PayrollRunView } from '@tali/shared';
 import { ServerError } from '../errors';
 import type { EnvLike } from '../env';
 import { createSuiPayrollExecutor } from '../sui/payroll-executor';
+import { createServerSupabaseClient } from '../supabase/client';
+import { createSupabasePayrollRunRepository } from '../supabase/payroll-run-repository';
 import { createPayrollService, type PayrollService } from './service';
+import { fallbackStore, memoryOnlyStore, type PayrollRunStore } from './run-store';
 import type {
   PayrollChainPort,
   PayrollRunRepository,
@@ -11,13 +14,31 @@ import type {
 } from './ports';
 
 /**
- * Runs are held in memory until the Supabase tables exist. They survive a
- * page navigation, not a restart, which is enough for a preview and honest
- * about what it is.
+ * Held on `globalThis` rather than in a module variable.
+ *
+ * A route handler and a page are separate module instances under Turbopack, so
+ * a plain module-level Map gave the API one set of runs and the history screen
+ * an empty one. Anything reached from both has to outlive the module.
+ */
+const MEMORY_RUNS = Symbol.for('tali.payroll.memoryRuns');
+
+interface MemoryState {
+  runs: Map<string, PayrollRunView>;
+  sequence: number;
+}
+
+function memoryState(): MemoryState {
+  const host = globalThis as unknown as Record<symbol, MemoryState | undefined>;
+  host[MEMORY_RUNS] ??= { runs: new Map(), sequence: 0 };
+  return host[MEMORY_RUNS];
+}
+
+/**
+ * Where a run lives when the database cannot take it. Survives a page
+ * navigation, not a restart, and the history screen says so.
  */
 function memoryRepository(): PayrollRunRepository {
-  const runs = new Map<string, PayrollRunView>();
-  let sequence = 0;
+  const { runs } = memoryState();
 
   const update = (id: string, patch: Partial<PayrollRunView>): PayrollRunView => {
     const existing = runs.get(id);
@@ -29,9 +50,10 @@ function memoryRepository(): PayrollRunRepository {
 
   return {
     async create({ employee, breakdown }) {
-      sequence += 1;
+      const state = memoryState();
+      state.sequence += 1;
       const view: PayrollRunView = {
-        id: `run-${sequence}`,
+        id: `run-${state.sequence}`,
         employee,
         breakdown: breakdown as PayrollBreakdown,
         status: 'pending',
@@ -105,15 +127,35 @@ function recipients(): StatutoryRecipientConfig {
   };
 }
 
+function runStore(): PayrollRunStore {
+  const memory = memoryRepository();
+  try {
+    return fallbackStore(
+      createSupabasePayrollRunRepository(createServerSupabaseClient() as never),
+      memory,
+    );
+  } catch {
+    return memoryOnlyStore(memory, 'Supabase is not configured');
+  }
+}
+
 let service: PayrollService | undefined;
+let store: PayrollRunStore | undefined;
 
 export function getPayrollService(): PayrollService {
   if (!service) {
+    store = runStore();
     service = createPayrollService({
-      runs: memoryRepository(),
+      runs: store,
       chain: payrollIsLive() ? createSuiPayrollExecutor() : unconfiguredChain(),
       recipients: recipients(),
     });
   }
   return service;
+}
+
+/** Whether the runs just read or written will outlive the process. */
+export function payrollRunsArePersisted(): { persisted: boolean; reason: string | null } {
+  getPayrollService();
+  return { persisted: store?.persisted() ?? false, reason: store?.reason() ?? null };
 }

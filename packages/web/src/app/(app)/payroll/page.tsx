@@ -24,9 +24,14 @@ export default function PayrollPage() {
 
       <PayrollDesk staff={sampleStaff} runsAreLive={payrollIsLive()} />
 
-      <Link href="/payroll/proof" className="btn btn--ghost btn--block">
-        Try underpaying EPF
-      </Link>
+      <div className="flex flex-col gap-3">
+        <Link href="/payroll/proof" className="btn btn--ghost btn--block">
+          Try underpaying EPF
+        </Link>
+        <Link href="/payroll/history" className="link self-start">
+          What has been run
+        </Link>
+      </div>
     </div>
   );
 }
