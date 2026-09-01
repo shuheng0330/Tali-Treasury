@@ -4,8 +4,12 @@
 -- the process endpoint returns a generic 500.
 --
 -- The relationship is already guaranteed transitively, so this constraint adds
--- no new restriction. It states the relationship directly, which is what the
--- embed needs.
+-- no new restriction. It states the relationship directly.
+--
+-- The process endpoint no longer depends on it: that query reads the claim and
+-- its event separately rather than asking PostgREST to join them. This is kept
+-- because referential integrity between a claim and its event should be stated
+-- rather than inferred from a membership key, and applying it costs nothing.
 
 alter table public.claims
   add constraint claims_event_id_fkey
