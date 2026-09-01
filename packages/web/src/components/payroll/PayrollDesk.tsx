@@ -82,9 +82,8 @@ export function PayrollDesk({ staff }: { staff: SampleEmployee[] }) {
       <DataNotice
         source={source}
         reason={reason}
-        live="Payroll runs and the statutory split"
-        plural
-        simulated="Figures follow the EPF Third Schedule bands and the RM6,000 SOCSO and EIS ceilings."
+        live="The statutory split"
+        simulated="Figures follow the EPF Third Schedule bands and the RM6,000 SOCSO and EIS ceilings. Paying a run still needs the payroll module on chain."
       />
 
       <div className="flex flex-col gap-3">
