@@ -1,5 +1,6 @@
 import { Money } from '@/components/Money';
-import type { ReviewQueueItem } from '@tali/shared';
+import type { ClaimReviewAction, ReviewQueueItem } from '@tali/shared';
+import { approvalBlockReason } from '@/lib/review-actions';
 
 function Verdict({ passed }: { passed: boolean }) {
   return passed ? (
@@ -44,15 +45,16 @@ function relative(atMs: number) {
 interface Props {
   item: ReviewQueueItem;
   processing: boolean;
+  pendingAction: ClaimReviewAction | null;
   onProcess: (id: string) => void;
-  onApprove: (id: string) => void;
-  onReject: (id: string) => void;
+  onReview: (id: string, action: ClaimReviewAction) => void;
 }
 
-export function ClaimRow({ item, processing, onProcess, onApprove, onReject }: Props) {
+export function ClaimRow({ item, processing, pendingAction, onProcess, onReview }: Props) {
   const { claim, decision, agentNote, reason } = item;
-  const immutableFailure = decision.checks.some((check) => check.onChain && !check.passed);
+  const approvalBlocked = approvalBlockReason(claim, decision);
   const awaitingPolicy = claim.state === 'submitted' && claim.decision === null;
+  const reviewPending = pendingAction !== null;
 
   return (
     <li className="flex flex-col gap-3 px-4 py-4">
@@ -116,19 +118,34 @@ export function ClaimRow({ item, processing, onProcess, onApprove, onReject }: P
           <>
             <button
               type="button"
-              disabled={immutableFailure}
-              onClick={() => onApprove(claim.id)}
+              disabled={approvalBlocked !== null || reviewPending}
+              onClick={() => onReview(claim.id, 'approve')}
               className="btn btn--primary h-9 px-5 text-label"
-              title={immutableFailure ? 'This claim violates an immutable on-chain rule' : undefined}
+              title={approvalBlocked ?? undefined}
             >
-              {immutableFailure ? 'Cannot approve' : 'Approve demo'}
+              {approvalBlocked
+                ? 'Cannot approve'
+                : pendingAction === 'approve'
+                  ? 'Approving…'
+                  : 'Approve'}
             </button>
             <button
               type="button"
-              onClick={() => onReject(claim.id)}
+              disabled={reviewPending}
+              onClick={() => onReview(claim.id, 'reject')}
+              className="btn btn--danger h-9 px-5 text-label"
+            >
+              {pendingAction === 'reject' ? 'Rejecting…' : 'Reject'}
+            </button>
+            <button
+              type="button"
+              disabled={reviewPending}
+              onClick={() => onReview(claim.id, 'request_correction')}
               className="btn btn--ghost h-9 px-5 text-label"
             >
-              Reject demo
+              {pendingAction === 'request_correction'
+                ? 'Requesting…'
+                : 'Request correction'}
             </button>
           </>
         )}

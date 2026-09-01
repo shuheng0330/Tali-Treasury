@@ -4,8 +4,17 @@ import type {
   CreateClaimRequest,
   CreateClaimResponse,
   ProcessClaimResponse,
+  ReviewClaimRequest,
+  ReviewClaimResponse,
 } from '@tali/shared';
-import { analyzeReceipt, createClaim, listClaims, processClaim, TaliApiError } from '@/lib/api/client';
+import {
+  analyzeReceipt,
+  createClaim,
+  listClaims,
+  processClaim,
+  reviewClaim,
+  TaliApiError,
+} from '@/lib/api/client';
 import { DEMO_EVENT_ID, DEMO_SUBMITTER, DEMO_TREASURER } from '@/lib/demo-config';
 import { recentClaims } from '@/lib/mock/api';
 
@@ -84,6 +93,24 @@ export async function tryProcessClaim(
 ): Promise<Sourced<ProcessClaimResponse | null>> {
   try {
     const data = await processClaim(claimId, DEMO_TREASURER);
+    return { data, source: 'live', reason: null };
+  } catch (error) {
+    return { data: null, source: 'mock', reason: describe(error) };
+  }
+}
+
+export async function tryReviewClaim(
+  claimId: string,
+  request:
+    | { action: 'approve'; reason?: string }
+    | { action: 'reject'; reason: string }
+    | { action: 'request_correction'; reason: string },
+): Promise<Sourced<ReviewClaimResponse | null>> {
+  try {
+    const data = await reviewClaim(claimId, {
+      ...request,
+      reviewer: DEMO_TREASURER,
+    } as ReviewClaimRequest);
     return { data, source: 'live', reason: null };
   } catch (error) {
     return { data: null, source: 'mock', reason: describe(error) };

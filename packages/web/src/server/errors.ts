@@ -7,6 +7,7 @@ export type ServerErrorCode =
   | 'event_not_found'
   | 'member_not_found'
   | 'processor_forbidden'
+  | 'reviewer_forbidden'
   | 'claim_not_found'
   | 'processing_conflict'
   | 'mandate_read_failed'

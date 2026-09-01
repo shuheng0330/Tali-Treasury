@@ -1,6 +1,8 @@
 import { EXPENSE_CATEGORIES } from '@tali/shared';
 import type {
   Claim,
+  ClaimReview,
+  ClaimReviewAction,
   ClaimState,
   CreateClaimRequest,
   ExpenseCategory,
@@ -57,6 +59,10 @@ interface ClaimRow {
   description: string;
   receipt_analysis: ReceiptAnalysis;
   decision: PolicyDecision | null;
+  review_action: ClaimReviewAction | null;
+  reviewer_wallet: string | null;
+  review_reason: string | null;
+  reviewed_at: string | null;
   payment: PaymentResult | null;
   created_at: string;
   updated_at: string;
@@ -89,6 +95,10 @@ const CLAIM_COLUMNS = `
   description,
   receipt_analysis,
   decision,
+  review_action,
+  reviewer_wallet,
+  review_reason,
+  reviewed_at,
   payment,
   created_at,
   updated_at,
@@ -107,6 +117,11 @@ const PROCESS_COLUMNS = `
 `;
 
 const CANONICAL_SUI_ID = /^0x[0-9a-f]{64}$/;
+const REVIEW_ACTIONS: readonly ClaimReviewAction[] = [
+  'approve',
+  'reject',
+  'request_correction',
+];
 
 function databaseFailure(error: DatabaseError | null): ServerError {
   return new ServerError('database_failed', 500, 'The database operation failed', {
@@ -128,6 +143,33 @@ function mapClaimRow(input: unknown): StoredClaim {
     throw databaseFailure(null);
   }
 
+  let review: ClaimReview | null = null;
+  if (
+    row.review_action !== null ||
+    row.reviewer_wallet !== null ||
+    row.review_reason !== null ||
+    row.reviewed_at !== null
+  ) {
+    const reviewedAtMs = Date.parse(row.reviewed_at ?? '');
+    if (
+      row.review_action === null ||
+      !REVIEW_ACTIONS.includes(row.review_action) ||
+      row.reviewer_wallet === null ||
+      !CANONICAL_SUI_ID.test(row.reviewer_wallet) ||
+      !Number.isFinite(reviewedAtMs) ||
+      ((row.review_action === 'reject' || row.review_action === 'request_correction') &&
+        row.review_reason === null)
+    ) {
+      throw databaseFailure(null);
+    }
+    review = {
+      action: row.review_action,
+      reviewer: row.reviewer_wallet,
+      reason: row.review_reason,
+      reviewedAtMs,
+    };
+  }
+
   const claim: Claim = {
     id: row.id,
     eventId: row.event_id,
@@ -143,6 +185,7 @@ function mapClaimRow(input: unknown): StoredClaim {
     receiptHash: row.receipt_sha256,
     analysis: row.receipt_analysis,
     decision: row.decision,
+    review,
     payment: row.payment,
     createdAtMs,
     updatedAtMs,
@@ -367,6 +410,38 @@ export function createSupabaseClaimRepository(
     },
 
     getProcessContext,
+
+    async applyReview(input) {
+      const nextStateByAction = {
+        approve: 'paying',
+        reject: 'rejected',
+        request_correction: 'needs_correction',
+      } as const;
+      const { data, error } = await query(client, 'claims')
+        .update({
+          state: nextStateByAction[input.review.action],
+          review_action: input.review.action,
+          reviewer_wallet: input.review.reviewer,
+          review_reason: input.review.reason,
+          reviewed_at: new Date(input.review.reviewedAtMs).toISOString(),
+        })
+        .eq('id', input.claimId)
+        .eq('state', 'awaiting_review')
+        .is('review_action', null)
+        .is('payment', null)
+        .select(CLAIM_COLUMNS)
+        .maybeSingle();
+
+      if (error && error.code !== 'PGRST116') {
+        throw databaseFailure(error);
+      }
+      if (data) {
+        return { status: 'saved', claim: mapClaimRow(data).claim };
+      }
+
+      const current = await getProcessContext(input.claimId);
+      return { status: 'lost_race', claim: current.claim };
+    },
 
     async reservePayment(claimId) {
       return mutatePayment({

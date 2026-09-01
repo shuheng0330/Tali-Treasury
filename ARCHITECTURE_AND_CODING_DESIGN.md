@@ -49,7 +49,10 @@ member corrects the confirmed claim fields.
 - `event_members` uses `(event_id, wallet_address)` as its primary key and records
   whether membership is active.
 - `claims` stores positive integer base units, normalized receipt fields, analysis
-  JSON, internal object path and optional later decision/payment JSON.
+  JSON, internal object path, decision/payment JSON, and nullable review metadata.
+- `claim_review_events` is append-only. A security-definer `AFTER UPDATE` trigger
+  inserts its single audit row when review metadata changes from null to populated,
+  so the state transition and audit record commit together.
 - `(event_id, receipt_sha256)` is unique. Receipt object paths are globally unique.
 - A composite membership foreign key preserves ownership history, while an insert
   trigger rejects claims by inactive members without preventing later member
@@ -112,6 +115,30 @@ transition to `paid` or `payment_failed`. Terminal results are returned
 idempotently. A transport or finality uncertainty leaves the row in `paying`; later
 requests return a reconciliation conflict and never sign a replacement payment.
 
+## Treasurer-review design
+
+`POST /api/claims/:id/review` is behind the same fail-closed demo identity gate as
+claim processing. The service validates the discriminated request, loads trusted
+claim/event context, and requires the configured treasurer. Supabase applies one
+guarded update filtered by claim ID, `state = awaiting_review`,
+`review_action IS NULL`, and `payment IS NULL`. Rejection and correction finish at
+`rejected` and `needs_correction`; approval reserves payment immediately by moving
+directly to `paying`.
+
+Before approval changes state, the service validates the signer, reads the current
+mandate, verifies its object ID, and re-runs all policy checks. Only category,
+receipt-date, and extraction-confidence failures are human-overridable. Currency
+readiness and every on-chain rule remain mandatory. Only the compare-and-set winner
+invokes the injected `PaymentExecutor`; terminal outcomes reuse the existing
+guarded `paying -> paid|payment_failed` persistence. Exact replays return stored
+results, while an in-flight/uncertain approval remains `paying` and cannot be
+automatically retried.
+
+The treasury client uses one review dialog. Approval explicitly names the testnet
+USDC payment consequence; rejection and correction validate their reason before
+sending. Successful writes reload persisted claims, and terminal payment responses
+also refresh the server-rendered mandate snapshot.
+
 `createSuiPaymentExecutor` is lazy: factory creation and route import do not read
 `AGENT_PRIVATE_KEY`. `assertReady` accepts only testnet, parses the server-only
 Ed25519 key and canonical `AgentCap`, and caches the validated runtime. Its internal
@@ -144,6 +171,10 @@ private-key material.
   mapping, payment readiness, preflight policy changes, single-winner signing,
   terminal idempotency, uncertainty handling, route validation and sanitized
   adapter failures.
+- Review tests cover request validation, authorization, all three compare-and-set
+  transitions, audit mapping, exact replay/conflict behavior, fresh mandate
+  failures, single-winner signing, terminal payment classification, uncertainty,
+  client payloads, dialog copy, reason validation and queue rules.
 - Payment-adapter tests use generated credentials and injected operations to cover
   lazy configuration, success, Move rejection and failure classification without
   a network request or transaction broadcast.

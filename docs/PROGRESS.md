@@ -14,8 +14,8 @@ whole product flow is live.
 | Sui TypeScript boundary | ✅ Ready | Reads, builders, config, USDC helpers, abort mapping and backend testnet signer adapter | One separately authorized live smoke claim |
 | Shared contracts | ✅ Ready | Claim, event, policy, audit, mandate and endpoint types | Evolve only with team agreement |
 | Web dashboard | ✅ Live read-only | Current mandate state comes from Sui Testnet | Signed actions and backend claim totals |
-| Receipt and claim backend | ✅ Hosted schema ready | Gemini validation, private storage, persistence, duplicate checks, guarded APIs, deterministic policy, non-USDC fail-closed review, atomic payment states, 42 database assertions, and all three active team members verified | Configure the deployed API, signer, and signed identity verification |
-| Claim and review UX | 🟡 Mixed | Real receipt analyze/create/list, treasury policy action and backend process/payment endpoint; mock review actions remain | Wallet auth, review actions and trusted FX quotes |
+| Receipt and claim backend | ✅ Hosted schema ready | Gemini validation, private storage, persistence, duplicate checks, guarded APIs, deterministic policy, atomic review/payment states, review audit migration, and all three active team members verified | Apply the review migration and configure deployed API/auth/signer |
+| Claim and review UX | ✅ Complete locally | Real receipt analyze/create/list plus real approve/reject/correction actions; eligible USDC approval starts guarded payment | Wallet auth, member resubmission and trusted FX quotes |
 | Safety Test UI | 🟡 Mocked with live evidence links | Local preview plus links to two real rejected transactions | Interactive signed attempts and revocation scenario |
 | Deployment | ✅ Live | Vercel production and live Sui dashboard verified | Enable receipt writes only after wallet auth |
 | Submission | ⬜ Pending | — | Landing content, videos, deck, disclosure and rehearsal |
@@ -26,10 +26,9 @@ whole product flow is live.
 - **Real when authenticated/demo identity and server payment credentials are
   enabled:** receipt analysis, private storage, event-scoped duplicate checks,
   claim persistence/listing, treasurer-triggered deterministic policy, and
-  race-safe testnet backend payment for USDC auto-pay claims. The payment code is
+  race-safe testnet backend payment for USDC automatic or human-approved claims. The payment code is
   verified with fakes; no new transaction was broadcast in this increment.
-- **Simulated in the current UI:** review actions, browser payment presentation,
-  revoke preview, and interactive safety controls.
+- **Simulated in the current UI:** revoke preview and interactive safety controls.
 - **Never simulated without a label:** digests, checkpoints, gas, finality, wallet signatures, or chain state.
 
 ## Frontend phase history
@@ -44,10 +43,10 @@ interactions as simulations and links separately to genuine Testnet evidence.
 | 0 | Repo, shared contracts, design tokens | ✅ Done | 29 Aug |
 | 1 | Design system, app shell, status chips | ✅ Done | 29 Aug |
 | 2 | Mobile claim flow — capture to submitted | 🟡 API-backed; auth pending | 31 Aug |
-| 3 | Treasurer dashboard and review queue | 🟡 Live mandate and API-backed queue; review actions pending | 31 Aug |
+| 3 | Treasurer dashboard and review queue | ✅ Real review actions complete locally | 1 Sep |
 | 4 | Safety Test panel | 🟡 Mock flow; live refusals linked | 29 Aug |
 | 5 | Landing page | ✅ Done, rebuilt 31 Aug | 30 Aug |
-| 6 | Wire to live contract and backend | 🟡 Live reads plus receipt, claim, policy, currency safety and backend testnet-payment code; review actions, FX, auth, deployment config and live smoke pending | 31 Aug |
+| 6 | Wire to live contract and backend | 🟡 Live reads plus receipt, claim, policy, review and backend testnet-payment code; FX, auth, deployment config and live smoke pending | 1 Sep |
 | 7 | Submission pack | ⬜ Not started | — |
 
 Legend: ✅ done · 🟡 in progress · ⬜ not started · ⛔ cut
@@ -61,7 +60,7 @@ Updated 1 September and ordered by the risk of leaving each item unfinished:
 1. Wallet-signature or session authentication for members and the treasurer.
 2. A persisted, one-time analysis draft binding the uploaded receipt to confirmation.
 3. A trusted MYR-to-USDC quote with source, timestamp, expiry, rounding and payout amount.
-4. Treasurer approve, reject and request-correction state transitions.
+4. Member correction and resubmission after a treasurer request.
 5. One authorized funded testnet smoke payment, plus digest recovery and
    reconciliation for uncertain submissions.
 6. Interactive on-chain safety attempts and live revocation.
@@ -158,6 +157,11 @@ Verified: build passes, all routes serve 200, claim page renders end to end.
   revoking is not, so only one of them gets a modal.
 - **The empty state is evidence of work done**, not a celebration: how many the agent
   paid and how many it escalated, plus the route into the safety test.
+- **1 September review milestone:** Approve, reject, and request correction now
+  call the real guarded API. Approval clearly warns that it starts a Sui Testnet
+  USDC payment; rejection and correction require an audited reason. Non-USDC and
+  failed on-chain checks cannot be approved, successful writes reload the queue,
+  and correction requests remain visible only in claim history.
 
 ## Phase 4 — Safety Test panel ✅
 

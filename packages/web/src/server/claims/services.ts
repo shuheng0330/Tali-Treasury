@@ -6,6 +6,8 @@ import type {
   PaymentResult,
   PolicyOutcome,
   ProcessClaimResponse,
+  ReviewClaimResponse,
+  RuleId,
 } from '@tali/shared';
 import { ZodError } from 'zod';
 
@@ -27,6 +29,7 @@ import {
   eventIdSchema,
   parseCreateClaimRequest,
   parseProcessClaimInput,
+  parseReviewClaimInput,
   suiAddressSchema,
 } from './validation';
 
@@ -249,18 +252,18 @@ export function createProcessClaimService(deps: {
 
     function inspectAutoPayState(storedClaim: Claim): ProcessClaimResponse | null {
       if (!storedClaim.decision) throw conflict();
+      if (storedClaim.state === 'paid' || storedClaim.state === 'payment_failed') {
+        return completedPaymentResponse(storedClaim);
+      }
+      if (storedClaim.state === 'paying') {
+        throw conflict('Payment requires reconciliation before retrying');
+      }
       if (storedClaim.decision.outcome !== 'auto_pay') {
         return {
           claim: storedClaim,
           decision: storedClaim.decision,
           payment: null,
         };
-      }
-      if (storedClaim.state === 'paid' || storedClaim.state === 'payment_failed') {
-        return completedPaymentResponse(storedClaim);
-      }
-      if (storedClaim.state === 'paying') {
-        throw conflict('Payment requires reconciliation before retrying');
       }
       if (storedClaim.state !== 'approved') throw conflict();
       return null;
@@ -423,5 +426,202 @@ export function createProcessClaimService(deps: {
       return completedPaymentResponse(finished.claim);
     }
     throw conflict('Payment requires reconciliation before retrying');
+  };
+}
+
+const HUMAN_REVIEW_OVERRIDES = new Set<RuleId>([
+  'category_allowed',
+  'receipt_date_valid',
+  'confidence_sufficient',
+]);
+
+export function createReviewClaimService(deps: {
+  claims: ClaimRepository;
+  mandates: MandateReader;
+  payments: PaymentExecutor;
+  now?: () => number;
+}): (input: unknown) => Promise<ReviewClaimResponse> {
+  return async (input) => {
+    let request: ReturnType<typeof parseReviewClaimInput>;
+    try {
+      request = parseReviewClaimInput(input);
+    } catch (error) {
+      if (error instanceof ZodError) {
+        throw new ServerError('invalid_request', 400, 'Invalid claim review request', {
+          cause: error,
+        });
+      }
+      throw error;
+    }
+
+    let context: ClaimProcessContext;
+    try {
+      context = await deps.claims.getProcessContext(request.claimId);
+    } catch (error) {
+      throw databaseError(error);
+    }
+
+    if (request.reviewer.toLowerCase() !== context.event.treasurer.toLowerCase()) {
+      throw new ServerError(
+        'reviewer_forbidden',
+        403,
+        'Only the event treasurer may review claims',
+      );
+    }
+
+    const conflict = (message = 'Claim is not available for review') =>
+      new ServerError('processing_conflict', 409, message);
+    const uncertain = () =>
+      new ServerError(
+        'payment_submission_uncertain',
+        502,
+        'Payment submission requires reconciliation before retrying',
+      );
+
+    function replay(storedClaim: Claim): ReviewClaimResponse {
+      const stored = storedClaim.review;
+      const requestedReason = request.reason ?? null;
+      if (
+        !stored ||
+        stored.action !== request.action ||
+        stored.reviewer.toLowerCase() !== request.reviewer.toLowerCase() ||
+        stored.reason !== requestedReason
+      ) {
+        throw conflict('A different review action has already been recorded');
+      }
+
+      if (stored.action !== 'approve') {
+        return { claim: storedClaim, payment: null };
+      }
+      if (storedClaim.state === 'paying') throw uncertain();
+      if (
+        (storedClaim.state === 'paid' || storedClaim.state === 'payment_failed') &&
+        storedClaim.payment
+      ) {
+        return { claim: storedClaim, payment: storedClaim.payment };
+      }
+      throw conflict('Claim payment state is inconsistent');
+    }
+
+    if (context.claim.review) return replay(context.claim);
+    if (
+      context.claim.state !== 'awaiting_review' ||
+      context.claim.decision?.outcome !== 'review'
+    ) {
+      throw conflict();
+    }
+
+    const claimReview = {
+      action: request.action,
+      reviewer: request.reviewer,
+      reason: request.reason ?? null,
+      reviewedAtMs: deps.now?.() ?? Date.now(),
+    } as const;
+
+    if (request.action !== 'approve') {
+      let applied;
+      try {
+        applied = await deps.claims.applyReview({
+          claimId: request.claimId,
+          review: claimReview,
+        });
+      } catch (error) {
+        throw databaseError(error);
+      }
+      return applied.status === 'saved'
+        ? { claim: applied.claim, payment: null }
+        : replay(applied.claim);
+    }
+
+    if (context.claim.analysis?.currency !== 'USDC') {
+      throw conflict('Only USDC claims can be approved for payment');
+    }
+
+    try {
+      deps.payments.assertReady();
+    } catch (error) {
+      throw new ServerError(
+        'payment_configuration_failed',
+        503,
+        'Backend payment configuration is unavailable',
+        { cause: error },
+      );
+    }
+
+    let mandate;
+    try {
+      mandate = await deps.mandates.read(context.event.mandateId);
+      if (mandate.id.toLowerCase() !== context.event.mandateId.toLowerCase()) {
+        throw new Error('Mandate object ID does not match the event');
+      }
+    } catch (error) {
+      throw new ServerError(
+        'mandate_read_failed',
+        502,
+        'The current Sui mandate could not be read',
+        { cause: error },
+      );
+    }
+
+    const freshDecision = evaluatePolicy({
+      claim: context.claim,
+      event: context.event,
+      mandate,
+      exactDuplicate: false,
+      nowMs: deps.now?.() ?? Date.now(),
+    });
+    const prohibitedFailure = freshDecision.checks.some(
+      (check) => !check.passed && (check.onChain || !HUMAN_REVIEW_OVERRIDES.has(check.rule)),
+    );
+    if (prohibitedFailure) {
+      throw conflict('The current policy does not permit human approval');
+    }
+
+    let applied;
+    try {
+      applied = await deps.claims.applyReview({
+        claimId: request.claimId,
+        review: claimReview,
+      });
+    } catch (error) {
+      throw databaseError(error);
+    }
+    if (applied.status === 'lost_race') return replay(applied.claim);
+
+    let execution;
+    try {
+      execution = await deps.payments.execute({
+        claimId: context.claim.id,
+        mandateId: context.event.mandateId,
+        recipient: context.claim.submitter,
+        amount: context.claim.amount,
+        budgetBefore: mandate.remainingBudget,
+      });
+    } catch (error) {
+      throw new ServerError(
+        'payment_submission_uncertain',
+        502,
+        'Payment submission requires reconciliation before retrying',
+        { cause: error },
+      );
+    }
+
+    let finished;
+    try {
+      finished = await deps.claims.finishPayment({
+        claimId: context.claim.id,
+        state: execution.status === 'paid' ? 'paid' : 'payment_failed',
+        payment: execution.payment,
+      });
+    } catch (error) {
+      throw databaseError(error);
+    }
+    if (
+      (finished.claim.state === 'paid' || finished.claim.state === 'payment_failed') &&
+      finished.claim.payment
+    ) {
+      return { claim: finished.claim, payment: finished.claim.payment };
+    }
+    throw uncertain();
   };
 }

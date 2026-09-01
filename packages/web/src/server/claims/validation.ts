@@ -2,6 +2,7 @@ import {
   EXPENSE_CATEGORIES,
   type CreateClaimRequest,
   type ExpenseCategory,
+  type ReviewClaimRequest,
   type UncertainField,
 } from '@tali/shared';
 import { z } from 'zod';
@@ -144,4 +145,41 @@ export function parseProcessClaimInput(input: unknown): {
   processor: string;
 } {
   return processClaimInputSchema.parse(input);
+}
+
+const reviewBase = {
+  claimId: claimIdSchema,
+  reviewer: suiAddressSchema,
+};
+
+const reviewClaimInputSchema = z.discriminatedUnion('action', [
+  z
+    .object({
+      ...reviewBase,
+      action: z.literal('approve'),
+      reason: trimmedString(500).optional(),
+    })
+    .strict(),
+  z
+    .object({
+      ...reviewBase,
+      action: z.literal('reject'),
+      reason: trimmedString(500),
+    })
+    .strict(),
+  z
+    .object({
+      ...reviewBase,
+      action: z.literal('request_correction'),
+      reason: trimmedString(500),
+    })
+    .strict(),
+]);
+
+export function parseReviewClaimInput(input: unknown): ReviewClaimRequest & {
+  claimId: string;
+} {
+  return reviewClaimInputSchema.parse(input) as ReviewClaimRequest & {
+    claimId: string;
+  };
 }

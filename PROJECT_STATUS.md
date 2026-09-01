@@ -17,16 +17,22 @@ Last updated: 1 September 2026 (MYT)
   mandate snapshots, idempotent decisions and atomic Supabase state transitions;
 - live treasury queue action for invoking the server policy endpoint and rendering
   its persisted decision instead of a browser-side duplicate;
+- real treasurer approve, reject, and request-correction actions with guarded
+  persistence, durable audit metadata, replay handling, and conflict safety;
+- human approval for eligible USDC review claims, including fresh mandate policy
+  checks and immediate testnet payment through the single-winner signer path;
+- a shared confirmation dialog with required reasons, payment consequence copy,
+  action-specific pending/errors, queue reloads, and mandate refresh after payment;
 - non-USDC receipts fail closed to review until an explicit USDC quote exists;
 - testnet-only backend-agent payment execution for `auto_pay` claims, including a
   fresh policy preflight, atomic `approved -> paying` reservation, confirmed
   terminal persistence and reconciliation-safe uncertain submissions;
 - lazy server-only Ed25519 and `AgentCap` configuration with preparation separated
   from submission and fake-operation verification that never broadcasts;
-- 155 web Vitest tests and 14 Sui integration tests passing, including currency,
-  malformed-input, payment concurrency, sanitization and idempotency coverage;
-- 42 passing pgTAP database assertions on a clean disposable PostgreSQL 17
-  database;
+- 191 web Vitest tests and 14 Sui integration tests passing, including review,
+  audit mapping, malformed input, concurrency, sanitization and idempotency;
+- 16 new pgTAP review assertions are defined; local execution is pending Docker
+  Desktop availability, alongside the existing 42 passing assertions;
 - web TypeScript check passing at the API checkpoint.
 
 ## Hosted schema verified
@@ -58,8 +64,8 @@ not needed.
 - add wallet-signature authentication;
 - bind analysis to claim confirmation through a signed token or persisted draft;
 - add trusted MYR-to-USDC quote capture, expiry and converted payout storage;
-- implement treasurer review actions and automatic reconciliation for uncertain
-  payment submissions;
+- add automatic reconciliation for uncertain payment submissions;
+- add member correction and resubmission after a correction request;
 - run the hosted receipt flow end to end after authenticated identity is available.
 
 ## Known limitations
@@ -71,8 +77,8 @@ not needed.
   bound to one another.
 - The frontend is wired to the hosted receipt APIs, but Production intentionally
   disables them until authenticated identity replaces the demo address.
-- Review and reject decisions still return `payment: null`; only `auto_pay` enters
-  the backend payment path.
+- Reject and correction return `payment: null`; eligible human approval enters the
+  same guarded backend payment executor as automatic approval.
 - MYR and other non-USDC receipts are preserved but cannot auto-pay until the
   conversion-quote increment is implemented.
 - Payment code can prepare and submit on Sui Testnet when valid server credentials
