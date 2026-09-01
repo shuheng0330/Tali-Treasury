@@ -4,10 +4,10 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
 const TABS = [
-  { href: '/claim', label: 'Claim', full: 'Submit a claim' },
+  { href: '/payroll', label: 'Payroll', full: 'Run payroll' },
   { href: '/earnings', label: 'Earn', full: 'Your earnings' },
-  { href: '/payroll', label: 'Pay', full: 'Run payroll' },
   { href: '/treasury', label: 'Treasury', full: 'Treasurer view' },
+  { href: '/claim', label: 'Claim', full: 'Submit a claim' },
   { href: '/safety', label: 'Safety', full: 'Safety test' },
 ];
 
