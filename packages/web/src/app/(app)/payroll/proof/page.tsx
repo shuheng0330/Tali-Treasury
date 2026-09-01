@@ -20,6 +20,12 @@ export default function PayrollProofPage() {
 
       <EnforcementProof person={sampleStaff[0]} />
 
+      <p className="text-caption text-ink-3">
+        Both outcomes become real testnet transactions once the payroll module is
+        published. Until then the screen shows the decision the contract will make, and
+        says so when nothing was submitted.
+      </p>
+
       <Link href="/payroll" className="link self-start">
         Back to payroll
       </Link>

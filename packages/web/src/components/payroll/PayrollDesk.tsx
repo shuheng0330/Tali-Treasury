@@ -1,20 +1,92 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import type { PayrollBreakdown } from '@tali/shared';
 import { toDisplay } from '@tali/shared';
+import { tryPreviewPayroll, tryRunPayroll } from '@/lib/api/payroll';
+import type { Source } from '@/lib/api/demo';
 import type { SampleEmployee } from '@/lib/mock/payroll';
+import { DataNotice } from '@/components/DataNotice';
 import { Breakdown } from './Breakdown';
+
+interface RunState {
+  status: 'idle' | 'running' | 'paid' | 'refused';
+  digest?: string | null;
+  message?: string;
+}
 
 export function PayrollDesk({ staff }: { staff: SampleEmployee[] }) {
   const [selected, setSelected] = useState(staff[0]);
+  const [breakdown, setBreakdown] = useState<PayrollBreakdown>(staff[0].breakdown);
+  const [source, setSource] = useState<Source>('mock');
+  const [reason, setReason] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [run, setRun] = useState<RunState>({ status: 'idle' });
+
+  useEffect(() => {
+    let current = true;
+    setLoading(true);
+    setRun({ status: 'idle' });
+
+    tryPreviewPayroll(
+      {
+        employee: selected.address,
+        gross: selected.breakdown.gross,
+        age: 30,
+        citizenship: 'local',
+      },
+      selected.breakdown,
+    ).then((result) => {
+      if (!current) return;
+      setBreakdown(result.data);
+      setSource(result.source);
+      setReason(result.reason);
+      setLoading(false);
+    });
+
+    return () => {
+      current = false;
+    };
+  }, [selected]);
 
   const monthlyCost = staff.reduce(
     (sum, person) => sum + BigInt(person.breakdown.employerCost),
     0n,
   );
 
+  async function onRun() {
+    setRun({ status: 'running' });
+    const result = await tryRunPayroll({
+      employee: selected.address,
+      gross: selected.breakdown.gross,
+      age: 30,
+      citizenship: 'local',
+    });
+
+    if (result.data === null) {
+      setRun({ status: 'refused', message: result.reason ?? 'the run did not complete' });
+      return;
+    }
+    setRun({
+      status: result.data.status === 'paid' ? 'paid' : 'refused',
+      digest: result.data.digest,
+      message:
+        result.data.abortCode !== null
+          ? `The contract refused this run on abort ${result.data.abortCode}.`
+          : undefined,
+    });
+  }
+
   return (
     <div className="flex flex-col gap-6">
+      <DataNotice
+        source={source}
+        reason={reason}
+        live="Payroll runs and the statutory split"
+        plural
+        simulated="Figures follow the EPF Third Schedule bands and the RM6,000 SOCSO and EIS ceilings."
+      />
+
       <div className="flex flex-col gap-3">
         <span className="eyebrow">Staff on this mandate</span>
 
@@ -52,8 +124,12 @@ export function PayrollDesk({ staff }: { staff: SampleEmployee[] }) {
       </div>
 
       <div className="flex flex-col gap-3">
-        <span className="eyebrow">{selected.name}&rsquo;s payroll run</span>
-        <Breakdown breakdown={selected.breakdown} />
+        <span className="eyebrow">
+          {selected.name}&rsquo;s payroll run{loading ? ' · reading' : ''}
+        </span>
+        <div className={loading ? 'opacity-60 transition-opacity' : 'transition-opacity'}>
+          <Breakdown breakdown={breakdown} />
+        </div>
       </div>
 
       <div className="flex flex-col gap-3 rounded-card border border-rule bg-surface p-5">
@@ -61,13 +137,43 @@ export function PayrollDesk({ staff }: { staff: SampleEmployee[] }) {
           <span className="text-body text-ink-2">This month, all staff</span>
           <span className="tnum text-title">{toDisplay(monthlyCost.toString())}</span>
         </div>
-        <button type="button" className="btn btn--primary btn--block" disabled>
-          Run payroll
+
+        <button
+          type="button"
+          className="btn btn--primary btn--block"
+          disabled={run.status === 'running'}
+          onClick={onRun}
+        >
+          {run.status === 'running' ? 'Running…' : 'Run payroll'}
         </button>
-        <p className="text-caption text-ink-3">
-          Running payroll needs the payroll module on chain. Until then this screen shows
-          what would be sent, not what was.
-        </p>
+
+        {run.status === 'paid' ? (
+          <p className="text-caption text-ok">
+            Paid in one transaction.{' '}
+            {run.digest ? (
+              <a
+                className="link"
+                href={`https://suiscan.xyz/testnet/tx/${run.digest}`}
+                target="_blank"
+                rel="noreferrer"
+              >
+                View it
+              </a>
+            ) : null}
+          </p>
+        ) : null}
+
+        {run.status === 'refused' ? (
+          <p className="text-caption text-wait">
+            Nothing was paid: {run.message}
+          </p>
+        ) : null}
+
+        {run.status === 'idle' ? (
+          <p className="text-caption text-ink-3">
+            The wage and all three statutory payments leave together, or not at all.
+          </p>
+        ) : null}
       </div>
     </div>
   );

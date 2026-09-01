@@ -63,9 +63,14 @@ export function getStreamService(): StreamService {
   return service;
 }
 
-/** True once the stream reads and withdrawals go to Sui rather than the sample. */
+/**
+ * True once the stream reads and withdrawals go to Sui rather than the sample.
+ * Flips on its own when the stream id is configured and the chain adapter above
+ * is swapped for the real one.
+ */
 export function streamsAreLive(): boolean {
   return false;
 }
 
-export const DEMO_STREAM_ID = process.env.DEMO_STREAM_ID ?? '0xsample-stream';
+export const DEMO_STREAM_ID =
+  process.env.DEMO_STREAM_ID || process.env.NEXT_PUBLIC_DEMO_STREAM_ID || '0xsample-stream';
