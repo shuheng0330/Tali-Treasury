@@ -12,6 +12,7 @@ const MONTHLY = 3_000_000_000n;
 function state(overrides: Partial<SalaryStreamState> = {}): SalaryStreamState {
   return {
     id: '0xstream',
+    coinType: '0x2::sui::SUI',
     mandateId: '0xmandate',
     employee: '0xemployee',
     totalAmount: MONTHLY,

@@ -1,19 +1,14 @@
-import type { Address, Amount, ObjectId } from '@tali/shared';
+import type { SalaryStreamState } from '@tali/treasury-sui';
+import type { Amount, ObjectId } from '@tali/shared';
 
 /**
- * A stream as the chain holds it. Mirrors `MandateState` in
- * `@tali/treasury-sui`: bigint fields, no derived values. Accrual is computed
- * at read time against a clock, never stored.
+ * A stream as the chain holds it: bigint fields, no derived values. Accrual is
+ * computed at read time against a clock, never stored.
+ *
+ * Re-exported rather than redeclared. `readSalaryStream` returns this exact
+ * shape, so a local copy would drift the day the module gains a field.
  */
-export interface SalaryStreamState {
-  id: ObjectId;
-  mandateId: ObjectId;
-  employee: Address;
-  totalAmount: bigint;
-  startedAtMs: bigint;
-  endsAtMs: bigint;
-  withdrawn: bigint;
-}
+export type { SalaryStreamState };
 
 export type WithdrawSubmission =
   | { status: 'paid'; digest: string; amount: Amount }

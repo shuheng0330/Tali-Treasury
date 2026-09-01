@@ -1,3 +1,5 @@
+import { CIRCLE_TESTNET_USDC_TYPE } from '@tali/treasury-sui';
+
 import { createStreamService, type StreamService } from './service';
 import type { SalaryStreamState, StreamChainPort, WithdrawSubmission } from './ports';
 
@@ -23,6 +25,7 @@ function sampleChain(): StreamChainPort {
     async read(streamId): Promise<SalaryStreamState> {
       return {
         id: streamId,
+        coinType: CIRCLE_TESTNET_USDC_TYPE,
         mandateId: '0xsample-payroll-mandate',
         employee: '0xsample-employee',
         totalAmount: SAMPLE_TOTAL,

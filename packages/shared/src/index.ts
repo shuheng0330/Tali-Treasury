@@ -47,6 +47,7 @@ export {
   STATUTORY_BODY_LABEL,
   accruedAt,
   availableAt,
+  toSalaryStreamView,
 } from './payroll.js';
 export type {
   PayrollBreakdown,

@@ -1,4 +1,6 @@
+import type { SalaryStreamState } from '@tali/treasury-sui';
 import type { Address, Amount, ObjectId } from './claims.js';
+import { fromBigInt } from './money.js';
 
 export type StatutoryBody = 'epf' | 'socso' | 'eis';
 
@@ -105,4 +107,33 @@ export function availableAt(
   const earned = BigInt(accruedAt(stream, nowMs));
   const drawn = BigInt(stream.withdrawn);
   return earned > drawn ? (earned - drawn).toString() : '0';
+}
+
+/**
+ * JSON-safe projection of the on-chain stream, with accrual resolved at a
+ * single instant.
+ *
+ * `accrued` and `available` are read at `nowMs` and stale immediately. The
+ * interface ticks them forward locally with the same formula rather than
+ * re-reading the chain every frame.
+ */
+export function toSalaryStreamView(
+  state: SalaryStreamState,
+  nowMs = Date.now(),
+): SalaryStreamView {
+  const settled = {
+    id: state.id,
+    mandateId: state.mandateId,
+    employee: state.employee,
+    totalAmount: fromBigInt(state.totalAmount),
+    startedAtMs: Number(state.startedAtMs),
+    endsAtMs: Number(state.endsAtMs),
+    withdrawn: fromBigInt(state.withdrawn),
+  };
+
+  return {
+    ...settled,
+    accrued: accruedAt(settled, nowMs),
+    available: availableAt(settled, nowMs),
+  };
 }

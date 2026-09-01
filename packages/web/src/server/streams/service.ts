@@ -1,32 +1,13 @@
 import type { ObjectId, SalaryStreamView, WithdrawEarnedResult } from '@tali/shared';
-import { accruedAt, availableAt } from '@tali/shared';
+import { toSalaryStreamView } from '@tali/shared';
 
-import type { SalaryStreamState, StreamChainPort } from './ports';
+import type { StreamChainPort } from './ports';
+
+export { toSalaryStreamView };
 
 export interface StreamService {
   read(streamId: ObjectId): Promise<SalaryStreamView>;
   withdraw(streamId: ObjectId): Promise<WithdrawEarnedResult>;
-}
-
-export function toSalaryStreamView(
-  state: SalaryStreamState,
-  nowMs: number,
-): SalaryStreamView {
-  const base = {
-    id: state.id,
-    mandateId: state.mandateId,
-    employee: state.employee,
-    totalAmount: state.totalAmount.toString(),
-    startedAtMs: Number(state.startedAtMs),
-    endsAtMs: Number(state.endsAtMs),
-    withdrawn: state.withdrawn.toString(),
-  };
-
-  return {
-    ...base,
-    accrued: accruedAt(base, nowMs),
-    available: availableAt(base, nowMs),
-  };
 }
 
 export function createStreamService(deps: {
