@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useMemo, useState, useTransition } from 'react';
-import type { MandateView } from '@tali/shared';
+import type { ClaimReviewAction, MandateView } from '@tali/shared';
 import { CLAIM_CHIP } from '@tali/shared';
 import { Money } from '@/components/Money';
 import { StatusChip } from '@/components/StatusChip';
@@ -11,11 +11,12 @@ import { event } from '@/lib/mock/data';
 import { reviewQueue, settledClaims } from '@/lib/mock/api';
 import { settledFrom, toReviewQueue } from '@/lib/queue';
 import { useClaims } from '@/lib/api/useClaims';
-import { tryProcessClaim } from '@/lib/api/demo';
+import { tryProcessClaim, tryReviewClaim } from '@/lib/api/demo';
 import { DataNotice } from '@/components/DataNotice';
 import { ClaimRow } from './ClaimRow';
 import { MandateHeader } from './MandateHeader';
 import { RevokeDialog } from './RevokeDialog';
+import { ReviewActionDialog } from './ReviewActionDialog';
 
 type Tab = 'review' | 'paid' | 'all';
 
@@ -40,6 +41,12 @@ export function TreasuryDashboard({ apiEnabled, initialMandate: mandate, readErr
   const [confirming, setConfirming] = useState(false);
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [processError, setProcessError] = useState<string | null>(null);
+  const [reviewing, setReviewing] = useState<{
+    claimId: string;
+    action: ClaimReviewAction;
+  } | null>(null);
+  const [reviewPending, setReviewPending] = useState(false);
+  const [reviewError, setReviewError] = useState<string | null>(null);
 
   const live = useClaims(apiEnabled);
 
@@ -65,6 +72,9 @@ export function TreasuryDashboard({ apiEnabled, initialMandate: mandate, readErr
   );
 
   const counts = { review: queue.length, paid: paid.length, all: everything.length };
+  const reviewingClaim = reviewing
+    ? everything.find((claim) => claim.id === reviewing.claimId) ?? null
+    : null;
 
   async function process(id: string) {
     setProcessingId(id);
@@ -76,6 +86,32 @@ export function TreasuryDashboard({ apiEnabled, initialMandate: mandate, readErr
       return;
     }
     live.reload();
+  }
+
+  function openReview(claimId: string, action: ClaimReviewAction) {
+    setReviewError(null);
+    setReviewing({ claimId, action });
+  }
+
+  async function submitReview(reason?: string) {
+    if (!reviewing) return;
+    setReviewPending(true);
+    setReviewError(null);
+    const request =
+      reviewing.action === 'approve'
+        ? { action: 'approve' as const }
+        : { action: reviewing.action, reason: reason ?? '' };
+    const result = await tryReviewClaim(reviewing.claimId, request);
+    setReviewPending(false);
+    if (result.data === null) {
+      setReviewError(result.reason ?? 'The review action could not be completed.');
+      return;
+    }
+    setReviewing(null);
+    live.reload();
+    if (result.data.payment !== null) {
+      startRefresh(() => router.refresh());
+    }
   }
 
   if (mandate === null) {
@@ -129,8 +165,9 @@ export function TreasuryDashboard({ apiEnabled, initialMandate: mandate, readErr
           <DataNotice
             source={live.source}
             reason={live.reason}
-            live="The claim queue"
-            simulated="Evaluating a claim runs the real policy engine and is persisted. Approving, rejecting and paying are not built yet, and their controls say so."
+            live="Claim loading, policy decisions, and review actions"
+            plural
+            simulated="Mandate revocation remains an explicitly labelled preview."
           />
           {processError ? (
             <p className="mt-3 rounded-control border border-no-line bg-no-soft p-3 text-caption text-no" role="alert">
@@ -180,7 +217,13 @@ export function TreasuryDashboard({ apiEnabled, initialMandate: mandate, readErr
                   key={item.claim.id}
                   item={item}
                   processing={processingId === item.claim.id}
+                  pendingAction={
+                    reviewing?.claimId === item.claim.id && reviewPending
+                      ? reviewing.action
+                      : null
+                  }
                   onProcess={process}
+                  onReview={openReview}
                 />
               ))}
             </ul>
@@ -212,6 +255,19 @@ export function TreasuryDashboard({ apiEnabled, initialMandate: mandate, readErr
           pendingCount={queue.length}
           onCancel={() => setConfirming(false)}
           onConfirm={() => setConfirming(false)}
+        />
+      ) : null}
+
+      {reviewing && reviewingClaim ? (
+        <ReviewActionDialog
+          action={reviewing.action}
+          claim={reviewingClaim}
+          pending={reviewPending}
+          serverError={reviewError}
+          onCancel={() => {
+            if (!reviewPending) setReviewing(null);
+          }}
+          onConfirm={submitReview}
         />
       ) : null}
     </div>

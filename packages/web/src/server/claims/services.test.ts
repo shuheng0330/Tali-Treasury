@@ -58,6 +58,7 @@ const claim: Claim = {
   receiptHash,
   analysis,
   decision: null,
+  review: null,
   payment: null,
   createdAtMs: 1_788_048_000_000,
   updatedAtMs: 1_788_048_000_000,
@@ -138,6 +139,7 @@ function createRepository(overrides: Partial<ClaimRepository> = {}): ClaimReposi
     listByEvent: vi.fn(async () => []),
     getProcessContext: vi.fn(),
     saveDecision: vi.fn(),
+    applyReview: vi.fn(),
     reservePayment: vi.fn(),
     failApprovedPayment: vi.fn(),
     finishPayment: vi.fn(),
@@ -556,6 +558,49 @@ describe('createProcessClaimService', () => {
     expect(payments.assertReady).not.toHaveBeenCalled();
     expect(payments.execute).not.toHaveBeenCalled();
   });
+
+  it.each(['paid', 'payment_failed'] as const)(
+    'returns a human-approved %s payment even when the original decision was review',
+    async (state) => {
+      const reviewDecision: PolicyDecision = {
+        ...approvedDecision,
+        outcome: 'review',
+        reason: 'Treasurer review required.',
+      };
+      const storedPayment = state === 'paid' ? payment : { ...payment, ok: false };
+      const reviewedClaim: Claim = {
+        ...approvedClaim,
+        state,
+        decision: reviewDecision,
+        review: {
+          action: 'approve',
+          reviewer: treasurer,
+          reason: null,
+          reviewedAtMs: nowMs,
+        },
+        payment: storedPayment,
+      };
+      const claims = createRepository({
+        getProcessContext: vi.fn(async () => ({
+          ...processContext,
+          claim: reviewedClaim,
+        })),
+      });
+      const mandates = { read: vi.fn() };
+      const payments = createPaymentExecutor();
+      const processClaim = createProcessClaimService({ claims, mandates, payments });
+
+      await expect(
+        processClaim({ claimId: claim.id, processor: treasurer }),
+      ).resolves.toEqual({
+        claim: reviewedClaim,
+        decision: reviewDecision,
+        payment: storedPayment,
+      });
+      expect(mandates.read).not.toHaveBeenCalled();
+      expect(payments.execute).not.toHaveBeenCalled();
+    },
+  );
 
   it('blocks retries while reconciliation is required', async () => {
     const claims = createRepository({

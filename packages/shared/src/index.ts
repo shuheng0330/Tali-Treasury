@@ -12,6 +12,8 @@ export type {
   AuditKind,
   Claim,
   ClaimChip,
+  ClaimReview,
+  ClaimReviewAction,
   ClaimState,
   Digest,
   Event,

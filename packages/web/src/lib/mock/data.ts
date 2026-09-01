@@ -51,6 +51,7 @@ function claim(partial: Partial<Claim> & Pick<Claim, 'id' | 'state' | 'amount' |
     receiptHash: '',
     analysis: null,
     decision: null,
+    review: null,
     payment: null,
     createdAtMs: Date.now() - 86_400_000,
     updatedAtMs: Date.now() - 86_400_000,

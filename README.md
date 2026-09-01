@@ -29,7 +29,8 @@ Status words are intentionally precise:
 | Treasurer mandate dashboard | **Live** (read-only) | Server reads the current mandate from Sui Testnet |
 | Claim receipt submission UI | **Complete locally** | Real analyze, create, and list API calls; Production remains fail-closed pending wallet auth |
 | Claim policy processing | **Complete locally** | Treasurer action invokes the server evaluator and persists the decision |
-| Review, revoke, payment UI, and Safety Test interactions | **Mocked** | Clearly labelled; no browser signing or state changes |
+| Treasurer review actions | **Complete locally** | Real approve/reject/correction API and UI; eligible USDC approval enters the guarded testnet signer |
+| Revoke and Safety Test interactions | **Mocked** | Clearly labelled previews; no browser signing or state changes |
 | Gemini receipt analysis and Supabase claims | **Hosted schema ready** | API-backed UI integration, 42 pgTAP assertions, and all three active team members verified |
 | Deterministic policy and backend agent signing | **Complete locally** | Testnet-only, treasurer-triggered, race-safe and fake-operation verified; no transaction broadcast in this increment |
 | Wallet connection and live UI writes | **Pending** | Add after backend/signing boundary is agreed |
@@ -71,12 +72,15 @@ Server-only testnet signer (complete locally)
              v
 Sui Testnet Mandate<USDC> (live enforcement and audit events)
 
-Non-USDC receipts stay in review pending a trusted conversion quote.
+Non-USDC receipts stay in review pending a trusted conversion quote. Eligible
+USDC review claims can be approved by the treasurer and enter the atomic payment
+flow; rejection and correction are durably audited.
 ```
 
 The web application reads public mandate state without a key. The process API can
 sign an eligible `auto_pay` claim with a server-only testnet agent after an atomic
-reservation; browser payment interactions remain outside the current UI integration.
+reservation. The review API uses the same guarded executor after a human approval;
+the browser never receives or uses the signing key.
 
 ## Repository structure
 
@@ -122,10 +126,9 @@ npm run dev
 
 Then open `http://localhost:3000/treasury`. The page should say **Live from Sui
 Testnet** and display the current mandate state. `/claim` uses the real receipt
-and claim APIs when demo identity is explicitly enabled. The process API has real
 and claim APIs when demo identity is explicitly enabled. The treasury process API
 persists real policy decisions and can run the server-only testnet signer for USDC
-`auto_pay` claims. Review actions, browser payment presentation, revoke, and Safety
+`auto_pay` claims. Treasurer review actions are real API writes. Revoke and Safety
 Test writes remain clearly marked simulations or previews.
 
 Run Move tests separately:
@@ -204,6 +207,8 @@ accepts only JPEG, PNG, and WebP. The server exposes:
   receipt URLs after active event-membership checking;
 - `POST /api/claims/:id/process` — treasurer-triggered deterministic policy and,
   for `auto_pay` only, an atomic server-agent payment attempt.
+- `POST /api/claims/:id/review` — one atomic treasurer approval, rejection, or
+  correction request; eligible USDC approval immediately starts testnet payment.
 
 When explicitly enabled, this hackathon slice treats the submitted wallet address
 as demo identity and checks event membership, but it does not verify a wallet signature. The analyze
@@ -231,11 +236,11 @@ Immediate next vertical slice:
 
 1. Configure server-only Gemini and Supabase credentials in the deployment.
 2. Add wallet-signature authentication and bind analysis to claim creation.
-3. Configure the testnet agent key and owned `AgentCap` server-side.
-4. With separate authorization, run one small funded smoke claim and record its
+3. Add member correction/resubmission and trusted MYR-to-USDC quotations.
+4. Configure the testnet agent key and owned `AgentCap` server-side.
+5. With separate authorization, run one small funded smoke claim and record its
    real digest; automated tests intentionally never broadcast.
-5. Add reconciliation for uncertain submissions and refresh the live mandate
-   dashboard after finality.
+6. Add reconciliation for uncertain submissions.
 
 ## Documentation index
 

@@ -2,6 +2,7 @@ import {
   EXPENSE_CATEGORIES,
   type CreateClaimRequest,
   type ExpenseCategory,
+  type ReviewClaimRequest,
   type UncertainField,
 } from '@tali/shared';
 import { z } from 'zod';
@@ -9,7 +10,7 @@ import { z } from 'zod';
 const SUI_ADDRESS = /^0x[0-9a-f]{64}$/;
 const SHA_256_HEX = /^[0-9a-f]{64}$/;
 const BASE_UNIT_AMOUNT = /^[1-9]\d{0,29}$/;
-const CURRENCY = /^[A-Z]{3}$/;
+const CURRENCY = /^(?:[A-Z]{3}|USDC)$/;
 const RECEIPT_PATH = /^([0-9a-f-]{36})\/([0-9a-f]{64})\.(?:jpg|png|webp)$/;
 
 export const eventIdSchema = z.string().uuid();
@@ -144,4 +145,41 @@ export function parseProcessClaimInput(input: unknown): {
   processor: string;
 } {
   return processClaimInputSchema.parse(input);
+}
+
+const reviewBase = {
+  claimId: claimIdSchema,
+  reviewer: suiAddressSchema,
+};
+
+const reviewClaimInputSchema = z.discriminatedUnion('action', [
+  z
+    .object({
+      ...reviewBase,
+      action: z.literal('approve'),
+      reason: trimmedString(500).optional(),
+    })
+    .strict(),
+  z
+    .object({
+      ...reviewBase,
+      action: z.literal('reject'),
+      reason: trimmedString(500),
+    })
+    .strict(),
+  z
+    .object({
+      ...reviewBase,
+      action: z.literal('request_correction'),
+      reason: trimmedString(500),
+    })
+    .strict(),
+]);
+
+export function parseReviewClaimInput(input: unknown): ReviewClaimRequest & {
+  claimId: string;
+} {
+  return reviewClaimInputSchema.parse(input) as ReviewClaimRequest & {
+    claimId: string;
+  };
 }

@@ -1,7 +1,11 @@
-import type { AnalyzeReceiptResponse, ProcessClaimResponse } from '@tali/shared';
+import type {
+  AnalyzeReceiptResponse,
+  ProcessClaimResponse,
+  ReviewClaimResponse,
+} from '@tali/shared';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { analyzeReceipt, listClaims, processClaim } from './client';
+import { analyzeReceipt, listClaims, processClaim, reviewClaim } from './client';
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -76,6 +80,32 @@ describe('claim API client', () => {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ processor: '0xtreasurer' }),
+    });
+  });
+
+  it('submits a typed treasurer review action', async () => {
+    const response = {
+      claim: { id: 'claim-id', state: 'needs_correction' },
+      payment: null,
+    } as ReviewClaimResponse;
+    const fetchMock = vi.fn(async () => Response.json(response));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(
+      reviewClaim('claim/id', {
+        action: 'request_correction',
+        reviewer: '0xtreasurer',
+        reason: 'Upload the full receipt',
+      }),
+    ).resolves.toEqual(response);
+    expect(fetchMock).toHaveBeenCalledWith('/api/claims/claim%2Fid/review', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        action: 'request_correction',
+        reviewer: '0xtreasurer',
+        reason: 'Upload the full receipt',
+      }),
     });
   });
 });

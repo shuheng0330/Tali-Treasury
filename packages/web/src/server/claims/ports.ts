@@ -1,6 +1,7 @@
 import type {
   Address,
   Claim,
+  ClaimReview,
   CreateClaimRequest,
   MandateView,
   ObjectId,
@@ -43,6 +44,10 @@ export type PaymentMutationResult =
   | { status: 'saved'; claim: Claim }
   | { status: 'lost_race'; claim: Claim };
 
+export type ReviewMutationResult =
+  | { status: 'saved'; claim: Claim }
+  | { status: 'lost_race'; claim: Claim };
+
 export type PaymentExecutionResult =
   | { status: 'paid'; payment: PaymentResult }
   | { status: 'rejected'; payment: PaymentResult };
@@ -77,6 +82,10 @@ export interface ClaimRepository {
     decision: PolicyDecision;
     state: ProcessedClaimState;
   }): Promise<SaveDecisionResult>;
+  applyReview(input: {
+    claimId: string;
+    review: ClaimReview;
+  }): Promise<ReviewMutationResult>;
   reservePayment(claimId: string): Promise<PaymentMutationResult>;
   failApprovedPayment(input: {
     claimId: string;

@@ -137,6 +137,15 @@ export interface PaymentResult {
   budgetAfter: Amount;
 }
 
+export type ClaimReviewAction = 'approve' | 'reject' | 'request_correction';
+
+export interface ClaimReview {
+  action: ClaimReviewAction;
+  reviewer: Address;
+  reason: string | null;
+  reviewedAtMs: number;
+}
+
 export interface Claim {
   id: string;
   eventId: string;
@@ -152,6 +161,7 @@ export interface Claim {
   receiptHash: string;
   analysis: ReceiptAnalysis | null;
   decision: PolicyDecision | null;
+  review: ClaimReview | null;
   payment: PaymentResult | null;
   createdAtMs: number;
   updatedAtMs: number;
@@ -183,6 +193,7 @@ export type AuditKind =
   | 'agent_auto_approved'
   | 'approved_by_human'
   | 'rejected_by_human'
+  | 'correction_requested_by_human'
   | 'payment_sent'
   | 'payment_rejected'
   | 'mandate_created'

@@ -82,6 +82,30 @@ The claim-processing endpoint must:
 The backend signer is restricted to Sui Testnet. Its private key and owned
 `AgentCap` ID are server-only values and must never enter a client bundle.
 
+## Implemented treasurer-review scope
+
+The review endpoint and treasury UI must:
+
+- support one durable `approve`, `reject`, or `request_correction` action for an
+  `awaiting_review` claim;
+- require the event's configured treasurer under the existing fail-closed demo
+  identity gate;
+- require a trimmed 1–500 character reason for rejection and correction;
+- store review metadata on the claim and append exactly one immutable audit row
+  in the same database transaction;
+- use a compare-and-set transition so concurrent approvals can sign at most once;
+- move approval directly to `paying`, rejection to `rejected`, and correction to
+  `needs_correction`;
+- allow human approval to override only category, receipt-date, or extraction
+  confidence review failures;
+- prohibit approval for non-USDC claims or any failed current on-chain check;
+- re-read and re-evaluate the Sui mandate before recording approval;
+- persist confirmed payment success or rejection, while leaving uncertain
+  submissions in `paying` for reconciliation;
+- return exact replays idempotently and reject conflicting review actions; and
+- reload persisted claims after success and refresh mandate state after a
+  completed payment.
+
 ## Security and business rules
 
 - Gemini and Supabase credentials are server-only and must never use a
@@ -112,12 +136,12 @@ The backend signer is restricted to Sui Testnet. Its private key and owned
 - wallet-signature authentication;
 - cryptographic or one-time binding between analysis and claim creation;
 - trusted MYR-to-USDC quote ingestion, quote expiry and converted payout storage;
-- treasurer review actions and review-driven claim-state transitions;
 - automatic reconciliation of a `paying` claim after an uncertain submission;
 - Sui Mainnet signing or any real-value payment;
 - a live funded smoke transaction for this increment (automated verification uses
   injected fake operations and never broadcasts);
-- frontend replacement of remaining mock review and payment-presentation data;
+- member correction and resubmission after `request_correction`;
+- live browser presentation for payments initiated outside the review flow;
 - production readiness; the schema is hosted, but real identity, deployed API
   configuration and end-to-end verification remain pending.
 

@@ -26,6 +26,7 @@ function claim(overrides: Partial<Claim> = {}): Claim {
     receiptHash: 'a'.repeat(64),
     analysis: null,
     decision,
+    review: null,
     payment: null,
     createdAtMs: 1,
     updatedAtMs: 1,
@@ -45,5 +46,9 @@ describe('toReviewQueue', () => {
 
     expect(item?.decision.checks).toEqual([]);
     expect(item?.decision.reason).toBe('Awaiting server policy evaluation.');
+  });
+
+  it('keeps correction requests out of the treasurer review queue', () => {
+    expect(toReviewQueue([claim({ state: 'needs_correction' })])).toEqual([]);
   });
 });

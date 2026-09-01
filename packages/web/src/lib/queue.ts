@@ -7,7 +7,6 @@ import type { Claim, PolicyDecision, ReviewQueueItem } from '@tali/shared';
 const REVIEW_STATES: ReadonlySet<Claim['state']> = new Set([
   'submitted',
   'awaiting_review',
-  'needs_correction',
 ]);
 
 /** Nothing tracks committed-but-unsettled claims yet, so the reserve is zero. */

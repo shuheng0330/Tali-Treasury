@@ -52,6 +52,10 @@ const row = {
   description: '',
   receipt_analysis: analysis,
   decision: null,
+  review_action: null,
+  reviewer_wallet: null,
+  review_reason: null,
+  reviewed_at: null,
   payment: null,
   created_at: '2026-08-30T00:00:00.000Z',
   updated_at: '2026-08-30T00:00:01.000Z',
@@ -153,6 +157,117 @@ function scriptedClient(options: {
 }
 
 describe('createSupabaseClaimRepository', () => {
+  it.each([
+    ['approve', 'paying'],
+    ['reject', 'rejected'],
+    ['request_correction', 'needs_correction'],
+  ] as const)('atomically applies %s from awaiting_review to %s', async (action, state) => {
+    let updated: unknown;
+    const filters: Array<[string, string, unknown]> = [];
+    const review = {
+      action,
+      reviewer: treasurer,
+      reason: action === 'approve' ? null : 'Reviewed by treasurer',
+      reviewedAtMs: Date.parse('2026-09-01T12:00:00.000Z'),
+    };
+    const repository = createSupabaseClaimRepository(
+      scriptedClient({
+        maybeSingle: {
+          data: {
+            ...row,
+            state,
+            review_action: action,
+            reviewer_wallet: treasurer,
+            review_reason: review.reason,
+            reviewed_at: '2026-09-01T12:00:00.000Z',
+          },
+          error: null,
+        },
+        captureUpdate: (value) => {
+          updated = value;
+        },
+        captureFilter: (kind, column, value) => {
+          filters.push([kind, column, value]);
+        },
+      }),
+    );
+
+    await expect(repository.applyReview({ claimId: row.id, review })).resolves.toEqual({
+      status: 'saved',
+      claim: expect.objectContaining({ state, review }),
+    });
+    expect(updated).toEqual({
+      state,
+      review_action: action,
+      reviewer_wallet: treasurer,
+      review_reason: review.reason,
+      reviewed_at: '2026-09-01T12:00:00.000Z',
+    });
+    expect(filters).toContainEqual(['eq', 'state', 'awaiting_review']);
+    expect(filters).toContainEqual(['is', 'review_action', null]);
+  });
+
+  it('reloads the review winner after a lost compare-and-set race', async () => {
+    const winner = {
+      action: 'reject' as const,
+      reviewer: treasurer,
+      reason: 'Duplicate expense',
+      reviewedAtMs: Date.parse('2026-09-01T12:00:00.000Z'),
+    };
+    const repository = createSupabaseClaimRepository(
+      scriptedClient({
+        maybeSingles: [
+          { data: null, error: null },
+          {
+            data: {
+              ...processRow,
+              state: 'rejected',
+              review_action: winner.action,
+              reviewer_wallet: winner.reviewer,
+              review_reason: winner.reason,
+              reviewed_at: '2026-09-01T12:00:00.000Z',
+            },
+            error: null,
+          },
+          { data: processRow.events, error: null },
+        ],
+      }),
+    );
+
+    await expect(
+      repository.applyReview({
+        claimId: row.id,
+        review: { ...winner, action: 'approve', reason: null },
+      }),
+    ).resolves.toEqual({
+      status: 'lost_race',
+      claim: expect.objectContaining({ state: 'rejected', review: winner }),
+    });
+  });
+
+  it('sanitizes database failures while applying a review', async () => {
+    const repository = createSupabaseClaimRepository(
+      scriptedClient({
+        maybeSingle: {
+          data: null,
+          error: { code: 'XX000', message: 'private database detail' },
+        },
+      }),
+    );
+
+    const result = repository.applyReview({
+      claimId: row.id,
+      review: {
+        action: 'approve',
+        reviewer: treasurer,
+        reason: null,
+        reviewedAtMs: Date.parse('2026-09-01T12:00:00.000Z'),
+      },
+    });
+    await expect(result).rejects.toMatchObject({ code: 'database_failed', status: 500 });
+    await expect(result).rejects.not.toThrow('private database detail');
+  });
+
   it('loads a claim with its trusted event processing context', async () => {
     const repository = createSupabaseClaimRepository(
       scriptedClient({

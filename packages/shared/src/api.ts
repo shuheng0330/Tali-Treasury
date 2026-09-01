@@ -72,11 +72,10 @@ export interface ProcessClaimResponse {
 }
 
 /** POST /api/claims/:id/review */
-export interface ReviewClaimRequest {
-  action: 'approve' | 'reject' | 'request_correction';
-  reviewer: Address;
-  reason?: string;
-}
+export type ReviewClaimRequest =
+  | { action: 'approve'; reviewer: Address; reason?: string }
+  | { action: 'reject'; reviewer: Address; reason: string }
+  | { action: 'request_correction'; reviewer: Address; reason: string };
 
 export interface ReviewClaimResponse {
   claim: Claim;
