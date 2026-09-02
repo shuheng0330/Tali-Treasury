@@ -14,6 +14,9 @@ interface Props {
   onCapture: (file: File) => void;
 }
 
+const CAPTURE_UNAVAILABLE =
+  'Submitting a receipt needs the claims backend, which is not answering right now.';
+
 function relative(atMs: number) {
   const minutes = Math.round((Date.now() - atMs) / 60_000);
   if (minutes < 1) return 'just now';
@@ -64,6 +67,7 @@ export function ClaimHome({
           accept="image/jpeg,image/png,image/webp"
           capture="environment"
           disabled={captureDisabled}
+          title={captureDisabled ? CAPTURE_UNAVAILABLE : undefined}
           className="sr-only"
           onChange={(e) => {
             const file = e.target.files?.[0];
@@ -72,6 +76,10 @@ export function ClaimHome({
           }}
         />
       </label>
+
+      {captureDisabled ? (
+        <p className="-mt-4 text-caption text-ink-3">{CAPTURE_UNAVAILABLE}</p>
+      ) : null}
 
       <section className="flex flex-col gap-3">
         {claims

@@ -156,6 +156,7 @@ export function ClaimRow({
               disabled={paying || actionsDisabled}
               onClick={() => onPay(claim.id)}
               className="btn btn--primary h-9 px-5 text-label"
+              title={actionsDisabled ? disabledReason : undefined}
             >
               {paying ? 'Paying…' : 'Release the payment'}
             </button>
@@ -170,6 +171,7 @@ export function ClaimRow({
             disabled={processing || actionsDisabled}
             onClick={() => onProcess(claim.id)}
             className="btn btn--primary h-9 px-5 text-label"
+            title={actionsDisabled ? disabledReason : undefined}
           >
             {processing ? 'Evaluating…' : 'Evaluate claim'}
           </button>

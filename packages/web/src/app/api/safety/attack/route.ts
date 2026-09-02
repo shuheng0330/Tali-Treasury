@@ -1,7 +1,9 @@
+import { assertSameOrigin } from '../../../../server/auth/session';
 import { requireDemoIdentityEnabled } from '../../../../server/demo-auth';
 import { ServerError, toApiError } from '../../../../server/errors';
 import { getSafetyService } from '../../../../server/safety/dependencies';
 import { safetyAttackSchema } from '../../../../server/safety/validation';
+import { requireAppOrigin } from '../../../../server/env';
 
 export const runtime = 'nodejs';
 
@@ -15,6 +17,9 @@ export const runtime = 'nodejs';
 export async function POST(request: Request): Promise<Response> {
   try {
     requireDemoIdentityEnabled();
+    /* This route really does sign and submit, so it spends gas from the
+       backend signer. Nothing off-origin gets to do that. */
+    assertSameOrigin(request, requireAppOrigin());
 
     let body: unknown;
     try {

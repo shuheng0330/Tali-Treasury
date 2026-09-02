@@ -7,7 +7,7 @@ import type { ClaimReviewAction, MandateView } from '@tali/shared';
 import { CLAIM_CHIP, EXPLORER } from '@tali/shared';
 import { Money } from '@/components/Money';
 import { StatusChip } from '@/components/StatusChip';
-import { event } from '@/lib/mock/data';
+import { COMMITTED, event } from '@/lib/mock/data';
 import { reviewQueue, settledClaims } from '@/lib/mock/api';
 import { committedFrom, settledFrom, toReviewQueue } from '@/lib/queue';
 import { useClaims } from '@/lib/api/useClaims';
@@ -58,7 +58,7 @@ export function TreasuryDashboard({
   const [reviewError, setReviewError] = useState<string | null>(null);
   const [payingId, setPayingId] = useState<string | null>(null);
 
-  const live = useClaims(authenticated);
+  const live = useClaims(apiEnabled);
 
   const queue = useMemo(
     () =>
@@ -85,7 +85,9 @@ export function TreasuryDashboard({
      budget still counts them as available, so subtracting them here is what
      stops the header inviting an approval the money cannot cover. */
   const committed = useMemo(
-    () => (live.source === 'live' ? committedFrom(live.claims) : '0'),
+    /* The sample evaluator measures the budget against COMMITTED, so the header
+       has to use the same figure or it contradicts the rows underneath it. */
+    () => (live.source === 'live' ? committedFrom(live.claims) : COMMITTED),
     [live.source, live.claims],
   );
 

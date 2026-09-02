@@ -18,6 +18,20 @@ type PayClaimService = (input: {
 
 type ResolveIdentity = (request: Request, legacyAddress?: string) => Promise<string>;
 
+const SUI_ADDRESS = /^0x[0-9a-f]{64}$/;
+
+/* A string that is not an address is a bad request, not a bad session. Letting
+   it fall through to the identity resolver told the caller their wallet
+   session was invalid when what they sent was a malformed address. */
+function legacyAddress(value: unknown, field: string): string | undefined {
+  if (value === undefined) return undefined;
+  if (typeof value !== 'string' || !SUI_ADDRESS.test(value)) {
+    throw new ServerError('invalid_request', 400, `${field} must be a canonical Sui address`);
+  }
+  return value;
+}
+
+
 export function createPayClaimHandler(
   service: PayClaimService,
   resolveIdentity?: ResolveIdentity,
@@ -33,11 +47,15 @@ export function createPayClaimHandler(
           cause: error,
         });
       }
-      const processor =
-        body && typeof body === 'object' && 'processor' in body ? body.processor : undefined;
-      if (processor !== undefined && typeof processor !== 'string') {
-        throw new ServerError('invalid_request', 400, 'processor must be a Sui address');
+      if (!body || typeof body !== 'object' || Array.isArray(body)) {
+        throw new ServerError('invalid_request', 400, 'The request body must be an object');
       }
+      const { processor: supplied, ...rest } = body as Record<string, unknown>;
+      const unknown = Object.keys(rest);
+      if (unknown.length > 0) {
+        throw new ServerError('invalid_request', 400, `Unrecognized key: "${unknown[0]}"`);
+      }
+      const processor = legacyAddress(supplied, 'processor');
 
       if (appOrigin) assertSameOrigin(request, appOrigin);
       const actor = resolveIdentity ? await resolveIdentity(request, processor) : processor;

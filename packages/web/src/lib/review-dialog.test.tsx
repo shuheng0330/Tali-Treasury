@@ -26,7 +26,7 @@ const claim = {
 } satisfies Claim;
 
 describe('ReviewActionDialog', () => {
-  it('renders the approval payment warning without a reason field', () => {
+  it('tells the treasurer approving pays nothing, without a reason field', () => {
     const html = renderToStaticMarkup(
       <ReviewActionDialog
         action="approve"
@@ -38,8 +38,8 @@ describe('ReviewActionDialog', () => {
       />,
     );
 
-    expect(html).toContain('Sui Testnet USDC payment');
-    expect(html).toContain('Approve and pay');
+    expect(html).toContain('Nothing is paid yet');
+    expect(html).toContain('Record the approval');
     expect(html).not.toContain('<textarea');
   });
 

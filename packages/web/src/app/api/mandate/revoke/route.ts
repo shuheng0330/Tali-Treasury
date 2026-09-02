@@ -1,8 +1,10 @@
 import { z } from 'zod';
 
+import { assertSameOrigin } from '../../../../server/auth/session';
 import { requireDemoIdentityEnabled } from '../../../../server/demo-auth';
 import { ServerError, toApiError } from '../../../../server/errors';
 import { getRevokePort, mandateIdForRevocation } from '../../../../server/mandate/dependencies';
+import { requireAppOrigin } from '../../../../server/env';
 
 export const runtime = 'nodejs';
 
@@ -19,6 +21,10 @@ const revokeSchema = z
 export async function POST(request: Request): Promise<Response> {
   try {
     requireDemoIdentityEnabled();
+    /* Revocation cannot be undone and stops every payment from the mandate.
+       Both halves of the typed confirmation come from the request body, so
+       without this the whole guard is one a foreign page can satisfy. */
+    assertSameOrigin(request, requireAppOrigin());
 
     let body: unknown;
     try {

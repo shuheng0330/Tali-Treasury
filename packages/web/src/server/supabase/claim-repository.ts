@@ -81,7 +81,7 @@ interface ClaimProcessRow extends ClaimRow {
   events: EventProcessRow | EventProcessRow[];
 }
 
-export const CLAIM_COLUMNS = `
+const CLAIM_COLUMNS_BASE = `
   id,
   event_id,
   submitter_wallet,
@@ -95,15 +95,33 @@ export const CLAIM_COLUMNS = `
   description,
   receipt_analysis,
   decision,
-  review_action,
-  reviewer_wallet,
-  review_reason,
-  reviewed_at,
   payment,
   created_at,
   updated_at,
   event_members!claims_active_member_fk(display_name)
 `;
+
+const REVIEW_COLUMNS = 'review_action, reviewer_wallet, review_reason, reviewed_at';
+
+export const CLAIM_COLUMNS = `${CLAIM_COLUMNS_BASE}, ${REVIEW_COLUMNS}`;
+
+/**
+ * The review columns arrive in a migration this app cannot apply itself, and
+ * they are in the select list of every claim read. Asking for them on a
+ * database that does not have them yet does not degrade one feature — it turns
+ * every read of every claim into a 500, which is the whole product.
+ *
+ * So the column is asked for once. PostgREST answers 42703 when it is absent,
+ * and it is dropped from the projection from then on: claims list and process
+ * as before, and only recording a decision is unavailable.
+ */
+let reviewColumns: 'unknown' | 'present' | 'absent' = 'unknown';
+
+const UNDEFINED_COLUMN = '42703';
+
+function claimColumns(): string {
+  return reviewColumns === 'absent' ? CLAIM_COLUMNS_BASE : CLAIM_COLUMNS;
+}
 
 const EVENT_POLICY_COLUMNS =
   'treasurer_wallet, mandate_object_id, allowed_categories, starts_at, expires_at';
@@ -137,27 +155,27 @@ export function mapClaimRow(input: unknown): StoredClaim {
 
   let review: ClaimReview | null = null;
   if (
-    row.review_action !== null ||
-    row.reviewer_wallet !== null ||
-    row.review_reason !== null ||
-    row.reviewed_at !== null
+    (row.review_action ?? null) !== null ||
+    (row.reviewer_wallet ?? null) !== null ||
+    (row.review_reason ?? null) !== null ||
+    (row.reviewed_at ?? null) !== null
   ) {
     const reviewedAtMs = Date.parse(row.reviewed_at ?? '');
     if (
-      row.review_action === null ||
+      !row.review_action ||
       !REVIEW_ACTIONS.includes(row.review_action) ||
-      row.reviewer_wallet === null ||
+      !row.reviewer_wallet ||
       !CANONICAL_SUI_ID.test(row.reviewer_wallet) ||
       !Number.isFinite(reviewedAtMs) ||
       ((row.review_action === 'reject' || row.review_action === 'request_correction') &&
-        row.review_reason === null)
+        !row.review_reason)
     ) {
       throw databaseFailure(null);
     }
     review = {
       action: row.review_action,
       reviewer: row.reviewer_wallet,
-      reason: row.review_reason,
+      reason: row.review_reason ?? null,
       reviewedAtMs,
     };
   }
@@ -226,6 +244,18 @@ function query(client: SupabaseDataClient, table: string): QueryBuilder {
 export function createSupabaseClaimRepository(
   client: SupabaseDataClient,
 ): ClaimRepository {
+  let probe: Promise<void> | undefined;
+
+  /* Asked once per process, not per query, so a database without the columns
+     costs one extra round trip in total rather than a failed read each time. */
+  async function ensureReviewColumns(): Promise<void> {
+    if (reviewColumns !== 'unknown') return;
+    probe ??= (async () => {
+      const { error } = await query(client, 'claims').select('review_action').limit(1);
+      reviewColumns = error?.code === UNDEFINED_COLUMN ? 'absent' : 'present';
+    })();
+    await probe;
+  }
   /*
    * Two reads rather than an embed. `claims.event_id` reaches an event only
    * through the composite key that ties a claim to a member of that event, so
@@ -234,8 +264,9 @@ export function createSupabaseClaimRepository(
    * inferable relationship.
    */
   async function getProcessContext(claimId: string) {
+      await ensureReviewColumns();
     const { data: claimRow, error: claimError } = await query(client, 'claims')
-      .select(CLAIM_COLUMNS)
+      .select(claimColumns())
       .eq('id', claimId)
       .maybeSingle();
 
@@ -284,7 +315,7 @@ export function createSupabaseClaimRepository(
       .eq('id', input.claimId)
       .eq('state', input.expectedState)
       .is('payment', null)
-      .select(CLAIM_COLUMNS)
+      .select(claimColumns())
       .maybeSingle();
 
     if (error && error.code !== 'PGRST116') {
@@ -411,7 +442,7 @@ export function createSupabaseClaimRepository(
           description: input.description,
           receipt_analysis: input.analysis,
         })
-        .select(CLAIM_COLUMNS)
+        .select(claimColumns())
         .single();
 
       if (error?.code === '23505') {
@@ -446,8 +477,9 @@ export function createSupabaseClaimRepository(
     },
 
     async listByEvent(eventId): Promise<StoredClaim[]> {
+      await ensureReviewColumns();
         const { data, error } = await query(client, 'claims')
-        .select(CLAIM_COLUMNS)
+        .select(claimColumns())
         .eq('event_id', eventId)
         .order('created_at', { ascending: false })
         .order('id', { ascending: false })
@@ -465,6 +497,19 @@ export function createSupabaseClaimRepository(
     getProcessContext,
 
     async applyReview(input) {
+      await ensureReviewColumns();
+
+      /* Refused before the write rather than after it. A decision whose
+         reviewer and reason cannot be stored is not one anybody can audit
+         later, and a state change without them would be worse than none. */
+      if (reviewColumns === 'absent') {
+        throw new ServerError(
+          'database_failed',
+          503,
+          'Recording a decision needs the claims review columns. Apply migration 20260901020000_claim_review_actions.sql.',
+        );
+      }
+
       const nextStateByAction = {
         approve: 'approved',
         reject: 'rejected',
@@ -482,7 +527,7 @@ export function createSupabaseClaimRepository(
         .eq('state', 'awaiting_review')
         .is('review_action', null)
         .is('payment', null)
-        .select(CLAIM_COLUMNS)
+        .select(claimColumns())
         .maybeSingle();
 
       if (error && error.code !== 'PGRST116') {
@@ -547,7 +592,7 @@ export function createSupabaseClaimRepository(
         })
         .eq('id', input.claimId)
         .eq('state', 'needs_correction')
-        .select(CLAIM_COLUMNS)
+        .select(claimColumns())
         .maybeSingle();
 
       if (error && error.code !== 'PGRST116') {
@@ -570,7 +615,7 @@ export function createSupabaseClaimRepository(
         .eq('id', input.claimId)
         .eq('state', 'submitted')
         .is('decision', null)
-        .select(CLAIM_COLUMNS)
+        .select(claimColumns())
         .maybeSingle();
 
       if (error && error.code !== 'PGRST116') {
