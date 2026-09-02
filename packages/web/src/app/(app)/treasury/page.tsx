@@ -14,7 +14,7 @@ export const metadata = {
 export const dynamic = 'force-dynamic';
 
 export default async function TreasuryPage() {
-  const apiEnabled = process.env.TALI_ALLOW_INSECURE_DEMO_IDENTITY === 'true';
+  const apiEnabled = true;
 
   try {
     const client = createTestnetClient(process.env.SUI_GRPC_URL);

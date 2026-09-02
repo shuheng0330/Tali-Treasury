@@ -1,39 +1,46 @@
 import { describe, expect, it } from 'vitest';
 
-import { parseCreateClaimRequest, parseReviewClaimInput } from './validation';
+import { parseCreateClaimInput, parseReviewClaimInput } from './validation';
 
 const claimId = '14ab1f35-2e55-4ca1-a917-dfdc5cf555c7';
 const reviewer = `0x${'b'.repeat(64)}`;
 
-describe('parseCreateClaimRequest', () => {
-  it('accepts USDC as the payable asset symbol', () => {
-    const eventId = '11111111-1111-4111-8111-111111111111';
-    const receiptHash = 'a'.repeat(64);
-
+describe('parseCreateClaimInput', () => {
+  it('accepts only the draft id, authenticated wallet, and confirmed fields', () => {
     expect(
-      parseCreateClaimRequest({
-        eventId,
+      parseCreateClaimInput({
+        draftId: '11111111-1111-4111-8111-111111111111',
         submitter: `0x${'a'.repeat(64)}`,
         amount: '1000000',
         merchant: 'Shop',
         receiptDate: '2026-08-31',
         category: 'printing',
         description: '',
-        storagePath: `${eventId}/${receiptHash}.png`,
-        analysis: {
-          merchant: 'Shop',
-          amount: '1000000',
-          currency: 'USDC',
-          receiptDate: '2026-08-31',
-          category: 'printing',
-          confidence: 0.99,
-          uncertainFields: [],
-          warnings: [],
-          receiptHash,
-          fuzzyKey: 'shop|2026-08-31|1000000',
-        },
       }),
-    ).toMatchObject({ analysis: { currency: 'USDC' } });
+    ).toEqual({
+      draftId: '11111111-1111-4111-8111-111111111111',
+      submitter: `0x${'a'.repeat(64)}`,
+      amount: '1000000',
+      merchant: 'Shop',
+      receiptDate: '2026-08-31',
+      category: 'printing',
+      description: '',
+    });
+  });
+
+  it('rejects client-supplied analysis and storage paths', () => {
+    expect(() =>
+      parseCreateClaimInput({
+        draftId: '11111111-1111-4111-8111-111111111111',
+        submitter: `0x${'a'.repeat(64)}`,
+        amount: '1000000',
+        merchant: 'Shop',
+        receiptDate: '2026-08-31',
+        category: 'printing',
+        description: '',
+        storagePath: 'private/path.png',
+      }),
+    ).toThrow();
   });
 });
 

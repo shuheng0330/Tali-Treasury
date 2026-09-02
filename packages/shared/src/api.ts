@@ -24,24 +24,46 @@ export function isApiError(value: unknown): value is ApiError {
   return typeof value === 'object' && value !== null && 'error' in value;
 }
 
+/** POST /api/auth/challenge */
+export interface CreateWalletChallengeRequest {
+  address: Address;
+}
+
+export interface CreateWalletChallengeResponse {
+  challengeId: string;
+  message: string;
+  expiresAt: string;
+}
+
+/** POST /api/auth/session */
+export interface CreateWalletSessionRequest {
+  challengeId: string;
+  signature: string;
+}
+
+export interface WalletSession {
+  address: Address;
+  expiresAt: string;
+}
+
+export type GetWalletSessionResponse = WalletSession;
+
 /** POST /api/receipts/analyze — multipart, field name "receipt". */
 export interface AnalyzeReceiptResponse {
   analysis: ReceiptAnalysis;
-  storagePath: string;
+  draftId: string | null;
+  draftExpiresAt: string | null;
   duplicateOf: string | null;
 }
 
 /** POST /api/claims */
 export interface CreateClaimRequest {
-  eventId: string;
-  submitter: Address;
+  draftId: string;
   amount: Amount;
   merchant: string;
   receiptDate: string;
   category: ExpenseCategory;
   description: string;
-  storagePath: string;
-  analysis: ReceiptAnalysis;
 }
 
 export interface CreateClaimResponse {
@@ -61,7 +83,8 @@ export interface DraftClaim {
 }
 
 export interface ProcessClaimRequest {
-  processor: Address;
+  /** Local-only compatibility identity; authenticated clients omit this. */
+  processor?: Address;
 }
 
 /** POST /api/claims/:id/process — evaluates policy; payment may remain pending. */
@@ -73,9 +96,9 @@ export interface ProcessClaimResponse {
 
 /** POST /api/claims/:id/review */
 export type ReviewClaimRequest =
-  | { action: 'approve'; reviewer: Address; reason?: string }
-  | { action: 'reject'; reviewer: Address; reason: string }
-  | { action: 'request_correction'; reviewer: Address; reason: string };
+  | { action: 'approve'; reviewer?: Address; reason?: string }
+  | { action: 'reject'; reviewer?: Address; reason: string }
+  | { action: 'request_correction'; reviewer?: Address; reason: string };
 
 export interface ReviewClaimResponse {
   claim: Claim;

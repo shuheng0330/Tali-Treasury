@@ -14,10 +14,10 @@ whole product flow is live.
 | Sui TypeScript boundary | ✅ Ready | Reads, builders, config, USDC helpers, abort mapping and backend testnet signer adapter | One separately authorized live smoke claim |
 | Shared contracts | ✅ Ready | Claim, event, policy, audit, mandate and endpoint types | Evolve only with team agreement |
 | Web dashboard | ✅ Live read-only | Current mandate state comes from Sui Testnet | Signed actions and backend claim totals |
-| Receipt and claim backend | ✅ Hosted schema ready | Gemini validation, private storage, persistence, duplicate checks, guarded APIs, deterministic policy, atomic review/payment states, review audit migration, and all three active team members verified | Apply the review migration and configure deployed API/auth/signer |
-| Claim and review UX | ✅ Complete locally | Real receipt analyze/create/list plus real approve/reject/correction actions; eligible USDC approval starts guarded payment | Wallet auth, member resubmission and trusted FX quotes |
+| Receipt and claim backend | ✅ Complete locally | Wallet sessions, one-time analysis drafts, private storage, deterministic policy, atomic review/payment states and 91 pgTAP checks | Apply latest migration and configure hosted API/origin/signer |
+| Claim and review UX | ✅ Complete locally | Testnet wallet connect/sign-in/logout plus real analyze/create/list/review actions | Hosted wallet verification, member resubmission and trusted FX quotes |
 | Safety Test UI | 🟡 Mocked with live evidence links | Local preview plus links to two real rejected transactions | Interactive signed attempts and revocation scenario |
-| Deployment | ✅ Live | Vercel production and live Sui dashboard verified | Enable receipt writes only after wallet auth |
+| Deployment | ✅ Live reads; auth rollout pending | Vercel production and live Sui dashboard verified | Push wallet migration, configure exact HTTPS origin, verify protected writes |
 | Submission | ⬜ Pending | — | Landing content, videos, deck, disclosure and rehearsal |
 
 ## Real versus simulated
@@ -42,11 +42,11 @@ interactions as simulations and links separately to genuine Testnet evidence.
 |---|---|---|---|
 | 0 | Repo, shared contracts, design tokens | ✅ Done | 29 Aug |
 | 1 | Design system, app shell, status chips | ✅ Done | 29 Aug |
-| 2 | Mobile claim flow — capture to submitted | 🟡 API-backed; auth pending | 31 Aug |
+| 2 | Mobile claim flow — capture to submitted | ✅ Authenticated locally | 1 Sep |
 | 3 | Treasurer dashboard and review queue | ✅ Real review actions complete locally | 1 Sep |
 | 4 | Safety Test panel | 🟡 Mock flow; live refusals linked | 29 Aug |
 | 5 | Landing page | ✅ Done, rebuilt 31 Aug | 30 Aug |
-| 6 | Wire to live contract and backend | 🟡 Live reads plus receipt, claim, policy, review and backend testnet-payment code; FX, auth, deployment config and live smoke pending | 1 Sep |
+| 6 | Wire to live contract and backend | 🟡 Authenticated local flow complete; FX, hosted rollout and live smoke pending | 1 Sep |
 | 7 | Submission pack | ⬜ Not started | — |
 
 Legend: ✅ done · 🟡 in progress · ⬜ not started · ⛔ cut
@@ -57,14 +57,14 @@ Legend: ✅ done · 🟡 in progress · ⬜ not started · ⛔ cut
 
 Updated 1 September and ordered by the risk of leaving each item unfinished:
 
-1. Wallet-signature or session authentication for members and the treasurer.
-2. A persisted, one-time analysis draft binding the uploaded receipt to confirmation.
-3. A trusted MYR-to-USDC quote with source, timestamp, expiry, rounding and payout amount.
-4. Member correction and resubmission after a treasurer request.
-5. One authorized funded testnet smoke payment, plus digest recovery and
+1. Push the wallet/draft migration, configure `TALI_APP_ORIGIN`, and verify member
+   and treasurer browser wallets on the hosted app.
+2. A trusted MYR-to-USDC quote with source, timestamp, expiry, rounding and payout amount.
+3. Member correction and resubmission after a treasurer request.
+4. One authorized funded testnet smoke payment, plus digest recovery and
    reconciliation for uncertain submissions.
-6. Interactive on-chain safety attempts and live revocation.
-7. Submission video, deck, AI disclosure and rehearsal.
+5. Interactive on-chain safety attempts and live revocation.
+6. Submission video, deck, AI disclosure and rehearsal.
 
 ---
 

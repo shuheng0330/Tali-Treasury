@@ -1,6 +1,5 @@
 import {
   EXPENSE_CATEGORIES,
-  type CreateClaimRequest,
   type ExpenseCategory,
   type ReviewClaimRequest,
   type UncertainField,
@@ -11,7 +10,6 @@ const SUI_ADDRESS = /^0x[0-9a-f]{64}$/;
 const SHA_256_HEX = /^[0-9a-f]{64}$/;
 const BASE_UNIT_AMOUNT = /^[1-9]\d{0,29}$/;
 const CURRENCY = /^(?:[A-Z]{3}|USDC)$/;
-const RECEIPT_PATH = /^([0-9a-f-]{36})\/([0-9a-f]{64})\.(?:jpg|png|webp)$/;
 
 export const eventIdSchema = z.string().uuid();
 export const claimIdSchema = z.string().uuid();
@@ -86,9 +84,9 @@ const receiptAnalysisSchema = z
     }
   });
 
-const createClaimRequestSchema = z
+const createClaimInputSchema = z
   .object({
-    eventId: eventIdSchema,
+    draftId: z.string().uuid(),
     submitter: suiAddressSchema,
     amount: z.string().regex(BASE_UNIT_AMOUNT),
     merchant: trimmedString(200),
@@ -98,39 +96,19 @@ const createClaimRequestSchema = z
       .string()
       .max(500)
       .refine((value) => value === value.trim(), 'must already be trimmed'),
-    storagePath: z.string().regex(RECEIPT_PATH, 'invalid private receipt path'),
-    analysis: receiptAnalysisSchema,
   })
-  .strict()
-  .superRefine((request, context) => {
-    const pathMatch = RECEIPT_PATH.exec(request.storagePath);
-    if (
-      pathMatch?.[1] !== request.eventId ||
-      pathMatch?.[2] !== request.analysis.receiptHash
-    ) {
-      context.addIssue({
-        code: 'custom',
-        path: ['storagePath'],
-        message: 'receipt path must match event and analysis hash',
-      });
-    }
+  .strict();
 
-    const expectedFuzzyKey = [
-      request.analysis.merchant?.toLowerCase().replace(/\s+/g, ' ').trim() ?? '',
-      request.analysis.receiptDate ?? '',
-      request.analysis.amount ?? '',
-    ].join('|');
-    if (request.analysis.fuzzyKey !== expectedFuzzyKey) {
-      context.addIssue({
-        code: 'custom',
-        path: ['analysis', 'fuzzyKey'],
-        message: 'fuzzy key does not match normalized claim fields',
-      });
-    }
-  });
-
-export function parseCreateClaimRequest(input: unknown): CreateClaimRequest {
-  return createClaimRequestSchema.parse(input) as CreateClaimRequest;
+export function parseCreateClaimInput(input: unknown): {
+  draftId: string;
+  submitter: string;
+  amount: string;
+  merchant: string;
+  receiptDate: string;
+  category: ExpenseCategory;
+  description: string;
+} {
+  return createClaimInputSchema.parse(input);
 }
 
 const processClaimInputSchema = z
@@ -176,10 +154,9 @@ const reviewClaimInputSchema = z.discriminatedUnion('action', [
     .strict(),
 ]);
 
-export function parseReviewClaimInput(input: unknown): ReviewClaimRequest & {
-  claimId: string;
-} {
-  return reviewClaimInputSchema.parse(input) as ReviewClaimRequest & {
-    claimId: string;
-  };
+export function parseReviewClaimInput(input: unknown):
+  | { claimId: string; action: 'approve'; reviewer: string; reason?: string }
+  | { claimId: string; action: 'reject'; reviewer: string; reason: string }
+  | { claimId: string; action: 'request_correction'; reviewer: string; reason: string } {
+  return reviewClaimInputSchema.parse(input);
 }

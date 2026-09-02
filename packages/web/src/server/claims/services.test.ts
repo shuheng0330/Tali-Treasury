@@ -1,6 +1,5 @@
 import type {
   Claim,
-  CreateClaimRequest,
   MandateView,
   PaymentResult,
   PolicyDecision,
@@ -13,7 +12,12 @@ import {
   PaymentConfigurationError,
   PaymentSubmissionUncertainError,
 } from '../sui/payment-executor';
-import type { ClaimRepository, PaymentExecutor, ReceiptStore } from './ports';
+import type {
+  AnalysisDraftRepository,
+  ClaimRepository,
+  PaymentExecutor,
+  ReceiptStore,
+} from './ports';
 import {
   createAnalyzeReceiptService,
   createClaimService,
@@ -116,17 +120,15 @@ const payment: PaymentResult = {
   budgetAfter: '75500000',
 };
 
-function createRequest(): CreateClaimRequest {
+function createRequest() {
   return {
-    eventId,
+    draftId: '11111111-1111-4111-8111-111111111111',
     submitter,
     amount: '4500000',
     merchant: 'Campus Print Shop',
     receiptDate: '2026-08-30',
     category: 'printing',
     description: '',
-    storagePath,
-    analysis,
   };
 }
 
@@ -134,6 +136,7 @@ function createRepository(overrides: Partial<ClaimRepository> = {}): ClaimReposi
   return {
     assertEventExists: vi.fn(async () => undefined),
     assertActiveMember: vi.fn(async () => undefined),
+    assertEventViewer: vi.fn(async () => undefined),
     findDuplicateReceipt: vi.fn(async () => null),
     create: vi.fn(async () => claim),
     listByEvent: vi.fn(async () => []),
@@ -151,6 +154,19 @@ function createReceiptStore(overrides: Partial<ReceiptStore> = {}): ReceiptStore
   return {
     upload: vi.fn(async () => storagePath),
     createSignedUrl: vi.fn(async () => 'https://signed.example/receipt'),
+    ...overrides,
+  };
+}
+
+function createDraftRepository(
+  overrides: Partial<AnalysisDraftRepository> = {},
+): AnalysisDraftRepository {
+  return {
+    create: vi.fn(async (input) => ({
+      id: '11111111-1111-4111-8111-111111111111',
+      expiresAtMs: input.expiresAtMs,
+    })),
+    consumeToClaim: vi.fn(async () => claim),
     ...overrides,
   };
 }
@@ -193,7 +209,12 @@ describe('createAnalyzeReceiptService', () => {
         return storagePath;
       }),
     });
-    const analyzeReceipt = createAnalyzeReceiptService({ analyzer, claims, receipts });
+    const analyzeReceipt = createAnalyzeReceiptService({
+      analyzer,
+      claims,
+      receipts,
+      drafts: createDraftRepository(),
+    });
 
     await expect(
       analyzeReceipt({
@@ -216,7 +237,12 @@ describe('createAnalyzeReceiptService', () => {
     });
     const analyzer = { analyze: vi.fn() };
     const receipts = createReceiptStore();
-    const analyzeReceipt = createAnalyzeReceiptService({ analyzer, claims, receipts });
+    const analyzeReceipt = createAnalyzeReceiptService({
+      analyzer,
+      claims,
+      receipts,
+      drafts: createDraftRepository(),
+    });
 
     await expect(
       analyzeReceipt({
@@ -225,7 +251,12 @@ describe('createAnalyzeReceiptService', () => {
         bytes: Buffer.from('hello'),
         mimeType: 'image/png',
       }),
-    ).resolves.toEqual({ analysis, storagePath, duplicateOf: claim.id });
+    ).resolves.toEqual({
+      analysis,
+      draftId: null,
+      draftExpiresAt: null,
+      duplicateOf: claim.id,
+    });
     expect(analyzer.analyze).not.toHaveBeenCalled();
     expect(receipts.upload).not.toHaveBeenCalled();
   });
@@ -265,7 +296,22 @@ describe('createAnalyzeReceiptService', () => {
         return storagePath;
       }),
     });
-    const analyzeReceipt = createAnalyzeReceiptService({ analyzer, claims, receipts });
+    const drafts = createDraftRepository({
+      create: vi.fn(async (input) => {
+        calls.push('draft');
+        return {
+          id: '11111111-1111-4111-8111-111111111111',
+          expiresAtMs: input.expiresAtMs,
+        };
+      }),
+    });
+    const analyzeReceipt = createAnalyzeReceiptService({
+      analyzer,
+      claims,
+      receipts,
+      drafts,
+      now: () => Date.parse('2026-09-01T12:00:00.000Z'),
+    });
 
     await expect(
       analyzeReceipt({
@@ -274,31 +320,49 @@ describe('createAnalyzeReceiptService', () => {
         bytes: Buffer.from('hello'),
         mimeType: 'image/png',
       }),
-    ).resolves.toEqual({ analysis, storagePath, duplicateOf: null });
+    ).resolves.toEqual({
+      analysis,
+      draftId: '11111111-1111-4111-8111-111111111111',
+      draftExpiresAt: '2026-09-01T12:15:00.000Z',
+      duplicateOf: null,
+    });
     expect(calls).toEqual([
       'event',
       'member',
       `duplicate:${receiptHash}`,
       'analyze',
       `upload:${eventId}`,
+      'draft',
     ]);
+    expect(drafts.create).toHaveBeenCalledWith({
+      eventId,
+      walletAddress: submitter,
+      storagePath,
+      receiptHash,
+      analysis,
+      createdAtMs: Date.parse('2026-09-01T12:00:00.000Z'),
+      expiresAtMs: Date.parse('2026-09-01T12:15:00.000Z'),
+    });
   });
 });
 
 describe('createClaimService', () => {
   it('rejects malformed input before repository access', async () => {
-    const claims = createRepository();
-    const createClaim = createClaimService({ claims });
+    const drafts = createDraftRepository();
+    const createClaim = createClaimService({ drafts });
 
     await expect(
       createClaim({ ...createRequest(), amount: 'not-an-amount' }),
     ).rejects.toMatchObject({ code: 'invalid_request', status: 400 });
-    expect(claims.create).not.toHaveBeenCalled();
+    expect(drafts.consumeToClaim).not.toHaveBeenCalled();
   });
 
-  it('preserves the original analysis while accepting corrected claim fields', async () => {
-    const claims = createRepository();
-    const createClaim = createClaimService({ claims });
+  it('atomically consumes the stored draft with authenticated wallet and corrections', async () => {
+    const drafts = createDraftRepository();
+    const createClaim = createClaimService({
+      drafts,
+      now: () => Date.parse('2026-09-01T12:01:00.000Z'),
+    });
     const corrected = {
       ...createRequest(),
       amount: '4750000',
@@ -308,57 +372,25 @@ describe('createClaimService', () => {
     };
 
     await expect(createClaim(corrected)).resolves.toEqual({ claim });
-    expect(claims.create).toHaveBeenCalledWith(corrected);
+    expect(drafts.consumeToClaim).toHaveBeenCalledWith({
+      draftId: corrected.draftId,
+      walletAddress: submitter,
+      amount: '4750000',
+      merchant: 'Campus Print & Copy',
+      receiptDate: '2026-08-31',
+      category: 'materials',
+      description: '',
+      nowMs: Date.parse('2026-09-01T12:01:00.000Z'),
+    });
   });
 
-  it('persists a valid shared CreateClaimRequest', async () => {
-    const claims = createRepository();
-    const createClaim = createClaimService({ claims });
-
-    await expect(createClaim(createRequest())).resolves.toEqual({ claim });
-    expect(claims.assertEventExists).toHaveBeenCalledWith(eventId);
-    expect(claims.assertActiveMember).toHaveBeenCalledWith(eventId, submitter);
-    expect(claims.create).toHaveBeenCalledWith(createRequest());
-  });
-
-  it('rejects an inactive member before claim insertion', async () => {
-    const claims = createRepository({
-      assertActiveMember: vi.fn(async () => {
-        throw new ServerError('member_not_found', 403, 'Active event membership is required');
-      }),
-    });
-    const createClaim = createClaimService({ claims });
-
-    await expect(createClaim(createRequest())).rejects.toMatchObject({
-      code: 'member_not_found',
-      status: 403,
-    });
-    expect(claims.create).not.toHaveBeenCalled();
-  });
-
-  it('returns event_not_found before membership or insertion', async () => {
-    const claims = createRepository({
-      assertEventExists: vi.fn(async () => {
-        throw new ServerError('event_not_found', 404, 'Event not found');
-      }),
-    });
-    const createClaim = createClaimService({ claims });
-
-    await expect(createClaim(createRequest())).rejects.toMatchObject({
-      code: 'event_not_found',
-      status: 404,
-    });
-    expect(claims.assertActiveMember).not.toHaveBeenCalled();
-    expect(claims.create).not.toHaveBeenCalled();
-  });
-
-  it('preserves a race-safe duplicate repository error', async () => {
-    const claims = createRepository({
-      create: vi.fn(async () => {
+  it('preserves safe draft and duplicate errors', async () => {
+    const drafts = createDraftRepository({
+      consumeToClaim: vi.fn(async () => {
         throw new ServerError('duplicate_receipt', 409, 'Receipt already claimed');
       }),
     });
-    const createClaim = createClaimService({ claims });
+    const createClaim = createClaimService({ drafts });
 
     await expect(createClaim(createRequest())).rejects.toMatchObject({
       code: 'duplicate_receipt',
@@ -380,7 +412,7 @@ describe('createListClaimsService', () => {
       cursor: null,
     });
     expect(claims.assertEventExists).toHaveBeenCalledWith(eventId);
-    expect(claims.assertActiveMember).toHaveBeenCalledWith(eventId, submitter);
+    expect(claims.assertEventViewer).toHaveBeenCalledWith(eventId, submitter);
     expect(receipts.createSignedUrl).toHaveBeenCalledWith(storagePath, 300);
   });
 });

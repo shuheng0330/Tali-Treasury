@@ -17,6 +17,7 @@ import { ClaimRow } from './ClaimRow';
 import { MandateHeader } from './MandateHeader';
 import { RevokeDialog } from './RevokeDialog';
 import { ReviewActionDialog } from './ReviewActionDialog';
+import { useWalletSession } from '@/components/wallet/WalletSessionProvider';
 
 type Tab = 'review' | 'paid' | 'all';
 
@@ -35,6 +36,8 @@ interface Props {
 const NO_COMMITTED_CLAIMS = '0';
 
 export function TreasuryDashboard({ apiEnabled, initialMandate: mandate, readError }: Props) {
+  const wallet = useWalletSession();
+  const authenticated = apiEnabled && wallet.status === 'authenticated';
   const router = useRouter();
   const [refreshing, startRefresh] = useTransition();
   const [tab, setTab] = useState<Tab>('review');
@@ -48,7 +51,7 @@ export function TreasuryDashboard({ apiEnabled, initialMandate: mandate, readErr
   const [reviewPending, setReviewPending] = useState(false);
   const [reviewError, setReviewError] = useState<string | null>(null);
 
-  const live = useClaims(apiEnabled);
+  const live = useClaims(authenticated);
 
   const queue = useMemo(
     () =>
@@ -77,6 +80,10 @@ export function TreasuryDashboard({ apiEnabled, initialMandate: mandate, readErr
     : null;
 
   async function process(id: string) {
+    if (!authenticated) {
+      setProcessError('sign in with the event treasurer wallet first');
+      return;
+    }
     setProcessingId(id);
     setProcessError(null);
     const result = await tryProcessClaim(id);
@@ -89,6 +96,10 @@ export function TreasuryDashboard({ apiEnabled, initialMandate: mandate, readErr
   }
 
   function openReview(claimId: string, action: ClaimReviewAction) {
+    if (!authenticated) {
+      setReviewError('Sign in with the event treasurer wallet first.');
+      return;
+    }
     setReviewError(null);
     setReviewing({ claimId, action });
   }
@@ -224,6 +235,7 @@ export function TreasuryDashboard({ apiEnabled, initialMandate: mandate, readErr
                   }
                   onProcess={process}
                   onReview={openReview}
+                  actionsDisabled={!authenticated}
                 />
               ))}
             </ul>

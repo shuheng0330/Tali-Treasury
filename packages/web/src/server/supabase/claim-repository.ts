@@ -4,7 +4,6 @@ import type {
   ClaimReview,
   ClaimReviewAction,
   ClaimState,
-  CreateClaimRequest,
   ExpenseCategory,
   PaymentResult,
   PolicyDecision,
@@ -14,6 +13,7 @@ import type {
 import type {
   ClaimRepository,
   DuplicateReceipt,
+  LegacyCreateClaimRequest,
   PaymentMutationResult,
   StoredClaim,
 } from '../claims/ports';
@@ -81,7 +81,7 @@ interface ClaimProcessRow extends ClaimRow {
   events: EventProcessRow | EventProcessRow[];
 }
 
-const CLAIM_COLUMNS = `
+export const CLAIM_COLUMNS = `
   id,
   event_id,
   submitter_wallet,
@@ -121,7 +121,7 @@ function databaseFailure(error: DatabaseError | null): ServerError {
   });
 }
 
-function mapClaimRow(input: unknown): StoredClaim {
+export function mapClaimRow(input: unknown): StoredClaim {
   if (!input || typeof input !== 'object') {
     throw databaseFailure(null);
   }
@@ -336,6 +336,40 @@ export function createSupabaseClaimRepository(
       }
     },
 
+    async assertEventViewer(eventId, viewer) {
+      const { data, error } = await query(client, 'events')
+        .select('treasurer_wallet')
+        .eq('id', eventId)
+        .maybeSingle();
+      if (error && error.code !== 'PGRST116') throw databaseFailure(error);
+      if (!data) {
+        throw new ServerError('event_not_found', 404, 'Event not found', {
+          cause: error ?? undefined,
+        });
+      }
+      const treasurer = (data as { treasurer_wallet?: unknown }).treasurer_wallet;
+      if (typeof treasurer !== 'string') throw databaseFailure(null);
+      if (treasurer.toLowerCase() === viewer.toLowerCase()) return;
+
+      const membership = await query(client, 'event_members')
+        .select('event_id')
+        .eq('event_id', eventId)
+        .eq('wallet_address', viewer)
+        .eq('active', true)
+        .maybeSingle();
+      if (membership.error && membership.error.code !== 'PGRST116') {
+        throw databaseFailure(membership.error);
+      }
+      if (!membership.data) {
+        throw new ServerError(
+          'member_not_found',
+          403,
+          'Event access requires active membership or the configured treasurer',
+          { cause: membership.error ?? undefined },
+        );
+      }
+    },
+
     async findDuplicateReceipt(eventId, receiptHash): Promise<DuplicateReceipt | null> {
       const { data, error } = await query(client, 'claims')
         .select('id, receipt_analysis, receipt_object_path')
@@ -360,7 +394,7 @@ export function createSupabaseClaimRepository(
       };
     },
 
-    async create(input: CreateClaimRequest): Promise<Claim> {
+    async create(input: LegacyCreateClaimRequest): Promise<Claim> {
       const { data, error } = await query(client, 'claims')
         .insert({
           event_id: input.eventId,

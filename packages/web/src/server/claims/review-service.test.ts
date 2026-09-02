@@ -102,6 +102,7 @@ function repository(overrides: Partial<ClaimRepository> = {}): ClaimRepository {
   return {
     assertEventExists: vi.fn(),
     assertActiveMember: vi.fn(),
+    assertEventViewer: vi.fn(),
     findDuplicateReceipt: vi.fn(),
     create: vi.fn(),
     listByEvent: vi.fn(),

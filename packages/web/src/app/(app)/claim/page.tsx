@@ -19,7 +19,7 @@ export const dynamic = 'force-dynamic';
  * was live, which put an invented figure under a truthful-looking label.
  */
 export default async function ClaimPage() {
-  const apiEnabled = process.env.TALI_ALLOW_INSECURE_DEMO_IDENTITY === 'true';
+  const apiEnabled = true;
 
   try {
     const client = createTestnetClient(process.env.SUI_GRPC_URL);

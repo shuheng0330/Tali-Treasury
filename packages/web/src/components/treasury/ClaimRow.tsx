@@ -48,9 +48,10 @@ interface Props {
   pendingAction: ClaimReviewAction | null;
   onProcess: (id: string) => void;
   onReview: (id: string, action: ClaimReviewAction) => void;
+  actionsDisabled?: boolean;
 }
 
-export function ClaimRow({ item, processing, pendingAction, onProcess, onReview }: Props) {
+export function ClaimRow({ item, processing, pendingAction, onProcess, onReview, actionsDisabled = false }: Props) {
   const { claim, decision, agentNote, reason } = item;
   const approvalBlocked = approvalBlockReason(claim, decision);
   const awaitingPolicy = claim.state === 'submitted' && claim.decision === null;
@@ -108,7 +109,7 @@ export function ClaimRow({ item, processing, pendingAction, onProcess, onReview 
         {awaitingPolicy ? (
           <button
             type="button"
-            disabled={processing}
+            disabled={processing || actionsDisabled}
             onClick={() => onProcess(claim.id)}
             className="btn btn--primary h-9 px-5 text-label"
           >
@@ -118,7 +119,7 @@ export function ClaimRow({ item, processing, pendingAction, onProcess, onReview 
           <>
             <button
               type="button"
-              disabled={approvalBlocked !== null || reviewPending}
+              disabled={approvalBlocked !== null || reviewPending || actionsDisabled}
               onClick={() => onReview(claim.id, 'approve')}
               className="btn btn--primary h-9 px-5 text-label"
               title={approvalBlocked ?? undefined}
@@ -131,7 +132,7 @@ export function ClaimRow({ item, processing, pendingAction, onProcess, onReview 
             </button>
             <button
               type="button"
-              disabled={reviewPending}
+              disabled={reviewPending || actionsDisabled}
               onClick={() => onReview(claim.id, 'reject')}
               className="btn btn--danger h-9 px-5 text-label"
             >
@@ -139,7 +140,7 @@ export function ClaimRow({ item, processing, pendingAction, onProcess, onReview 
             </button>
             <button
               type="button"
-              disabled={reviewPending}
+              disabled={reviewPending || actionsDisabled}
               onClick={() => onReview(claim.id, 'request_correction')}
               className="btn btn--ghost h-9 px-5 text-label"
             >

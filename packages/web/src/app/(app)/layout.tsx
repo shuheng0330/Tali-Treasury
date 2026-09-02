@@ -1,6 +1,8 @@
 import Link from 'next/link';
 import { AppNav } from '@/components/AppNav';
 import { BackButton } from '@/components/BackButton';
+import { WalletSessionControl } from '@/components/wallet/WalletSessionControl';
+import { WalletSessionBoundary } from '@/components/wallet/WalletSessionBoundary';
 
 /**
  * Every screen in this group used to be a dead end: once you were on one, the
@@ -9,6 +11,7 @@ import { BackButton } from '@/components/BackButton';
  */
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
+    <WalletSessionBoundary>
     <div className="flex min-h-dvh flex-col">
       <header className="sticky top-0 z-30 border-b border-rule bg-canvas/85 backdrop-blur-md">
         <div className="mx-auto flex max-w-5xl flex-wrap items-center gap-x-3 gap-y-3 px-4 py-3 sm:gap-x-4 sm:px-6 sm:py-4">
@@ -26,6 +29,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           </Link>
 
           <AppNav className="w-full sm:ml-auto sm:w-auto" />
+          <WalletSessionControl />
         </div>
       </header>
 
@@ -45,5 +49,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         </div>
       </footer>
     </div>
+    </WalletSessionBoundary>
   );
 }
