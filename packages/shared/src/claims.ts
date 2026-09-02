@@ -109,6 +109,13 @@ export const ON_CHAIN_RULES: Partial<Record<RuleId, number>> = {
 export interface RuleCheck {
   rule: RuleId;
   passed: boolean;
+  /**
+   * True when the rule could not be evaluated at all — a non-USDC amount has
+   * nothing to compare against the mandate until a conversion quote exists.
+   * Such a check is not a failure, and it is not a pass either; rendering it
+   * as a tick tells a treasurer a guard held when it never ran.
+   */
+  pending?: boolean;
   label: string;
   detail: string;
   onChain: boolean;

@@ -193,6 +193,38 @@ describe('createPayApprovedClaimService', () => {
     expect(finishPayment).not.toHaveBeenCalled();
   });
 
+  it('will not pay a receipt denominated in anything but USDC', async () => {
+    // The mandate holds USDC. Nothing in this codebase converts, so paying a
+    // MYR amount at face value sends that many USDC for a smaller receipt --
+    // and the cap and budget checks are not evaluated for such a claim, so
+    // they pass without ever running.
+    const { impl, payments } = service({
+      claim: { analysis: { currency: 'MYR' } as ReceiptAnalysis },
+    });
+
+    await expect(impl(request)).rejects.toThrow('explicit conversion quote');
+    expect(payments.execute).not.toHaveBeenCalled();
+  });
+
+  it('does not report a refusal it failed to store', async () => {
+    // Another attempt finished the claim first. Returning the locally built
+    // POLICY_CHANGED result would report a failure against a claim that may
+    // well be paid, with nothing in the database saying so.
+    const { impl, failApprovedPayment } = service({ mandate: { revoked: true } });
+    failApprovedPayment.mockImplementation(async () => ({ status: 'lost_race', claim }));
+
+    await expect(impl(request)).rejects.toThrow('decided by another attempt');
+  });
+
+  it('does not report a payment it failed to record', async () => {
+    // The transfer happened. If this row is not the one that recorded it, the
+    // honest answer is that the outcome needs checking on chain.
+    const { impl, finishPayment } = service();
+    finishPayment.mockImplementation(async () => ({ status: 'lost_race', claim }));
+
+    await expect(impl(request)).rejects.toThrow('another attempt recorded the outcome');
+  });
+
   it('records a contract refusal as payment_failed rather than throwing', async () => {
     const { impl, finishPayment } = service({
       execute: vi.fn(async () => ({

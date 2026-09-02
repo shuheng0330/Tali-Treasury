@@ -64,8 +64,9 @@ export function RevokeDialog({ eventName, remaining, pendingCount, onCancel, onR
           </p>
           {pendingCount > 0 ? (
             <p className="text-wait">
-              {pendingCount} {pendingCount === 1 ? 'claim is' : 'claims are'} awaiting review.
-              They will be cancelled.
+              {pendingCount} {pendingCount === 1 ? 'claim is' : 'claims are'} still open.
+              Revoking does not close them: they stay where they are, and the contract
+              refuses the payment when one is released.
             </p>
           ) : null}
         </div>

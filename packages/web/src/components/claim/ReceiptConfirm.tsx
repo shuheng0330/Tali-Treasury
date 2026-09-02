@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import type { DraftClaim, ExpenseCategory, ReceiptAnalysis } from '@tali/shared';
-import { EXPENSE_CATEGORIES, toBaseUnits, toDisplay } from '@tali/shared';
+import { COIN_DECIMALS, EXPENSE_CATEGORIES, toBaseUnits, toDisplay } from '@tali/shared';
 
 interface Props {
   photoUrl: string;
@@ -65,10 +65,16 @@ export function ReceiptConfirm({
 }: Props) {
   const failed = analysis === null && initial === null;
   const [zoomed, setZoomed] = useState(false);
+  /* A stored receipt is fetched behind a signed URL with a short expiry, so a
+     screen left open long enough gets a 403 and a broken-image icon beside the
+     figures — which reads as the receipt itself being lost. */
+  const [imageFailed, setImageFailed] = useState(false);
   const [merchant, setMerchant] = useState(initial?.merchant ?? analysis?.merchant ?? '');
   const [amount, setAmount] = useState(() => {
     const source = initial?.amount ?? analysis?.amount;
-    return source ? toDisplay(source) : '';
+    /* Six digits, not two. `toDisplay` truncates, so prefilling a correction
+       at 2dp silently drops the rest of an amount the member never touched. */
+    return source ? toDisplay(source, COIN_DECIMALS).replace(/0+$/, '').replace(/\.$/, '') : '';
   });
   const [receiptDate, setReceiptDate] = useState(
     initial?.receiptDate ?? analysis?.receiptDate ?? '',
@@ -115,7 +121,7 @@ export function ReceiptConfirm({
         </button>
       </div>
 
-      {photoUrl ? (
+      {photoUrl && !imageFailed ? (
         <button
           type="button"
           onClick={() => setZoomed((open) => !open)}
@@ -125,6 +131,7 @@ export function ReceiptConfirm({
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={photoUrl}
+            onError={() => setImageFailed(true)}
             alt="The receipt you photographed"
             className={`w-full object-contain transition-[max-height] duration-200 ease-pop ${
               zoomed ? 'max-h-[70vh]' : 'max-h-40'
@@ -136,8 +143,9 @@ export function ReceiptConfirm({
            empty <img> would render as a broken-image icon beside the figures,
            which reads as the receipt itself being lost. */
         <p className="rounded-card border border-dashed border-rule bg-surface p-4 text-caption text-ink-3">
-          The receipt image is not available on this screen. The figures below are
-          what the claim says.
+          {imageFailed
+            ? 'The link to this receipt has expired. Reopen the claim to fetch it again — the figures below are what the claim says.'
+            : 'The receipt image is not available on this screen. The figures below are what the claim says.'}
         </p>
       )}
 

@@ -174,6 +174,9 @@ export function TreasuryDashboard({
   }
 
   if (mandate === null) {
+    /* The revoke dialog outlives this branch on purpose. Revoking triggers a
+       re-read, and a re-read that fails would otherwise replace the dialog —
+       and the only link to the transaction that just revoked — with this. */
     return (
       <div className="mx-auto flex w-full max-w-4xl flex-col gap-4 px-5 py-8">
         <h1 className="text-heading">Treasury unavailable</h1>
@@ -186,6 +189,15 @@ export function TreasuryDashboard({
         <button type="button" onClick={() => router.refresh()} className="btn btn--primary w-fit">
           Retry live read
         </button>
+        {confirming ? (
+          <RevokeDialog
+            eventName={event.name}
+            remaining="0"
+            pendingCount={0}
+            onCancel={() => setConfirming(false)}
+            onRevoked={reloadEverything}
+          />
+        ) : null}
       </div>
     );
   }

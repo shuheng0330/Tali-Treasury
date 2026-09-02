@@ -523,8 +523,8 @@ export function createSupabaseClaimRepository(
     },
 
     /*
-     * Guarded on `awaiting_review`, which is the only state a human decision
-     * applies to. A claim the engine already settled, or that another
+     * Guarded on `needs_correction`, which is the only state a member's
+     * correction applies to. A claim the engine already settled, or that another
      * treasurer reached first, fails the guard rather than being overwritten.
      */
     /*

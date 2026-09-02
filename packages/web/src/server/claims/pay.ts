@@ -56,6 +56,17 @@ export function createPayApprovedClaimService(deps: {
       );
     }
 
+    if (context.claim.analysis?.currency !== 'USDC') {
+      /* The amount is denominated in something the mandate does not hold, and
+         no conversion quote exists anywhere in this codebase. Paying it would
+         send that many USDC for a receipt in another currency. */
+      throw new ServerError(
+        'processing_conflict',
+        409,
+        'Only a USDC claim can be paid. This one needs an explicit conversion quote first.',
+      );
+    }
+
     deps.payments.assertReady();
 
     let mandate;
@@ -97,6 +108,16 @@ export function createPayApprovedClaimService(deps: {
         claimId: request.claimId,
         payment,
       });
+      if (failed.status === 'lost_race') {
+        /* Another attempt finished this claim. Returning the refusal built
+           here would report a failure against a claim that may well be paid,
+           and nothing would have stored it. */
+        throw new ServerError(
+          'processing_conflict',
+          409,
+          'This claim was decided by another attempt while it was being checked',
+        );
+      }
       return { claim: failed.claim, payment };
     }
 
@@ -137,6 +158,16 @@ export function createPayApprovedClaimService(deps: {
       state: execution.status === 'paid' ? 'paid' : 'payment_failed',
       payment: execution.payment,
     });
+    if (finished.status === 'lost_race') {
+      /* The transfer happened, but this row is not the one that recorded it.
+         Saying so is the only honest answer: the money moved and the state on
+         screen came from somewhere else. */
+      throw new ServerError(
+        'payment_submission_uncertain',
+        502,
+        'The payment was submitted but another attempt recorded the outcome. Check the chain before trying again.',
+      );
+    }
 
     return { claim: finished.claim, payment: execution.payment };
   };

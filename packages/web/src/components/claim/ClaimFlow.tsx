@@ -7,6 +7,8 @@ import type {
   MandateView,
   ReceiptAnalysis,
 } from '@tali/shared';
+import { subtract } from '@tali/shared';
+import { committedFrom } from '@/lib/queue';
 import { mandate as sampleMandate } from '@/lib/mock/data';
 import { tryAnalyzeReceipt, tryCreateClaim, type Source } from '@/lib/api/demo';
 import { useClaims } from '@/lib/api/useClaims';
@@ -156,6 +158,17 @@ export function ClaimFlow({ apiEnabled, mandate, mandateReadError }: Props) {
         setStep('correcting');
         return;
       }
+      if (!saved.data.accepted) {
+        /* The treasurer moved the claim on between the read and the write, so
+           the correction no longer applies. Showing "Claim submitted" here
+           would tell the member their fix landed when it was discarded. */
+        setSaveError(
+          'This correction was not saved: the treasurer had already moved the claim on.',
+        );
+        reloadClaims();
+        setStep('correcting');
+        return;
+      }
       setSubmittedClaim(saved.data.claim);
       setCorrecting(null);
       reloadClaims();
@@ -165,6 +178,10 @@ export function ClaimFlow({ apiEnabled, mandate, mandateReadError }: Props) {
   );
 
   const reset = useCallback(() => {
+    setPhotoUrl((previous) => {
+      if (previous) URL.revokeObjectURL(previous);
+      return null;
+    });
     setAnalysis(null);
     setCorrecting(null);
     setDraftId(null);
@@ -182,6 +199,14 @@ export function ClaimFlow({ apiEnabled, mandate, mandateReadError }: Props) {
       ? claim.submitter.toLowerCase() === wallet.address.toLowerCase()
       : claim.submitter.toLowerCase() === DEMO_SUBMITTER.toLowerCase(),
   );
+
+  /* The same subtraction the treasurer's header makes. Claims already approved
+     are spoken for, and showing the member a larger figure than the treasurer
+     sees would invite a receipt the budget cannot cover. */
+  const available =
+    claims.source === 'live'
+      ? subtract(budget.remainingBudget, committedFrom(claims.claims))
+      : budget.remainingBudget;
 
   const home = step === 'home';
   const homeLive = claims.source === 'live' && chainLive;
@@ -211,7 +236,7 @@ export function ClaimFlow({ apiEnabled, mandate, mandateReadError }: Props) {
       {home ? (
         <ClaimHome
           eventName={DEMO_EVENT_NAME}
-          available={budget.remainingBudget}
+          available={available}
           budget={budget.initialBudget}
           claims={mine}
           claimsLoading={claims.loading}
@@ -252,8 +277,14 @@ export function ClaimFlow({ apiEnabled, mandate, mandateReadError }: Props) {
         />
       ) : null}
 
-      {step === 'submitting' && photoUrl ? (
-        <Reading photoUrl={photoUrl} message="Submitting your claim…" />
+      {step === 'submitting' ? (
+        correcting === null && photoUrl ? (
+          <Reading photoUrl={photoUrl} message="Submitting your claim…" />
+        ) : (
+          <p className="pt-6 text-center text-subhead text-ink-2" aria-live="polite">
+            Sending your correction…
+          </p>
+        )
       ) : null}
 
       {step === 'submitted' && submittedClaim ? (

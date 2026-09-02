@@ -172,22 +172,28 @@ export function evaluatePolicy(input: PolicyEvaluationInput): PolicyDecision {
   );
 
   const checks: RuleCheck[] = [
-    check(
-      'per_claim_max',
-      amountWithinCap,
-      'Per-claim cap',
-      currencyReady
-        ? `${displayAmount(input.claim.amount)} against a ${displayAmount(input.mandate.maxPerClaim)} cap`
-        : 'Checked after an explicit USDC conversion quote is attached',
-    ),
-    check(
-      'total_budget',
-      amountWithinBudget,
-      'Budget remaining',
-      currencyReady
-        ? `${displayAmount(input.mandate.remainingBudget)} remains in the mandate`
-        : 'Checked after an explicit USDC conversion quote is attached',
-    ),
+    {
+      ...check(
+        'per_claim_max',
+        amountWithinCap,
+        'Per-claim cap',
+        currencyReady
+          ? `${displayAmount(input.claim.amount)} against a ${displayAmount(input.mandate.maxPerClaim)} cap`
+          : 'Checked after an explicit USDC conversion quote is attached',
+      ),
+      ...(currencyReady ? {} : { pending: true }),
+    },
+    {
+      ...check(
+        'total_budget',
+        amountWithinBudget,
+        'Budget remaining',
+        currencyReady
+          ? `${displayAmount(input.mandate.remainingBudget)} remains in the mandate`
+          : 'Checked after an explicit USDC conversion quote is attached',
+      ),
+      ...(currencyReady ? {} : { pending: true }),
+    },
     check(
       'recipient_allowlist',
       recipientAllowed,

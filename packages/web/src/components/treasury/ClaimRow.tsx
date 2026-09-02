@@ -2,7 +2,15 @@ import { Money } from '@/components/Money';
 import type { ClaimReviewAction, ReviewQueueItem } from '@tali/shared';
 import { approvalBlockReason } from '@/lib/review-actions';
 
-function Verdict({ passed }: { passed: boolean }) {
+function Verdict({ passed, pending }: { passed: boolean; pending?: boolean }) {
+  if (pending) {
+    return (
+      <svg viewBox="0 0 12 12" width="11" height="11" className="text-ink-3" aria-hidden>
+        <path d="M2.5 6 H9.5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+      </svg>
+    );
+  }
+
   return passed ? (
     <svg viewBox="0 0 12 12" width="11" height="11" className="text-ok" aria-hidden>
       <path d="M2 6.4 L4.8 9 L10 3" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
@@ -96,14 +104,24 @@ export function ClaimRow({
         ) : (
           <ul className="grid gap-x-6 gap-y-1 sm:grid-cols-2">
             {decision.checks.map((check) => (
-              <li key={check.rule} className="flex items-baseline gap-2">
+              <li key={check.rule} className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
                 <span className="translate-y-0.5">
-                  <Verdict passed={check.passed} />
+                  <Verdict passed={check.passed} pending={check.pending} />
                 </span>
-                <span className={`text-caption ${check.passed ? 'text-ink-2' : 'font-medium text-no'}`}>
+                <span
+                  className={`text-caption ${
+                    check.pending
+                      ? 'text-ink-3'
+                      : check.passed
+                        ? 'text-ink-2'
+                        : 'font-medium text-no'
+                  }`}
+                >
                   {check.label}
                 </span>
-                <span className="tnum ml-auto text-caption text-ink-3">{check.detail}</span>
+                <span className="tnum ml-auto text-right text-caption text-ink-3">
+                  {check.detail}
+                </span>
               </li>
             ))}
           </ul>
