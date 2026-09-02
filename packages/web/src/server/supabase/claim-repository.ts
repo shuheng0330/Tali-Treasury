@@ -64,6 +64,10 @@ interface ClaimRow {
   review_reason: string | null;
   reviewed_at: string | null;
   payment: PaymentResult | null;
+  payment_attempt_digest: string | null;
+  payment_attempt_budget_before: string | number | null;
+  payment_attempt_prepared_at: string | null;
+  payment_attempt_last_checked_at: string | null;
   created_at: string;
   updated_at: string;
   event_members: { display_name: string } | { display_name: string }[];
@@ -100,6 +104,10 @@ export const CLAIM_COLUMNS = `
   review_reason,
   reviewed_at,
   payment,
+  payment_attempt_digest,
+  payment_attempt_budget_before,
+  payment_attempt_prepared_at,
+  payment_attempt_last_checked_at,
   created_at,
   updated_at,
   event_members!claims_active_member_fk(display_name)
@@ -109,6 +117,7 @@ const EVENT_POLICY_COLUMNS =
   'treasurer_wallet, mandate_object_id, allowed_categories, starts_at, expires_at';
 
 const CANONICAL_SUI_ID = /^0x[0-9a-f]{64}$/;
+const SUI_TRANSACTION_DIGEST = /^[1-9A-HJ-NP-Za-km-z]{32,64}$/;
 const REVIEW_ACTIONS: readonly ClaimReviewAction[] = [
   'approve',
   'reject',
@@ -162,6 +171,32 @@ export function mapClaimRow(input: unknown): StoredClaim {
     };
   }
 
+  let paymentAttempt: Claim['paymentAttempt'] = null;
+  if (
+    row.payment_attempt_digest !== null ||
+    row.payment_attempt_prepared_at !== null ||
+    row.payment_attempt_last_checked_at !== null
+  ) {
+    const preparedAtMs = Date.parse(row.payment_attempt_prepared_at ?? '');
+    const lastCheckedAtMs =
+      row.payment_attempt_last_checked_at === null
+        ? null
+        : Date.parse(row.payment_attempt_last_checked_at);
+    if (
+      row.payment_attempt_digest === null ||
+      !SUI_TRANSACTION_DIGEST.test(row.payment_attempt_digest) ||
+      !Number.isFinite(preparedAtMs) ||
+      (lastCheckedAtMs !== null && !Number.isFinite(lastCheckedAtMs))
+    ) {
+      throw databaseFailure(null);
+    }
+    paymentAttempt = {
+      digest: row.payment_attempt_digest,
+      preparedAtMs,
+      lastCheckedAtMs,
+    };
+  }
+
   const claim: Claim = {
     id: row.id,
     eventId: row.event_id,
@@ -178,6 +213,7 @@ export function mapClaimRow(input: unknown): StoredClaim {
     analysis: row.receipt_analysis,
     decision: row.decision,
     review,
+    paymentAttempt,
     payment: row.payment,
     createdAtMs,
     updatedAtMs,
@@ -192,6 +228,10 @@ function mapProcessRow(input: unknown) {
   const event = Array.isArray(row.events) ? row.events[0] : row.events;
   const startsAtMs = Date.parse(event?.starts_at ?? '');
   const expiresAtMs = Date.parse(event?.expires_at ?? '');
+  const paymentAttemptBudgetBefore =
+    row.payment_attempt_budget_before === null
+      ? null
+      : String(row.payment_attempt_budget_before);
   if (
     !event?.treasurer_wallet ||
     !CANONICAL_SUI_ID.test(event.treasurer_wallet) ||
@@ -202,13 +242,16 @@ function mapProcessRow(input: unknown) {
       EXPENSE_CATEGORIES.includes(category),
     ) ||
     !Number.isFinite(startsAtMs) ||
-    !Number.isFinite(expiresAtMs)
+    !Number.isFinite(expiresAtMs) ||
+    (stored.claim.paymentAttempt === null) !== (paymentAttemptBudgetBefore === null) ||
+    (paymentAttemptBudgetBefore !== null && !/^\d+$/.test(paymentAttemptBudgetBefore))
   ) {
     throw databaseFailure(null);
   }
 
   return {
     claim: stored.claim,
+    paymentAttemptBudgetBefore,
     event: {
       treasurer: event.treasurer_wallet,
       mandateId: event.mandate_object_id,
@@ -502,6 +545,46 @@ export function createSupabaseClaimRepository(
         expectedState: 'approved',
         nextState: 'paying',
       });
+    },
+
+    async recordPaymentAttempt(input) {
+      const { data, error } = await query(client, 'claims')
+        .update({
+          payment_attempt_digest: input.digest,
+          payment_attempt_budget_before: input.budgetBefore,
+          payment_attempt_prepared_at: new Date(input.preparedAtMs).toISOString(),
+        })
+        .eq('id', input.claimId)
+        .eq('state', 'paying')
+        .is('payment', null)
+        .is('payment_attempt_digest', null)
+        .select(CLAIM_COLUMNS)
+        .maybeSingle();
+
+      if (error && error.code !== 'PGRST116') throw databaseFailure(error);
+      if (data) return { status: 'saved', claim: mapClaimRow(data).claim };
+
+      const current = await getProcessContext(input.claimId);
+      return { status: 'lost_race', claim: current.claim };
+    },
+
+    async markPaymentAttemptChecked(input) {
+      const { data, error } = await query(client, 'claims')
+        .update({
+          payment_attempt_last_checked_at: new Date(input.checkedAtMs).toISOString(),
+        })
+        .eq('id', input.claimId)
+        .eq('state', 'paying')
+        .eq('payment_attempt_digest', input.digest)
+        .is('payment', null)
+        .select(CLAIM_COLUMNS)
+        .maybeSingle();
+
+      if (error && error.code !== 'PGRST116') throw databaseFailure(error);
+      if (data) return { status: 'saved', claim: mapClaimRow(data).claim };
+
+      const current = await getProcessContext(input.claimId);
+      return { status: 'lost_race', claim: current.claim };
     },
 
     async failApprovedPayment(input) {

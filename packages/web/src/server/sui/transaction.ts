@@ -1,4 +1,5 @@
 import type { SuiGrpcClient } from '@mysten/sui/grpc';
+import { TransactionError } from '@mysten/sui/client';
 import type { Ed25519Keypair } from '@mysten/sui/keypairs/ed25519';
 import type { Transaction } from '@mysten/sui/transactions';
 
@@ -32,6 +33,13 @@ export type ExecutionClient = Pick<
   SuiGrpcClient,
   'executeTransaction' | 'waitForTransaction'
 >;
+
+interface TransactionLookupClient {
+  getTransaction(input: {
+    digest: string;
+    include: { effects: true };
+  }): Promise<unknown>;
+}
 
 function asRecord(value: unknown): Record<string, unknown> | null {
   return value !== null && typeof value === 'object' && !Array.isArray(value)
@@ -94,5 +102,45 @@ export async function submitTransaction(
     checkpoint: transaction.checkpoint,
     status: transaction.status,
     gasUsed: transaction.effects.gasUsed,
+  };
+}
+
+export async function readTransaction(
+  client: TransactionLookupClient,
+  digest: string,
+): Promise<ConfirmedTransaction | null> {
+  let confirmed: unknown;
+  try {
+    confirmed = await client.getTransaction({ digest, include: { effects: true } });
+  } catch (error) {
+    if (error instanceof TransactionError && error.reason === 'notFound') return null;
+    throw error;
+  }
+
+  const result = confirmed as {
+    $kind?: string;
+    Transaction?: Record<string, unknown>;
+    FailedTransaction?: Record<string, unknown>;
+  };
+  const transaction =
+    result.$kind === 'Transaction' ? result.Transaction : result.FailedTransaction;
+  const effects = transaction?.effects as
+    | { gasUsed?: ConfirmedTransaction['gasUsed'] }
+    | undefined;
+  if (
+    !transaction ||
+    typeof transaction.digest !== 'string' ||
+    !effects?.gasUsed ||
+    !transaction.status
+  ) {
+    throw new Error('Confirmed transaction did not include effects');
+  }
+
+  return {
+    digest: transaction.digest,
+    checkpoint:
+      typeof transaction.checkpoint === 'string' ? transaction.checkpoint : null,
+    status: transaction.status as ConfirmedTransaction['status'],
+    gasUsed: effects.gasUsed,
   };
 }

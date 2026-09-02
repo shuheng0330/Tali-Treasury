@@ -3,6 +3,7 @@ import {
   createClaimService,
   createListClaimsService,
   createProcessClaimService,
+  createReconcileClaimService,
   createReviewClaimService,
 } from './claims/services';
 import {
@@ -24,6 +25,7 @@ export interface BackendServices {
   createClaim: ReturnType<typeof createClaimService>;
   listClaims: ReturnType<typeof createListClaimsService>;
   processClaim: ReturnType<typeof createProcessClaimService>;
+  reconcileClaim: ReturnType<typeof createReconcileClaimService>;
   reviewClaim: ReturnType<typeof createReviewClaimService>;
   auth: ReturnType<typeof createSupabaseWalletAuthRepository>;
   issueWalletChallenge: ReturnType<typeof createIssueWalletChallengeService>;
@@ -59,6 +61,7 @@ export function getBackendServices(): BackendServices {
     createClaim: createClaimService({ drafts }),
     listClaims: createListClaimsService({ claims, receipts }),
     processClaim: createProcessClaimService({ claims, mandates, payments }),
+    reconcileClaim: createReconcileClaimService({ claims, payments }),
     reviewClaim: createReviewClaimService({ claims, mandates, payments }),
     auth,
     issueWalletChallenge: createIssueWalletChallengeService({ auth, appOrigin }),

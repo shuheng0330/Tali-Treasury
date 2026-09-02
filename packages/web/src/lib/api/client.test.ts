@@ -1,6 +1,7 @@
 import type {
   AnalyzeReceiptResponse,
   ProcessClaimResponse,
+  ReconcileClaimResponse,
   ReviewClaimResponse,
 } from '@tali/shared';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -12,6 +13,7 @@ import {
   issueWalletChallenge,
   listClaims,
   processClaim,
+  reconcileClaim,
   reviewClaim,
 } from './client';
 
@@ -147,6 +149,24 @@ describe('claim API client', () => {
         action: 'request_correction',
         reason: 'Upload the full receipt',
       }),
+    });
+  });
+
+  it('reconciles a claim without submitting an identity or payment payload', async () => {
+    const response = {
+      claim: { id: 'claim-id', state: 'paying' },
+      status: 'pending',
+      digest: '4'.repeat(44),
+      payment: null,
+    } as ReconcileClaimResponse;
+    const fetchMock = vi.fn(async () => Response.json(response));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(reconcileClaim('claim/id')).resolves.toEqual(response);
+    expect(fetchMock).toHaveBeenCalledWith('/api/claims/claim%2Fid/reconcile', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({}),
     });
   });
 });

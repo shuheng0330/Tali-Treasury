@@ -1,4 +1,5 @@
 import { Ed25519Keypair } from '@mysten/sui/keypairs/ed25519';
+import { TransactionDataBuilder } from '@mysten/sui/transactions';
 import { describe, expect, it, vi } from 'vitest';
 
 import {
@@ -14,11 +15,14 @@ const testEnv = {
   AGENT_CAP_ID: `0x${'3'.repeat(64)}`,
   SUI_NETWORK: 'testnet',
 };
+const preparedBytes = new Uint8Array([1, 2]);
+const preparedDigest = TransactionDataBuilder.getDigestFromBytes(preparedBytes);
 
 function createOperations(): PaymentOperations {
   return {
     prepare: vi.fn(),
     submit: vi.fn(),
+    lookup: vi.fn(),
     readBudget: vi.fn(),
   };
 }
@@ -26,11 +30,11 @@ function createOperations(): PaymentOperations {
 function createSuccessfulOperations(): PaymentOperations {
   return {
     prepare: vi.fn(async () => ({
-      bytes: new Uint8Array([1, 2]),
+      bytes: preparedBytes,
       signature: 'test-signature',
     })),
     submit: vi.fn(async () => ({
-      digest: '7LhYxDemoDigest',
+      digest: preparedDigest,
       checkpoint: '123',
       status: { success: true as const, error: null },
       gasUsed: {
@@ -40,6 +44,7 @@ function createSuccessfulOperations(): PaymentOperations {
         nonRefundableStorageFee: '100',
       },
     })),
+    lookup: vi.fn(),
     readBudget: vi.fn(async () => '15500000'),
   };
 }
@@ -94,11 +99,12 @@ describe('createSuiPaymentExecutor outcomes', () => {
     const now = vi.fn().mockReturnValueOnce(100).mockReturnValueOnce(1000);
     const executor = createSuiPaymentExecutor({ env: testEnv, operations, now });
 
-    await expect(executor.execute(input)).resolves.toEqual({
+    const recordAttempt = vi.fn(async () => undefined);
+    await expect(executor.execute(input, recordAttempt)).resolves.toEqual({
       status: 'paid',
       payment: {
         ok: true,
-        digest: '7LhYxDemoDigest',
+        digest: preparedDigest,
         checkpoint: '123',
         gasUsed: '1200',
         finalityMs: 900,
@@ -116,13 +122,20 @@ describe('createSuiPaymentExecutor outcomes', () => {
       recipient: input.recipient,
       amount: 4500000n,
     });
+    expect(recordAttempt).toHaveBeenCalledWith({
+      digest: preparedDigest,
+      preparedAtMs: 100,
+    });
+    expect(recordAttempt.mock.invocationCallOrder[0]).toBeLessThan(
+      vi.mocked(operations.submit).mock.invocationCallOrder[0],
+    );
     expect(operations.readBudget).toHaveBeenCalledWith(input.mandateId);
   });
 
   it('returns a sanitized confirmed Move rejection', async () => {
     const operations = createSuccessfulOperations();
     vi.mocked(operations.submit).mockResolvedValueOnce({
-      digest: '7LhYxRejectedDigest',
+      digest: preparedDigest,
       checkpoint: '124',
       status: {
         success: false,
@@ -137,11 +150,11 @@ describe('createSuiPaymentExecutor outcomes', () => {
     });
     const executor = createSuiPaymentExecutor({ env: testEnv, operations });
 
-    await expect(executor.execute(input)).resolves.toEqual({
+    await expect(executor.execute(input, async () => undefined)).resolves.toEqual({
       status: 'rejected',
       payment: expect.objectContaining({
         ok: false,
-        digest: '7LhYxRejectedDigest',
+        digest: preparedDigest,
         abortCode: 7,
         abortKey: 'RECIPIENT_NOT_APPROVED',
         message: 'This recipient is not approved by the mandate.',
@@ -162,7 +175,7 @@ describe('createSuiPaymentExecutor outcomes', () => {
 
     let thrown: unknown;
     try {
-      await executor.execute(input);
+      await executor.execute(input, async () => undefined);
     } catch (error) {
       thrown = error;
     }
@@ -179,7 +192,7 @@ describe('createSuiPaymentExecutor outcomes', () => {
     );
     const executor = createSuiPaymentExecutor({ env: testEnv, operations });
 
-    await expect(executor.execute(input)).resolves.toEqual({
+    await expect(executor.execute(input, async () => undefined)).resolves.toEqual({
       status: 'rejected',
       payment: {
         ok: false,
@@ -195,6 +208,77 @@ describe('createSuiPaymentExecutor outcomes', () => {
         budgetAfter: '20000000',
       },
     });
+    expect(operations.submit).not.toHaveBeenCalled();
+  });
+
+  it('does not submit when durable attempt persistence fails', async () => {
+    const operations = createSuccessfulOperations();
+    const executor = createSuiPaymentExecutor({ env: testEnv, operations });
+
+    await expect(
+      executor.execute(input, async () => {
+        throw new Error('database unavailable');
+      }),
+    ).rejects.toThrow('database unavailable');
+    expect(operations.submit).not.toHaveBeenCalled();
+  });
+
+  it('returns pending when the stored digest is not found without signing or submitting', async () => {
+    const operations = createSuccessfulOperations();
+    vi.mocked(operations.lookup).mockResolvedValueOnce(null);
+    const executor = createSuiPaymentExecutor({
+      env: { SUI_NETWORK: 'testnet' },
+      operations,
+      now: () => 20_000,
+    });
+
+    await expect(
+      executor.reconcile({
+        ...input,
+        digest: preparedDigest,
+        preparedAtMs: 10_000,
+      }),
+    ).resolves.toEqual({ status: 'pending', digest: preparedDigest });
+    expect(operations.prepare).not.toHaveBeenCalled();
+    expect(operations.submit).not.toHaveBeenCalled();
+  });
+
+  it('maps a reconciled confirmed success and current budget', async () => {
+    const operations = createSuccessfulOperations();
+    vi.mocked(operations.lookup).mockResolvedValueOnce(
+      await vi.mocked(operations.submit)(
+        await vi.mocked(operations.prepare)({
+          agentCapId: testEnv.AGENT_CAP_ID,
+          mandateId: input.mandateId,
+          recipient: input.recipient,
+          amount: 4500000n,
+        }),
+      ),
+    );
+    vi.mocked(operations.prepare).mockClear();
+    vi.mocked(operations.submit).mockClear();
+    const executor = createSuiPaymentExecutor({
+      env: { SUI_NETWORK: 'testnet' },
+      operations,
+      now: () => 11_500,
+    });
+
+    await expect(
+      executor.reconcile({
+        ...input,
+        digest: preparedDigest,
+        preparedAtMs: 10_000,
+      }),
+    ).resolves.toEqual({
+      status: 'paid',
+      payment: expect.objectContaining({
+        ok: true,
+        digest: preparedDigest,
+        finalityMs: 1500,
+        budgetAfter: '15500000',
+      }),
+    });
+    expect(operations.prepare).not.toHaveBeenCalled();
     expect(operations.submit).not.toHaveBeenCalled();
   });
 });

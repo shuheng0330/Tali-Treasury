@@ -137,6 +137,12 @@ export interface PaymentResult {
   budgetAfter: Amount;
 }
 
+export interface ClaimPaymentAttempt {
+  digest: Digest;
+  preparedAtMs: number;
+  lastCheckedAtMs: number | null;
+}
+
 export type ClaimReviewAction = 'approve' | 'reject' | 'request_correction';
 
 export interface ClaimReview {
@@ -162,6 +168,7 @@ export interface Claim {
   analysis: ReceiptAnalysis | null;
   decision: PolicyDecision | null;
   review: ClaimReview | null;
+  paymentAttempt: ClaimPaymentAttempt | null;
   payment: PaymentResult | null;
   createdAtMs: number;
   updatedAtMs: number;

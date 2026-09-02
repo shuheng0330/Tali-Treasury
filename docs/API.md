@@ -64,6 +64,21 @@ from the session and permits an active member or the configured treasurer.
 accepts `approve`, `reject`, or `request_correction`; rejection and correction
 require a trimmed 1–500 character reason. Both derive the treasurer from session.
 
+`POST /api/claims/:id/reconcile` accepts `{}` and derives the treasurer from the
+session. It observes only the durable payment digest and returns:
+
+```json
+{
+  "claim": { "state": "paying", "paymentAttempt": { "digest": "…" } },
+  "status": "pending",
+  "digest": "…",
+  "payment": null
+}
+```
+
+`status` is `pending`, `paid`, or `payment_failed`. A pending response never signs
+or broadcasts. Terminal claims replay their stored payment result.
+
 ## Safe errors
 
 - `401 authentication_required` / `authentication_failed`: sign in again; no
@@ -74,6 +89,10 @@ require a trimmed 1–500 character reason. Both derive the treasurer from sessi
 - `410 analysis_draft_expired`: the 15-minute draft expired; analyze again.
 - `403 member_not_found`, `processor_forbidden`, `reviewer_forbidden`: the session
   wallet lacks the required event role.
+- `409 payment_reconciliation_unavailable`: a legacy in-flight claim has no safe
+  durable digest and will not be retried automatically.
+- `502 payment_reconciliation_failed`: the chain result could not be determined;
+  the claim remains `paying` and may be checked again later.
 
 Database, RPC, signature, token, key and private storage details are never part of
 API errors.

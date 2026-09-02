@@ -45,6 +45,13 @@ Last updated: 2 September 2026 (MYT)
   local-only no-cookie demo compatibility;
 - 324 web tests, 45 Sui integration tests and 91 pgTAP assertions passing at the
   wallet-session checkpoint.
+- safe on-demand reconciliation for uncertain `paying` claims: digest persistence
+  before broadcast, exact-digest Testnet lookup, terminal compare-and-set updates,
+  idempotent replay, and no signing or resubmission during reconciliation;
+- authenticated `POST /api/claims/:id/reconcile` plus treasury digest display,
+  explorer links, explicit bounded polling, and reconcile-on-refresh behavior;
+- 349 web tests passing at the reconciliation checkpoint. The new migration and
+  pgTAP assertions are authored; their local replay remains pending Docker startup.
 
 ## Hosted schema verified
 
@@ -60,12 +67,12 @@ Last updated: 2 September 2026 (MYT)
 
 ## Environment note
 
-Docker Desktop 4.66.1 is operational after backing up its inaccessible transient
-Windows runtime sockets and explicitly disabling the unused Model Runner feature.
-No images, volumes or project data were removed. The local Supabase stack is
-running and has replayed all migrations through
-`20260901030000_wallet_auth_and_analysis_drafts.sql`. Keep at least 20 GB free on C: and stop
-the stack when it is not needed.
+Docker Desktop 4.66.1 currently fails during startup while removing inaccessible
+Windows Unix-socket files for its disabled inference and secrets services. The
+transient `Docker\run` and `docker-secrets-engine` runtime directories were moved
+to timestamped local backups; no images, volumes, or project data were removed.
+The application suite is verified, but the new local Supabase reset/pgTAP replay
+must be rerun after Docker Desktop is repaired or upgraded.
 
 ## Pending integration
 
@@ -77,7 +84,6 @@ the stack when it is not needed.
 - manually verify member analyze/create/list and treasurer process/review with
   browser Testnet wallets;
 - add trusted MYR-to-USDC quote capture, expiry and converted payout storage;
-- add automatic reconciliation for uncertain payment submissions;
 - add member correction and resubmission after a correction request;
 - run the hosted receipt flow end to end after authenticated identity is available.
 
@@ -93,6 +99,8 @@ the stack when it is not needed.
   conversion-quote increment is implemented.
 - Payment code can prepare and submit on Sui Testnet when valid server credentials
   are supplied, but no real transaction was broadcast during this increment.
-- A claim left in `paying` requires manual reconciliation before retry; automatic
-  digest recovery is not implemented.
+- A legacy `paying` claim created before durable attempt metadata cannot be safely
+  reconciled or retried automatically; it fails closed for manual investigation.
+- Reconciliation is deliberately treasurer-triggered and on demand; no scheduled
+  background job is included in the hackathon scope.
 - Mainnet signing and real-value payments remain out of scope.

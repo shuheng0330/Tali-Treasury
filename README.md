@@ -30,6 +30,7 @@ Status words are intentionally precise:
 | Claim receipt submission UI | **Complete locally** | Authenticated analyze/create/list with one-time 15-minute drafts |
 | Claim policy processing | **Complete locally** | Treasurer action invokes the server evaluator and persists the decision |
 | Treasurer review actions | **Complete locally** | Real approve/reject/correction API and UI; eligible USDC approval enters the guarded testnet signer |
+| Safe payment reconciliation | **Complete locally** | Digest stored before broadcast; explicit status checks never sign or resubmit |
 | Revoke and Safety Test interactions | **Mocked** | Clearly labelled previews; no browser signing or state changes |
 | Gemini receipt analysis and Supabase claims | **Complete locally; rollout pending** | Private drafts, authenticated access and 91 pgTAP assertions |
 | Deterministic policy and backend agent signing | **Complete locally** | Testnet-only, treasurer-triggered, race-safe and fake-operation verified; no transaction broadcast in this increment |
@@ -215,6 +216,8 @@ accepts only JPEG, PNG, and WebP. The server exposes:
   for `auto_pay` only, an atomic server-agent payment attempt.
 - `POST /api/claims/:id/review` — one atomic treasurer approval, rejection, or
   correction request; eligible USDC approval immediately starts testnet payment.
+- `POST /api/claims/:id/reconcile` — treasurer-only observation of the stored Sui
+  digest; returns pending or atomically persists a confirmed terminal result.
 
 See [`docs/API.md`](docs/API.md) for request/response and error details. Protected
 writes require the exact configured Origin header. Wallet connection alone does
@@ -241,11 +244,11 @@ Immediate next vertical slice:
 1. Apply migration `20260901030000`, configure the hosted origin and verify both
    wallet roles manually.
 2. Configure server-only Gemini and Supabase credentials in the deployment.
-3. Add member correction/resubmission and trusted MYR-to-USDC quotations.
+3. Add member correction/resubmission; trusted MYR-to-USDC quotation remains the
+   teammate-owned parallel increment.
 4. Configure the testnet agent key and owned `AgentCap` server-side.
 5. With separate authorization, run one small funded smoke claim and record its
    real digest; automated tests intentionally never broadcast.
-6. Add reconciliation for uncertain submissions.
 
 ## Documentation index
 
