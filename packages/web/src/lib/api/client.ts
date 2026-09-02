@@ -3,6 +3,8 @@ import type {
   ApiError,
   CreateClaimRequest,
   CreateClaimResponse,
+  CreateWalletChallengeResponse,
+  GetWalletSessionResponse,
   ListClaimsResponse,
   ProcessClaimRequest,
   ProcessClaimResponse,
@@ -53,12 +55,10 @@ export async function responseJson<T>(response: Response): Promise<T> {
 export async function analyzeReceipt(
   receipt: File,
   eventId: string,
-  submitter: string,
 ): Promise<AnalyzeReceiptResponse> {
   const form = new FormData();
   form.set('receipt', receipt);
   form.set('eventId', eventId);
-  form.set('submitter', submitter);
 
   return responseJson<AnalyzeReceiptResponse>(
     await fetch('/api/receipts/analyze', { method: 'POST', body: form }),
@@ -79,11 +79,9 @@ export async function createClaim(
 
 export async function listClaims(
   eventId: string,
-  viewer: string,
 ): Promise<ListClaimsResponse> {
-  const query = new URLSearchParams({ viewer });
   return responseJson<ListClaimsResponse>(
-    await fetch(`/api/events/${encodeURIComponent(eventId)}/claims?${query}`, {
+    await fetch(`/api/events/${encodeURIComponent(eventId)}/claims`, {
       cache: 'no-store',
     }),
   );
@@ -91,9 +89,8 @@ export async function listClaims(
 
 export async function processClaim(
   claimId: string,
-  processor: string,
 ): Promise<ProcessClaimResponse> {
-  const request: ProcessClaimRequest = { processor };
+  const request: ProcessClaimRequest = {};
   return responseJson<ProcessClaimResponse>(
     await fetch(`/api/claims/${encodeURIComponent(claimId)}/process`, {
       method: 'POST',
@@ -101,6 +98,42 @@ export async function processClaim(
       body: JSON.stringify(request),
     }),
   );
+}
+
+export async function issueWalletChallenge(
+  address: string,
+): Promise<CreateWalletChallengeResponse> {
+  return responseJson<CreateWalletChallengeResponse>(
+    await fetch('/api/auth/challenge', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ address }),
+    }),
+  );
+}
+
+export async function createWalletSession(
+  challengeId: string,
+  signature: string,
+): Promise<GetWalletSessionResponse> {
+  return responseJson<GetWalletSessionResponse>(
+    await fetch('/api/auth/session', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ challengeId, signature }),
+    }),
+  );
+}
+
+export async function getWalletSession(): Promise<GetWalletSessionResponse> {
+  return responseJson<GetWalletSessionResponse>(
+    await fetch('/api/auth/session', { cache: 'no-store' }),
+  );
+}
+
+export async function deleteWalletSession(): Promise<void> {
+  const response = await fetch('/api/auth/session', { method: 'DELETE' });
+  if (!response.ok) await responseJson<never>(response);
 }
 
 export async function reviewClaim(

@@ -19,6 +19,7 @@ import { toReceiptAnalysis } from '../receipts/schema';
 import { PaymentSubmissionUncertainError } from '../sui/payment-executor';
 import type {
   ClaimRepository,
+  AnalysisDraftRepository,
   ClaimProcessContext,
   MandateReader,
   PaymentExecutor,
@@ -27,7 +28,7 @@ import type {
 } from './ports';
 import {
   eventIdSchema,
-  parseCreateClaimRequest,
+  parseCreateClaimInput,
   parseProcessClaimInput,
   parseReviewClaimInput,
   suiAddressSchema,
@@ -55,6 +56,8 @@ export function createAnalyzeReceiptService(deps: {
   analyzer: ReceiptAnalyzer;
   claims: ClaimRepository;
   receipts: ReceiptStore;
+  drafts: AnalysisDraftRepository;
+  now?: () => number;
 }): (input: AnalyzeReceiptInput) => Promise<AnalyzeReceiptResponse> {
   return async (input) => {
     let eventId: string;
@@ -93,7 +96,8 @@ export function createAnalyzeReceiptService(deps: {
     if (duplicate) {
       return {
         analysis: duplicate.analysis,
-        storagePath: duplicate.storagePath,
+        draftId: null,
+        draftExpiresAt: null,
         duplicateOf: duplicate.claimId,
       };
     }
@@ -128,17 +132,39 @@ export function createAnalyzeReceiptService(deps: {
       });
     }
 
-    return { analysis, storagePath, duplicateOf: null };
+    const createdAtMs = deps.now?.() ?? Date.now();
+    let draft;
+    try {
+      draft = await deps.drafts.create({
+        eventId,
+        walletAddress: submitter,
+        storagePath,
+        receiptHash,
+        analysis,
+        createdAtMs,
+        expiresAtMs: createdAtMs + 15 * 60_000,
+      });
+    } catch (error) {
+      throw databaseError(error);
+    }
+
+    return {
+      analysis,
+      draftId: draft.id,
+      draftExpiresAt: new Date(draft.expiresAtMs).toISOString(),
+      duplicateOf: null,
+    };
   };
 }
 
 export function createClaimService(deps: {
-  claims: ClaimRepository;
+  drafts: AnalysisDraftRepository;
+  now?: () => number;
 }): (input: unknown) => Promise<CreateClaimResponse> {
   return async (input) => {
     let request;
     try {
-      request = parseCreateClaimRequest(input);
+      request = parseCreateClaimInput(input);
     } catch (error) {
       if (error instanceof ZodError) {
         throw new ServerError('invalid_request', 400, 'Invalid claim request', {
@@ -149,9 +175,18 @@ export function createClaimService(deps: {
     }
 
     try {
-      await deps.claims.assertEventExists(request.eventId);
-      await deps.claims.assertActiveMember(request.eventId, request.submitter);
-      return { claim: await deps.claims.create(request) };
+      return {
+        claim: await deps.drafts.consumeToClaim({
+          draftId: request.draftId,
+          walletAddress: request.submitter,
+          amount: request.amount,
+          merchant: request.merchant,
+          receiptDate: request.receiptDate,
+          category: request.category,
+          description: request.description,
+          nowMs: deps.now?.() ?? Date.now(),
+        }),
+      };
     } catch (error) {
       throw databaseError(error);
     }
@@ -177,7 +212,7 @@ export function createListClaimsService(deps: {
     let storedClaims;
     try {
       await deps.claims.assertEventExists(eventId);
-      await deps.claims.assertActiveMember(eventId, viewer);
+      await deps.claims.assertEventViewer(eventId, viewer);
       storedClaims = await deps.claims.listByEvent(eventId);
     } catch (error) {
       throw databaseError(error);

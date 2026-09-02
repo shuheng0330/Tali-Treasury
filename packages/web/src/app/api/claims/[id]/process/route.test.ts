@@ -50,17 +50,14 @@ describe('POST /api/claims/:id/process', () => {
     expect(service).not.toHaveBeenCalled();
   });
 
-  it('requires a processor string before calling the service', async () => {
-    const service = vi.fn();
-    const handler = createProcessClaimHandler(service);
+  it('derives the processor from the authenticated session', async () => {
+    const service = vi.fn(async () => response);
+    const handler = createProcessClaimHandler(service, async () => processor);
 
     const result = await handler(request(JSON.stringify({})), context);
 
-    expect(result.status).toBe(400);
-    await expect(result.json()).resolves.toMatchObject({
-      error: 'invalid_request',
-    });
-    expect(service).not.toHaveBeenCalled();
+    expect(result.status).toBe(200);
+    expect(service).toHaveBeenCalledWith({ claimId, processor });
   });
 
   it('maps safe service errors to the API response', async () => {

@@ -1,6 +1,6 @@
 import type { ListClaimsResponse } from '@tali/shared';
 
-import { requireDemoIdentityEnabled } from '../../../../../server/demo-auth';
+import { resolveWalletIdentity } from '../../../../../server/auth/session';
 import { getBackendServices } from '../../../../../server/dependencies';
 import { ServerError, toApiError } from '../../../../../server/errors';
 
@@ -15,11 +15,19 @@ type ListClaimsService = (input: {
   viewer: string;
 }) => Promise<ListClaimsResponse>;
 
-export function createListClaimsHandler(service: ListClaimsService) {
+type ResolveIdentity = (request: Request, legacyAddress?: string) => Promise<string>;
+
+export function createListClaimsHandler(
+  service: ListClaimsService,
+  resolveIdentity?: ResolveIdentity,
+) {
   return async (_request: Request, context: RouteContext): Promise<Response> => {
     try {
       const { id } = await context.params;
-      const viewer = new URL(_request.url).searchParams.get('viewer');
+      const legacyViewer = new URL(_request.url).searchParams.get('viewer') ?? undefined;
+      const viewer = resolveIdentity
+        ? await resolveIdentity(_request, legacyViewer)
+        : legacyViewer;
       if (!viewer) {
         throw new ServerError('invalid_request', 400, 'viewer is required');
       }
@@ -33,9 +41,17 @@ export function createListClaimsHandler(service: ListClaimsService) {
 
 export async function GET(request: Request, context: RouteContext): Promise<Response> {
   try {
-    requireDemoIdentityEnabled();
-    return createListClaimsHandler((input) =>
-      getBackendServices().listClaims(input),
+    const services = getBackendServices();
+    return createListClaimsHandler(
+      (input) => services.listClaims(input),
+      async (currentRequest, legacyAddress) =>
+        (
+          await resolveWalletIdentity({
+            request: currentRequest,
+            auth: services.auth,
+            legacyAddress,
+          })
+        ).address,
     )(request, context);
   } catch (error) {
     const { body, status } = toApiError(error);

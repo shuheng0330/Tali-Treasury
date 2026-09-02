@@ -15,7 +15,7 @@ import {
   reviewClaim,
   TaliApiError,
 } from '@/lib/api/client';
-import { DEMO_EVENT_ID, DEMO_SUBMITTER, DEMO_TREASURER } from '@/lib/demo-config';
+import { DEMO_EVENT_ID } from '@/lib/demo-config';
 import { recentClaims } from '@/lib/mock/api';
 
 export type Source = 'live' | 'mock';
@@ -40,7 +40,7 @@ function describe(error: unknown): string {
   }
 
   if (error.code === 'authentication_required') {
-    return 'the demo identity API is switched off';
+    return 'wallet sign-in is required';
   }
   if (error.code === 'analysis_failed') {
     return 'receipt analysis is not configured yet';
@@ -61,7 +61,7 @@ export async function tryAnalyzeReceipt(
   file: File,
 ): Promise<Sourced<AnalyzeReceiptResponse | null>> {
   try {
-    const data = await analyzeReceipt(file, DEMO_EVENT_ID, DEMO_SUBMITTER);
+    const data = await analyzeReceipt(file, DEMO_EVENT_ID);
     return { data, source: 'live', reason: null };
   } catch (error) {
     return { data: null, source: 'mock', reason: describe(error) };
@@ -81,7 +81,7 @@ export async function tryCreateClaim(
 
 export async function tryListClaims(): Promise<Sourced<Claim[]>> {
   try {
-    const body = await listClaims(DEMO_EVENT_ID, DEMO_SUBMITTER);
+    const body = await listClaims(DEMO_EVENT_ID);
     return { data: body.claims, source: 'live', reason: null };
   } catch (error) {
     return { data: recentClaims, source: 'mock', reason: describe(error) };
@@ -92,7 +92,7 @@ export async function tryProcessClaim(
   claimId: string,
 ): Promise<Sourced<ProcessClaimResponse | null>> {
   try {
-    const data = await processClaim(claimId, DEMO_TREASURER);
+    const data = await processClaim(claimId);
     return { data, source: 'live', reason: null };
   } catch (error) {
     return { data: null, source: 'mock', reason: describe(error) };
@@ -107,10 +107,7 @@ export async function tryReviewClaim(
     | { action: 'request_correction'; reason: string },
 ): Promise<Sourced<ReviewClaimResponse | null>> {
   try {
-    const data = await reviewClaim(claimId, {
-      ...request,
-      reviewer: DEMO_TREASURER,
-    } as ReviewClaimRequest);
+    const data = await reviewClaim(claimId, request as ReviewClaimRequest);
     return { data, source: 'live', reason: null };
   } catch (error) {
     return { data: null, source: 'mock', reason: describe(error) };

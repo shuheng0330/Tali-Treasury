@@ -1,6 +1,6 @@
 import type { ReviewClaimResponse } from '@tali/shared';
 
-import { requireDemoIdentityEnabled } from '../../../../../server/demo-auth';
+import { assertSameOrigin, resolveWalletIdentity } from '../../../../../server/auth/session';
 import { getBackendServices } from '../../../../../server/dependencies';
 import { ServerError, toApiError } from '../../../../../server/errors';
 
@@ -12,7 +12,13 @@ interface RouteContext {
 
 type ReviewClaimService = (input: unknown) => Promise<ReviewClaimResponse>;
 
-export function createReviewClaimHandler(service: ReviewClaimService) {
+type ResolveIdentity = (request: Request, legacyAddress?: string) => Promise<string>;
+
+export function createReviewClaimHandler(
+  service: ReviewClaimService,
+  resolveIdentity?: ResolveIdentity,
+  appOrigin?: string,
+) {
   return async (request: Request, context: RouteContext): Promise<Response> => {
     try {
       let body: unknown;
@@ -29,14 +35,28 @@ export function createReviewClaimHandler(service: ReviewClaimService) {
       const payload = body as Record<string, unknown>;
       if (
         typeof payload.action !== 'string' ||
-        typeof payload.reviewer !== 'string' ||
-        (payload.reason !== undefined && typeof payload.reason !== 'string')
+        (payload.reviewer !== undefined && typeof payload.reviewer !== 'string') ||
+        (payload.reason !== undefined && typeof payload.reason !== 'string') ||
+        ((payload.action === 'reject' || payload.action === 'request_correction') &&
+          typeof payload.reason !== 'string')
       ) {
         throw new ServerError('invalid_request', 400, 'Invalid review payload');
       }
 
+      if (appOrigin) assertSameOrigin(request, appOrigin);
+      const reviewer = resolveIdentity
+        ? await resolveIdentity(
+            request,
+            typeof payload.reviewer === 'string' ? payload.reviewer : undefined,
+          )
+        : payload.reviewer;
+      if (typeof reviewer !== 'string') {
+        throw new ServerError('authentication_required', 401, 'A valid wallet session is required');
+      }
+
       const { id } = await context.params;
-      return Response.json(await service({ claimId: id, ...payload }));
+      const { reviewer: _legacy, ...action } = payload;
+      return Response.json(await service({ claimId: id, ...action, reviewer }));
     } catch (error) {
       const { body, status } = toApiError(error);
       return Response.json(body, { status });
@@ -49,9 +69,18 @@ export async function POST(
   context: RouteContext,
 ): Promise<Response> {
   try {
-    requireDemoIdentityEnabled();
-    return createReviewClaimHandler((input) =>
-      getBackendServices().reviewClaim(input),
+    const services = getBackendServices();
+    return createReviewClaimHandler(
+      (input) => services.reviewClaim(input),
+      async (currentRequest, legacyAddress) =>
+        (
+          await resolveWalletIdentity({
+            request: currentRequest,
+            auth: services.auth,
+            legacyAddress,
+          })
+        ).address,
+      services.appOrigin,
     )(request, context);
   } catch (error) {
     const { body, status } = toApiError(error);

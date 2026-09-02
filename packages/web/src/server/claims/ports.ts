@@ -2,7 +2,7 @@ import type {
   Address,
   Claim,
   ClaimReview,
-  CreateClaimRequest,
+  ExpenseCategory,
   MandateView,
   ObjectId,
   PaymentResult,
@@ -22,6 +22,19 @@ export interface DuplicateReceipt {
 export interface StoredClaim {
   claim: Claim;
   storagePath: string;
+}
+
+/** Internal persistence shape; API callers never provide these trusted fields. */
+export interface LegacyCreateClaimRequest {
+  eventId: string;
+  submitter: Address;
+  amount: string;
+  merchant: string;
+  receiptDate: string;
+  category: ExpenseCategory;
+  description: string;
+  storagePath: string;
+  analysis: ReceiptAnalysis;
 }
 
 export interface ClaimProcessContext {
@@ -70,11 +83,12 @@ export interface PaymentExecutor {
 export interface ClaimRepository {
   assertEventExists(eventId: string): Promise<void>;
   assertActiveMember(eventId: string, submitter: Address): Promise<void>;
+  assertEventViewer(eventId: string, viewer: Address): Promise<void>;
   findDuplicateReceipt(
     eventId: string,
     receiptHash: string,
   ): Promise<DuplicateReceipt | null>;
-  create(input: CreateClaimRequest): Promise<Claim>;
+  create(input: LegacyCreateClaimRequest): Promise<Claim>;
   listByEvent(eventId: string): Promise<StoredClaim[]>;
   getProcessContext(claimId: string): Promise<ClaimProcessContext>;
   saveDecision(input: {
@@ -106,4 +120,26 @@ export interface ReceiptStore {
     mimeType: ReceiptMimeType;
   }): Promise<string>;
   createSignedUrl(path: string, expiresInSeconds: number): Promise<string>;
+}
+
+export interface AnalysisDraftRepository {
+  create(input: {
+    eventId: string;
+    walletAddress: Address;
+    storagePath: string;
+    receiptHash: string;
+    analysis: ReceiptAnalysis;
+    expiresAtMs: number;
+    createdAtMs: number;
+  }): Promise<{ id: string; expiresAtMs: number }>;
+  consumeToClaim(input: {
+    draftId: string;
+    walletAddress: Address;
+    amount: string;
+    merchant: string;
+    receiptDate: string;
+    category: string;
+    description: string;
+    nowMs: number;
+  }): Promise<Claim>;
 }

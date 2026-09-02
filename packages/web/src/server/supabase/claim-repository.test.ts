@@ -1,5 +1,4 @@
 import type {
-  CreateClaimRequest,
   PaymentResult,
   PolicyDecision,
   ReceiptAnalysis,
@@ -7,6 +6,7 @@ import type {
 import { describe, expect, it } from 'vitest';
 
 import { createSupabaseClaimRepository } from './claim-repository';
+import type { LegacyCreateClaimRequest } from '../claims/ports';
 
 const eventId = 'ba7e50e2-7e7b-4a67-a505-9e3a329739ae';
 const submitter = `0x${'a'.repeat(64)}`;
@@ -26,7 +26,7 @@ const analysis: ReceiptAnalysis = {
   receiptHash,
   fuzzyKey: 'campus print shop|2026-08-30|4500000',
 };
-const request: CreateClaimRequest = {
+const request: LegacyCreateClaimRequest = {
   eventId,
   submitter,
   amount: '4500000',

@@ -34,7 +34,7 @@ export function useClaims(enabled: boolean): ClaimsState & { reload: () => void 
       setState({
         claims: recentClaims,
         source: 'mock',
-        reason: 'the demo identity API is switched off',
+        reason: 'wallet sign-in is required',
         loading: false,
       });
       return;

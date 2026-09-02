@@ -4,7 +4,7 @@ The current safe boundary is: a member can submit a receipt, the treasurer can r
 the real server policy, and no code claims that approval means payment. Non-USDC
 receipts cannot auto-pay until a conversion quote exists.
 
-## 1. Authenticated identity and analysis binding
+## 1. Authenticated identity and analysis binding — complete locally
 
 - Issue a short-lived wallet challenge with a one-time nonce.
 - Verify the signed challenge server-side and create an HTTP-only session.
@@ -12,8 +12,10 @@ receipts cannot auto-pay until a conversion quote exists.
 - Persist receipt analysis as an expiring draft and consume it once at confirmation.
 - Store original extraction and member corrections separately for audit.
 
-Acceptance: replayed challenges and consumed drafts fail; members cannot submit or
-read claims for another event; only the configured treasurer can process or review.
+Acceptance is covered locally: replayed challenges and consumed drafts fail;
+member/treasurer access is checked from the session; invalid cookies cannot fall
+back; and atomic claim failure leaves the draft usable. Rollout still requires the
+hosted migration, exact HTTPS origin configuration, and manual two-role testing.
 
 ## 2. MYR-to-USDC quote
 
