@@ -1,7 +1,7 @@
 import type { AnalyzeReceiptResponse } from '@tali/shared';
 
 import type { AnalyzeReceiptInput } from '../../../../server/claims/services';
-import { requireDemoIdentityEnabled } from '../../../../server/demo-auth';
+import { assertSameOrigin, resolveWalletIdentity } from '../../../../server/auth/session';
 import { getBackendServices } from '../../../../server/dependencies';
 import { ServerError, toApiError } from '../../../../server/errors';
 import {
@@ -24,7 +24,13 @@ function errorResponse(error: unknown): Response {
   return Response.json(body, { status });
 }
 
-export function createAnalyzeReceiptHandler(service: AnalyzeReceiptService) {
+type ResolveIdentity = (request: Request, legacyAddress?: string) => Promise<string>;
+
+export function createAnalyzeReceiptHandler(
+  service: AnalyzeReceiptService,
+  resolveIdentity?: ResolveIdentity,
+  appOrigin?: string,
+) {
   return async (request: Request): Promise<Response> => {
     try {
       const contentLength = Number(request.headers.get('content-length'));
@@ -52,13 +58,12 @@ export function createAnalyzeReceiptHandler(service: AnalyzeReceiptService) {
         !(receipt instanceof File) ||
         typeof eventId !== 'string' ||
         !eventId ||
-        typeof submitter !== 'string' ||
-        !submitter
+        (submitter !== null && typeof submitter !== 'string')
       ) {
         throw new ServerError(
           'invalid_request',
           400,
-          'receipt, eventId, and submitter are required',
+          'receipt and eventId are required',
         );
       }
       if (!isReceiptMimeType(receipt.type)) {
@@ -87,9 +92,19 @@ export function createAnalyzeReceiptHandler(service: AnalyzeReceiptService) {
           'Receipt bytes do not match the declared image type',
         );
       }
+      if (appOrigin) assertSameOrigin(request, appOrigin);
+      const actor = resolveIdentity
+        ? await resolveIdentity(
+            request,
+            typeof submitter === 'string' ? submitter : undefined,
+          )
+        : submitter;
+      if (typeof actor !== 'string' || !actor) {
+        throw new ServerError('authentication_required', 401, 'A valid wallet session is required');
+      }
       const response = await service({
         eventId,
-        submitter,
+        submitter: actor,
         bytes,
         mimeType: receipt.type as ReceiptMimeType,
       });
@@ -102,9 +117,18 @@ export function createAnalyzeReceiptHandler(service: AnalyzeReceiptService) {
 
 export async function POST(request: Request): Promise<Response> {
   try {
-    requireDemoIdentityEnabled();
-    return createAnalyzeReceiptHandler((input) =>
-      getBackendServices().analyzeReceipt(input),
+    const services = getBackendServices();
+    return createAnalyzeReceiptHandler(
+      (input) => services.analyzeReceipt(input),
+      async (currentRequest, legacyAddress) =>
+        (
+          await resolveWalletIdentity({
+            request: currentRequest,
+            auth: services.auth,
+            legacyAddress,
+          })
+        ).address,
+      services.appOrigin,
     )(request);
   } catch (error) {
     return errorResponse(error);

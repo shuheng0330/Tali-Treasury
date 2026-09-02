@@ -1,7 +1,7 @@
 import {
   EXPENSE_CATEGORIES,
-  type CreateClaimRequest,
   type ExpenseCategory,
+  type ReviewClaimRequest,
   type UncertainField,
 } from '@tali/shared';
 import { z } from 'zod';
@@ -9,8 +9,7 @@ import { z } from 'zod';
 const SUI_ADDRESS = /^0x[0-9a-f]{64}$/;
 const SHA_256_HEX = /^[0-9a-f]{64}$/;
 const BASE_UNIT_AMOUNT = /^[1-9]\d{0,29}$/;
-const CURRENCY = /^[A-Z]{3}$/;
-const RECEIPT_PATH = /^([0-9a-f-]{36})\/([0-9a-f]{64})\.(?:jpg|png|webp)$/;
+const CURRENCY = /^(?:[A-Z]{3}|USDC)$/;
 
 export const eventIdSchema = z.string().uuid();
 export const claimIdSchema = z.string().uuid();
@@ -85,9 +84,9 @@ const receiptAnalysisSchema = z
     }
   });
 
-const createClaimRequestSchema = z
+const createClaimInputSchema = z
   .object({
-    eventId: eventIdSchema,
+    draftId: z.string().uuid(),
     submitter: suiAddressSchema,
     amount: z.string().regex(BASE_UNIT_AMOUNT),
     merchant: trimmedString(200),
@@ -97,39 +96,52 @@ const createClaimRequestSchema = z
       .string()
       .max(500)
       .refine((value) => value === value.trim(), 'must already be trimmed'),
-    storagePath: z.string().regex(RECEIPT_PATH, 'invalid private receipt path'),
-    analysis: receiptAnalysisSchema,
   })
-  .strict()
-  .superRefine((request, context) => {
-    const pathMatch = RECEIPT_PATH.exec(request.storagePath);
-    if (
-      pathMatch?.[1] !== request.eventId ||
-      pathMatch?.[2] !== request.analysis.receiptHash
-    ) {
-      context.addIssue({
-        code: 'custom',
-        path: ['storagePath'],
-        message: 'receipt path must match event and analysis hash',
-      });
-    }
+  .strict();
 
-    const expectedFuzzyKey = [
-      request.analysis.merchant?.toLowerCase().replace(/\s+/g, ' ').trim() ?? '',
-      request.analysis.receiptDate ?? '',
-      request.analysis.amount ?? '',
-    ].join('|');
-    if (request.analysis.fuzzyKey !== expectedFuzzyKey) {
-      context.addIssue({
-        code: 'custom',
-        path: ['analysis', 'fuzzyKey'],
-        message: 'fuzzy key does not match normalized claim fields',
-      });
-    }
-  });
+export function parseCreateClaimInput(input: unknown): {
+  draftId: string;
+  submitter: string;
+  amount: string;
+  merchant: string;
+  receiptDate: string;
+  category: ExpenseCategory;
+  description: string;
+} {
+  return createClaimInputSchema.parse(input);
+}
 
-export function parseCreateClaimRequest(input: unknown): CreateClaimRequest {
-  return createClaimRequestSchema.parse(input) as CreateClaimRequest;
+/*
+ * A correction restates the figures, so it has to hold them to the same rules
+ * the original submission did. Built from the same pieces rather than a second
+ * set: a looser copy here let a date the create path refuses through the
+ * correction path instead.
+ */
+const resubmitClaimInputSchema = z
+  .object({
+    claimId: claimIdSchema,
+    submitter: suiAddressSchema,
+    amount: z.string().regex(BASE_UNIT_AMOUNT, 'amount must be base units above zero'),
+    merchant: trimmedString(200),
+    receiptDate: z.string().refine(isValidIsoDate, 'invalid receipt date'),
+    category: categorySchema,
+    description: z
+      .string()
+      .max(500)
+      .refine((value) => value === value.trim(), 'must already be trimmed'),
+  })
+  .strict();
+
+export function parseResubmitClaimInput(input: unknown): {
+  claimId: string;
+  submitter: string;
+  amount: string;
+  merchant: string;
+  receiptDate: string;
+  category: ExpenseCategory;
+  description: string;
+} {
+  return resubmitClaimInputSchema.parse(input);
 }
 
 const processClaimInputSchema = z
@@ -144,4 +156,40 @@ export function parseProcessClaimInput(input: unknown): {
   processor: string;
 } {
   return processClaimInputSchema.parse(input);
+}
+
+const reviewBase = {
+  claimId: claimIdSchema,
+  reviewer: suiAddressSchema,
+};
+
+const reviewClaimInputSchema = z.discriminatedUnion('action', [
+  z
+    .object({
+      ...reviewBase,
+      action: z.literal('approve'),
+      reason: trimmedString(500).optional(),
+    })
+    .strict(),
+  z
+    .object({
+      ...reviewBase,
+      action: z.literal('reject'),
+      reason: trimmedString(500),
+    })
+    .strict(),
+  z
+    .object({
+      ...reviewBase,
+      action: z.literal('request_correction'),
+      reason: trimmedString(500),
+    })
+    .strict(),
+]);
+
+export function parseReviewClaimInput(input: unknown):
+  | { claimId: string; action: 'approve'; reviewer: string; reason?: string }
+  | { claimId: string; action: 'reject'; reviewer: string; reason: string }
+  | { claimId: string; action: 'request_correction'; reviewer: string; reason: string } {
+  return reviewClaimInputSchema.parse(input);
 }

@@ -3,21 +3,21 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useMemo, useState, useTransition } from 'react';
-import type { MandateView } from '@tali/shared';
+import type { ClaimReviewAction, MandateView } from '@tali/shared';
 import { CLAIM_CHIP, EXPLORER } from '@tali/shared';
 import { Money } from '@/components/Money';
 import { StatusChip } from '@/components/StatusChip';
 import { event } from '@/lib/mock/data';
 import { reviewQueue, settledClaims } from '@/lib/mock/api';
 import { committedFrom, settledFrom, toReviewQueue } from '@/lib/queue';
-import type { ReviewAction } from '@tali/shared';
 import { useClaims } from '@/lib/api/useClaims';
-import { tryPayClaim, tryReviewClaim } from '@/lib/api/review';
-import { tryProcessClaim } from '@/lib/api/demo';
+import { tryPayClaim, tryProcessClaim, tryReviewClaim } from '@/lib/api/demo';
 import { DataNotice } from '@/components/DataNotice';
 import { ClaimRow } from './ClaimRow';
 import { MandateHeader } from './MandateHeader';
 import { RevokeDialog } from './RevokeDialog';
+import { ReviewActionDialog } from './ReviewActionDialog';
+import { useWalletSession } from '@/components/wallet/WalletSessionProvider';
 
 type Tab = 'review' | 'paid' | 'all';
 
@@ -29,8 +29,8 @@ const TABS: { id: Tab; label: string }[] = [
 
 interface Props {
   apiEnabled: boolean;
-  /** False when `claims.review` is missing, which the repository refuses to
-   *  write around. The controls say so rather than failing on the click. */
+  /** False when the review columns are missing, which no write can work
+   *  around. The controls say so rather than failing on the click. */
   reviewsRecordable: boolean;
   initialMandate: MandateView | null;
   readError?: string;
@@ -42,15 +42,23 @@ export function TreasuryDashboard({
   initialMandate: mandate,
   readError,
 }: Props) {
+  const wallet = useWalletSession();
+  const authenticated = apiEnabled && wallet.status === 'authenticated';
   const router = useRouter();
   const [refreshing, startRefresh] = useTransition();
   const [tab, setTab] = useState<Tab>('review');
   const [confirming, setConfirming] = useState(false);
   const [processingId, setProcessingId] = useState<string | null>(null);
-  const [failure, setFailure] = useState<{ verb: string; detail: string } | null>(null);
-  const [reviewingId, setReviewingId] = useState<string | null>(null);
+  const [processError, setProcessError] = useState<string | null>(null);
+  const [reviewing, setReviewing] = useState<{
+    claimId: string;
+    action: ClaimReviewAction;
+  } | null>(null);
+  const [reviewPending, setReviewPending] = useState(false);
+  const [reviewError, setReviewError] = useState<string | null>(null);
+  const [payingId, setPayingId] = useState<string | null>(null);
 
-  const live = useClaims(apiEnabled);
+  const live = useClaims(authenticated);
 
   const queue = useMemo(
     () =>
@@ -82,55 +90,86 @@ export function TreasuryDashboard({
   );
 
   const counts = { review: queue.length, paid: paid.length, all: everything.length };
+  const reviewingClaim = reviewing
+    ? everything.find((claim) => claim.id === reviewing.claimId) ?? null
+    : null;
 
-  /* A write moves money or the mandate itself, and both are read on the server.
-     Reloading only the claims would leave the budget above them stale. */
+  /* A write moves money or the mandate itself, and both are read on the
+     server. Reloading only the claims would leave the budget above them
+     stale. */
   function reloadEverything() {
     live.reload();
     startRefresh(() => router.refresh());
   }
 
   async function process(id: string) {
+    if (!authenticated) {
+      setProcessError('sign in with the event treasurer wallet first');
+      return;
+    }
     setProcessingId(id);
-    setFailure(null);
+    setProcessError(null);
     const result = await tryProcessClaim(id);
     setProcessingId(null);
     if (result.data === null) {
-      setFailure({ verb: 'evaluate', detail: result.reason ?? 'claim processing failed' });
+      setProcessError(result.reason ?? 'claim processing failed');
       return;
     }
-    live.reload();
-  }
-
-  async function review(id: string, action: ReviewAction, reason?: string) {
-    setReviewingId(id);
-    setFailure(null);
-    const result = await tryReviewClaim({ claimId: id, action, reason });
-    setReviewingId(null);
-    if (result.data === null) {
-      setFailure({
-        verb: action === 'approve' ? 'approve' : 'record a decision on',
-        detail: result.reason ?? 'the decision was not recorded',
-      });
-      return;
+    /* Evaluating is not read-only: an auto_pay verdict signs and submits in
+       the same request, so a refusal has to be said out loud rather than left
+       looking like a successful evaluation. */
+    if (result.data.payment && !result.data.payment.ok) {
+      setProcessError(result.data.payment.message);
     }
-    /* Re-read rather than dropping the row locally. If the write lost a race
-       the queue should show whose decision actually stands. */
     reloadEverything();
   }
 
   async function pay(id: string) {
-    setReviewingId(id);
-    setFailure(null);
+    setPayingId(id);
+    setProcessError(null);
     const result = await tryPayClaim(id);
-    setReviewingId(null);
+    setPayingId(null);
     if (result.data === null) {
-      setFailure({ verb: 'pay', detail: result.reason ?? 'the payment did not complete' });
+      setProcessError(result.reason ?? 'the payment did not complete');
       return;
     }
     if (!result.data.payment.ok) {
-      setFailure({ verb: 'pay', detail: result.data.payment.message });
+      setProcessError(result.data.payment.message);
     }
+    reloadEverything();
+  }
+
+  function openReview(claimId: string, action: ClaimReviewAction) {
+    if (!authenticated) {
+      setReviewError('Sign in with the event treasurer wallet first.');
+      return;
+    }
+    setReviewError(null);
+    setReviewing({ claimId, action });
+  }
+
+  async function submitReview(reason?: string) {
+    if (!reviewing) return;
+    setReviewPending(true);
+    setReviewError(null);
+    const request =
+      reviewing.action === 'approve'
+        ? { action: 'approve' as const }
+        : { action: reviewing.action, reason: reason ?? '' };
+    const result = await tryReviewClaim(reviewing.claimId, request);
+    setReviewPending(false);
+    if (result.data === null) {
+      setReviewError(result.reason ?? 'The review action could not be completed.');
+      return;
+    }
+    if (!result.data.recorded) {
+      /* Somebody decided first. Their decision stands, and saying nothing here
+         would let this treasurer believe theirs did. */
+      setReviewError('Another treasurer decided this claim first. Their decision stands.');
+      reloadEverything();
+      return;
+    }
+    setReviewing(null);
     reloadEverything();
   }
 
@@ -185,21 +224,21 @@ export function TreasuryDashboard({
           <DataNotice
             source={live.source}
             reason={live.reason}
-            live="The claim queue"
-            simulated="Evaluating a claim runs the real policy engine and is persisted. Reviewing and paying a claim need the live queue, so on sample data their controls do nothing."
+            live="Claim loading, policy decisions, and review actions"
+            plural
+            simulated="Reviewing and paying a claim need the live queue, so on sample data their controls do nothing."
           />
           {live.source === 'live' && !reviewsRecordable ? (
             <p className="mt-3 rounded-control border border-wait-line bg-wait-soft p-3 text-caption text-wait">
-              A decision cannot be recorded: the database has no{' '}
-              <span className="font-mono">claims.review</span> column, so there would be
-              nothing saying who decided or why. Apply migration{' '}
-              <span className="font-mono">20260902000000_add_claim_review.sql</span>.
+              A decision cannot be recorded: the database has no review columns, so there
+              would be nothing saying who decided or why. Apply migration{' '}
+              <span className="font-mono">20260901020000_claim_review_actions.sql</span>.
               Evaluating a claim still works.
             </p>
           ) : null}
-          {failure ? (
+          {processError ? (
             <p className="mt-3 rounded-control border border-no-line bg-no-soft p-3 text-caption text-no" role="alert">
-              Could not {failure.verb} the claim: {failure.detail}.
+              Could not evaluate the claim: {processError}.
             </p>
           ) : null}
         </div>
@@ -245,11 +284,21 @@ export function TreasuryDashboard({
                   key={item.claim.id}
                   item={item}
                   processing={processingId === item.claim.id}
-                  reviewing={reviewingId === item.claim.id}
-                  reviewsRecordable={reviewsRecordable}
+                  pendingAction={
+                    reviewing?.claimId === item.claim.id && reviewPending
+                      ? reviewing.action
+                      : null
+                  }
                   onProcess={process}
-                  onReview={review}
+                  onReview={openReview}
                   onPay={pay}
+                  paying={payingId === item.claim.id}
+                  actionsDisabled={!authenticated || !reviewsRecordable}
+                  disabledReason={
+                    !authenticated
+                      ? 'Sign in with the event treasurer wallet first'
+                      : 'The database cannot store a decision yet'
+                  }
                 />
               ))}
             </ul>
@@ -257,41 +306,49 @@ export function TreasuryDashboard({
         ) : null}
 
         {tab !== 'review' ? (
-          <ul className="flex flex-col divide-y divide-rule">
-            {(tab === 'paid' ? paid : everything).map((claim) => (
-              <li key={claim.id} className="flex flex-col gap-1.5 px-4 py-3">
-                <div className="flex items-center gap-3">
-                  <div className="flex min-w-0 flex-1 flex-col gap-1">
-                    <span className="truncate text-body">{claim.merchant}</span>
-                    <span className="flex items-center gap-2">
-                      <StatusChip status={CLAIM_CHIP[claim.state]} />
-                      <span className="text-caption text-ink-3">{claim.submitterName}</span>
-                    </span>
+          (tab === 'paid' ? paid : everything).length === 0 ? (
+            <p className="px-6 py-14 text-center text-caption text-ink-3">
+              {tab === 'paid'
+                ? 'Nothing has settled yet. A claim lands here once it is paid, refused or rejected.'
+                : 'No claim has been submitted against this mandate yet.'}
+            </p>
+          ) : (
+            <ul className="flex flex-col divide-y divide-rule">
+              {(tab === 'paid' ? paid : everything).map((claim) => (
+                <li key={claim.id} className="flex flex-col gap-1.5 px-4 py-3">
+                  <div className="flex items-center gap-3">
+                    <div className="flex min-w-0 flex-1 flex-col gap-1">
+                      <span className="truncate text-body">{claim.merchant}</span>
+                      <span className="flex items-center gap-2">
+                        <StatusChip status={CLAIM_CHIP[claim.state]} />
+                        <span className="text-caption text-ink-3">{claim.submitterName}</span>
+                      </span>
+                    </div>
+                    <Money amount={claim.amount} unit={claim.analysis?.currency ?? 'USDC'} size="row" />
                   </div>
-                  <Money amount={claim.amount} unit={claim.analysis?.currency ?? 'USDC'} size="row" />
-                </div>
-                {/* Why a claim ended the way it did is the part worth keeping.
-                    A settled row that shows only its state makes the treasurer
-                    reconstruct their own decision from memory. */}
-                {claim.state === 'rejected' && claim.review?.reason ? (
-                  <p className="text-caption text-ink-3">Rejected: {claim.review.reason}</p>
-                ) : null}
-                {claim.state === 'payment_failed' && claim.payment ? (
-                  <p className="text-caption text-no">{claim.payment.message}</p>
-                ) : null}
-                {claim.state === 'paid' && claim.payment?.digest ? (
-                  <a
-                    className="link self-start text-caption"
-                    href={EXPLORER.tx(claim.payment.digest).suiscan}
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    View the transaction
-                  </a>
-                ) : null}
-              </li>
-            ))}
-          </ul>
+                  {/* Why a claim ended the way it did is the part worth keeping.
+                      A settled row that shows only its state makes the treasurer
+                      reconstruct their own decision from memory. */}
+                  {claim.state === 'rejected' && claim.review?.reason ? (
+                    <p className="text-caption text-ink-3">Rejected: {claim.review.reason}</p>
+                  ) : null}
+                  {claim.state === 'payment_failed' && claim.payment ? (
+                    <p className="text-caption text-no">{claim.payment.message}</p>
+                  ) : null}
+                  {claim.state === 'paid' && claim.payment?.digest ? (
+                    <a
+                      className="link self-start text-caption"
+                      href={EXPLORER.tx(claim.payment.digest).suiscan}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      View the transaction
+                    </a>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+          )
         ) : null}
       </section>
 
@@ -302,6 +359,19 @@ export function TreasuryDashboard({
           pendingCount={queue.length}
           onCancel={() => setConfirming(false)}
           onRevoked={reloadEverything}
+        />
+      ) : null}
+
+      {reviewing && reviewingClaim ? (
+        <ReviewActionDialog
+          action={reviewing.action}
+          claim={reviewingClaim}
+          pending={reviewPending}
+          serverError={reviewError}
+          onCancel={() => {
+            if (!reviewPending) setReviewing(null);
+          }}
+          onConfirm={submitReview}
         />
       ) : null}
     </div>

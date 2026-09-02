@@ -16,6 +16,7 @@ import { ClaimHome } from './ClaimHome';
 import { ReceiptConfirm } from './ReceiptConfirm';
 import { tryResubmitClaim } from '@/lib/api/resubmit';
 import { Submitted } from './Outcome';
+import { useWalletSession } from '@/components/wallet/WalletSessionProvider';
 
 type Step = 'home' | 'reading' | 'confirm' | 'correcting' | 'submitting' | 'submitted';
 
@@ -41,10 +42,13 @@ function Reading({ photoUrl, message = 'Reading your receipt…' }: { photoUrl: 
 }
 
 export function ClaimFlow({ apiEnabled, mandate, mandateReadError }: Props) {
+  const wallet = useWalletSession();
+  const authenticated = apiEnabled && wallet.status === 'authenticated';
   const [step, setStep] = useState<Step>('home');
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const [analysis, setAnalysis] = useState<ReceiptAnalysis | null>(null);
-  const [storagePath, setStoragePath] = useState<string | null>(null);
+  const [draftId, setDraftId] = useState<string | null>(null);
+  const [draftExpiresAt, setDraftExpiresAt] = useState<string | null>(null);
   const [duplicateOf, setDuplicateOf] = useState<string | null>(null);
   const [submittedClaim, setSubmittedClaim] = useState<Claim | null>(null);
   const [correcting, setCorrecting] = useState<Claim | null>(null);
@@ -60,7 +64,7 @@ export function ClaimFlow({ apiEnabled, mandate, mandateReadError }: Props) {
    *  blaming the analyser for a database refusal. */
   const [saveError, setSaveError] = useState<string | null>(null);
 
-  const claims = useClaims(apiEnabled);
+  const claims = useClaims(authenticated);
   const reloadClaims = claims.reload;
 
   /** The chain is the authority on the budget. Falling back to the sample
@@ -85,7 +89,8 @@ export function ClaimFlow({ apiEnabled, mandate, mandateReadError }: Props) {
 
     tryAnalyzeReceipt(file).then((result) => {
       setAnalysis(result.data?.analysis ?? null);
-      setStoragePath(result.data?.storagePath || null);
+      setDraftId(result.data?.draftId ?? null);
+      setDraftExpiresAt(result.data?.draftExpiresAt ?? null);
       setDuplicateOf(result.data?.duplicateOf ?? null);
       setSource(result.source);
       setNotice(result.reason);
@@ -95,23 +100,24 @@ export function ClaimFlow({ apiEnabled, mandate, mandateReadError }: Props) {
 
   const onSubmit = useCallback(
     async (next: DraftClaim) => {
-      if (source !== 'live' || analysis === null || storagePath === null) {
+      if (source !== 'live' || analysis === null || draftId === null) {
         setSaveError('This claim was not saved: the receipt was never uploaded.');
+        return;
+      }
+      if (draftExpiresAt && Date.parse(draftExpiresAt) <= Date.now()) {
+        setSaveError('This receipt analysis expired. Analyze again before submitting.');
         return;
       }
 
       setSaveError(null);
       setStep('submitting');
       const created = await tryCreateClaim({
-        eventId: DEMO_EVENT_ID,
-        submitter: DEMO_SUBMITTER,
+        draftId,
         amount: next.amount,
         merchant: next.merchant.trim(),
         receiptDate: next.receiptDate,
         category: next.category,
         description: next.description.trim(),
-        storagePath,
-        analysis,
       });
       if (created.data === null) {
         setSaveError(`This claim was not saved: ${created.reason}.`);
@@ -122,7 +128,7 @@ export function ClaimFlow({ apiEnabled, mandate, mandateReadError }: Props) {
       reloadClaims();
       setStep('submitted');
     },
-    [source, analysis, storagePath, reloadClaims],
+    [source, analysis, draftId, draftExpiresAt, reloadClaims],
   );
 
   const onCorrect = useCallback((claim: Claim) => {
@@ -161,7 +167,8 @@ export function ClaimFlow({ apiEnabled, mandate, mandateReadError }: Props) {
   const reset = useCallback(() => {
     setAnalysis(null);
     setCorrecting(null);
-    setStoragePath(null);
+    setDraftId(null);
+    setDraftExpiresAt(null);
     setDuplicateOf(null);
     setSubmittedClaim(null);
     setSource('mock');
@@ -170,8 +177,10 @@ export function ClaimFlow({ apiEnabled, mandate, mandateReadError }: Props) {
     setStep('home');
   }, []);
 
-  const mine = claims.claims.filter(
-    (claim) => claim.submitter.toLowerCase() === DEMO_SUBMITTER.toLowerCase(),
+  const mine = claims.claims.filter((claim) =>
+    wallet.address
+      ? claim.submitter.toLowerCase() === wallet.address.toLowerCase()
+      : claim.submitter.toLowerCase() === DEMO_SUBMITTER.toLowerCase(),
   );
 
   const home = step === 'home';
@@ -194,7 +203,7 @@ export function ClaimFlow({ apiEnabled, mandate, mandateReadError }: Props) {
             reason={home ? homeReason : notice}
             live={home ? homeLabel : 'Receipt reading and storage'}
             plural={home && homeLabel.includes(' and ')}
-            simulated="A claim is evaluated, reviewed and paid from the treasury screen. Signing in with a wallet is not built, so this screen speaks for one fixed member."
+            simulated="Policy and payment remain server-controlled; wallet authentication is live on Sui Testnet."
           />
         </div>
       )}
@@ -206,7 +215,7 @@ export function ClaimFlow({ apiEnabled, mandate, mandateReadError }: Props) {
           budget={budget.initialBudget}
           claims={mine}
           claimsLoading={claims.loading}
-          captureDisabled={!apiEnabled}
+          captureDisabled={!authenticated}
           onCapture={onCapture}
           onCorrect={onCorrect}
         />

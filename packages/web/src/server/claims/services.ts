@@ -6,6 +6,8 @@ import type {
   PaymentResult,
   PolicyOutcome,
   ProcessClaimResponse,
+  ReviewClaimResponse,
+  RuleId,
 } from '@tali/shared';
 import { ZodError } from 'zod';
 
@@ -17,6 +19,7 @@ import { toReceiptAnalysis } from '../receipts/schema';
 import { PaymentSubmissionUncertainError } from '../sui/payment-executor';
 import type {
   ClaimRepository,
+  AnalysisDraftRepository,
   ClaimProcessContext,
   MandateReader,
   PaymentExecutor,
@@ -25,8 +28,9 @@ import type {
 } from './ports';
 import {
   eventIdSchema,
-  parseCreateClaimRequest,
+  parseCreateClaimInput,
   parseProcessClaimInput,
+  parseReviewClaimInput,
   suiAddressSchema,
 } from './validation';
 
@@ -52,6 +56,8 @@ export function createAnalyzeReceiptService(deps: {
   analyzer: ReceiptAnalyzer;
   claims: ClaimRepository;
   receipts: ReceiptStore;
+  drafts: AnalysisDraftRepository;
+  now?: () => number;
 }): (input: AnalyzeReceiptInput) => Promise<AnalyzeReceiptResponse> {
   return async (input) => {
     let eventId: string;
@@ -90,7 +96,8 @@ export function createAnalyzeReceiptService(deps: {
     if (duplicate) {
       return {
         analysis: duplicate.analysis,
-        storagePath: duplicate.storagePath,
+        draftId: null,
+        draftExpiresAt: null,
         duplicateOf: duplicate.claimId,
       };
     }
@@ -125,17 +132,39 @@ export function createAnalyzeReceiptService(deps: {
       });
     }
 
-    return { analysis, storagePath, duplicateOf: null };
+    const createdAtMs = deps.now?.() ?? Date.now();
+    let draft;
+    try {
+      draft = await deps.drafts.create({
+        eventId,
+        walletAddress: submitter,
+        storagePath,
+        receiptHash,
+        analysis,
+        createdAtMs,
+        expiresAtMs: createdAtMs + 15 * 60_000,
+      });
+    } catch (error) {
+      throw databaseError(error);
+    }
+
+    return {
+      analysis,
+      draftId: draft.id,
+      draftExpiresAt: new Date(draft.expiresAtMs).toISOString(),
+      duplicateOf: null,
+    };
   };
 }
 
 export function createClaimService(deps: {
-  claims: ClaimRepository;
+  drafts: AnalysisDraftRepository;
+  now?: () => number;
 }): (input: unknown) => Promise<CreateClaimResponse> {
   return async (input) => {
     let request;
     try {
-      request = parseCreateClaimRequest(input);
+      request = parseCreateClaimInput(input);
     } catch (error) {
       if (error instanceof ZodError) {
         throw new ServerError('invalid_request', 400, 'Invalid claim request', {
@@ -146,9 +175,18 @@ export function createClaimService(deps: {
     }
 
     try {
-      await deps.claims.assertEventExists(request.eventId);
-      await deps.claims.assertActiveMember(request.eventId, request.submitter);
-      return { claim: await deps.claims.create(request) };
+      return {
+        claim: await deps.drafts.consumeToClaim({
+          draftId: request.draftId,
+          walletAddress: request.submitter,
+          amount: request.amount,
+          merchant: request.merchant,
+          receiptDate: request.receiptDate,
+          category: request.category,
+          description: request.description,
+          nowMs: deps.now?.() ?? Date.now(),
+        }),
+      };
     } catch (error) {
       throw databaseError(error);
     }
@@ -174,7 +212,7 @@ export function createListClaimsService(deps: {
     let storedClaims;
     try {
       await deps.claims.assertEventExists(eventId);
-      await deps.claims.assertActiveMember(eventId, viewer);
+      await deps.claims.assertEventViewer(eventId, viewer);
       storedClaims = await deps.claims.listByEvent(eventId);
     } catch (error) {
       throw databaseError(error);
@@ -249,18 +287,18 @@ export function createProcessClaimService(deps: {
 
     function inspectAutoPayState(storedClaim: Claim): ProcessClaimResponse | null {
       if (!storedClaim.decision) throw conflict();
+      if (storedClaim.state === 'paid' || storedClaim.state === 'payment_failed') {
+        return completedPaymentResponse(storedClaim);
+      }
+      if (storedClaim.state === 'paying') {
+        throw conflict('Payment requires reconciliation before retrying');
+      }
       if (storedClaim.decision.outcome !== 'auto_pay') {
         return {
           claim: storedClaim,
           decision: storedClaim.decision,
           payment: null,
         };
-      }
-      if (storedClaim.state === 'paid' || storedClaim.state === 'payment_failed') {
-        return completedPaymentResponse(storedClaim);
-      }
-      if (storedClaim.state === 'paying') {
-        throw conflict('Payment requires reconciliation before retrying');
       }
       if (storedClaim.state !== 'approved') throw conflict();
       return null;
@@ -423,5 +461,153 @@ export function createProcessClaimService(deps: {
       return completedPaymentResponse(finished.claim);
     }
     throw conflict('Payment requires reconciliation before retrying');
+  };
+}
+
+const HUMAN_REVIEW_OVERRIDES = new Set<RuleId>([
+  'category_allowed',
+  'receipt_date_valid',
+  'confidence_sufficient',
+]);
+
+export function createReviewClaimService(deps: {
+  claims: ClaimRepository;
+  mandates: MandateReader;
+  payments: PaymentExecutor;
+  now?: () => number;
+}): (input: unknown) => Promise<ReviewClaimResponse> {
+  return async (input) => {
+    let request: ReturnType<typeof parseReviewClaimInput>;
+    try {
+      request = parseReviewClaimInput(input);
+    } catch (error) {
+      if (error instanceof ZodError) {
+        throw new ServerError('invalid_request', 400, 'Invalid claim review request', {
+          cause: error,
+        });
+      }
+      throw error;
+    }
+
+    let context: ClaimProcessContext;
+    try {
+      context = await deps.claims.getProcessContext(request.claimId);
+    } catch (error) {
+      throw databaseError(error);
+    }
+
+    if (request.reviewer.toLowerCase() !== context.event.treasurer.toLowerCase()) {
+      throw new ServerError(
+        'reviewer_forbidden',
+        403,
+        'Only the event treasurer may review claims',
+      );
+    }
+
+    const conflict = (message = 'Claim is not available for review') =>
+      new ServerError('processing_conflict', 409, message);
+    const uncertain = () =>
+      new ServerError(
+        'payment_submission_uncertain',
+        502,
+        'Payment submission requires reconciliation before retrying',
+      );
+
+    function replay(storedClaim: Claim): ReviewClaimResponse {
+      const stored = storedClaim.review;
+      const requestedReason = request.reason ?? null;
+      if (
+        !stored ||
+        stored.action !== request.action ||
+        stored.reviewer.toLowerCase() !== request.reviewer.toLowerCase() ||
+        stored.reason !== requestedReason
+      ) {
+        throw conflict('A different review action has already been recorded');
+      }
+
+      /* The same decision, already stored. Reporting it as not recorded is
+         what stops the caller believing this request is the one that took
+         effect. */
+      return { claim: storedClaim, recorded: false };
+    }
+
+    if (context.claim.review) return replay(context.claim);
+    if (
+      context.claim.state !== 'awaiting_review' ||
+      context.claim.decision?.outcome !== 'review'
+    ) {
+      throw conflict();
+    }
+
+    const claimReview = {
+      action: request.action,
+      reviewer: request.reviewer,
+      reason: request.reason ?? null,
+      reviewedAtMs: deps.now?.() ?? Date.now(),
+    } as const;
+
+    if (request.action !== 'approve') {
+      let applied;
+      try {
+        applied = await deps.claims.applyReview({
+          claimId: request.claimId,
+          review: claimReview,
+        });
+      } catch (error) {
+        throw databaseError(error);
+      }
+      return applied.status === 'saved'
+        ? { claim: applied.claim, recorded: true }
+        : replay(applied.claim);
+    }
+
+    if (context.claim.analysis?.currency !== 'USDC') {
+      throw conflict('Only USDC claims can be approved for payment');
+    }
+
+    let mandate;
+    try {
+      mandate = await deps.mandates.read(context.event.mandateId);
+      if (mandate.id.toLowerCase() !== context.event.mandateId.toLowerCase()) {
+        throw new Error('Mandate object ID does not match the event');
+      }
+    } catch (error) {
+      throw new ServerError(
+        'mandate_read_failed',
+        502,
+        'The current Sui mandate could not be read',
+        { cause: error },
+      );
+    }
+
+    const freshDecision = evaluatePolicy({
+      claim: context.claim,
+      event: context.event,
+      mandate,
+      exactDuplicate: false,
+      nowMs: deps.now?.() ?? Date.now(),
+    });
+    const prohibitedFailure = freshDecision.checks.some(
+      (check) => !check.passed && (check.onChain || !HUMAN_REVIEW_OVERRIDES.has(check.rule)),
+    );
+    if (prohibitedFailure) {
+      throw conflict('The current policy does not permit human approval');
+    }
+
+    let applied;
+    try {
+      applied = await deps.claims.applyReview({
+        claimId: request.claimId,
+        review: claimReview,
+      });
+    } catch (error) {
+      throw databaseError(error);
+    }
+    if (applied.status === 'lost_race') return replay(applied.claim);
+
+    /* Approving leaves the claim in `approved`, and the transfer is a separate
+       request. A signature that fails then reads as a failed payment on an
+       approved claim, rather than as a treasurer who changed their mind. */
+    return { claim: applied.claim, recorded: true };
   };
 }

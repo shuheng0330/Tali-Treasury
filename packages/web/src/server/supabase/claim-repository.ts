@@ -2,8 +2,8 @@ import { EXPENSE_CATEGORIES } from '@tali/shared';
 import type {
   Claim,
   ClaimReview,
+  ClaimReviewAction,
   ClaimState,
-  CreateClaimRequest,
   ExpenseCategory,
   PaymentResult,
   PolicyDecision,
@@ -13,6 +13,7 @@ import type {
 import type {
   ClaimRepository,
   DuplicateReceipt,
+  LegacyCreateClaimRequest,
   PaymentMutationResult,
   StoredClaim,
 } from '../claims/ports';
@@ -58,7 +59,10 @@ interface ClaimRow {
   description: string;
   receipt_analysis: ReceiptAnalysis;
   decision: PolicyDecision | null;
-  review: ClaimReview | null;
+  review_action: ClaimReviewAction | null;
+  reviewer_wallet: string | null;
+  review_reason: string | null;
+  reviewed_at: string | null;
   payment: PaymentResult | null;
   created_at: string;
   updated_at: string;
@@ -77,7 +81,7 @@ interface ClaimProcessRow extends ClaimRow {
   events: EventProcessRow | EventProcessRow[];
 }
 
-const CLAIM_COLUMNS_BASE = `
+export const CLAIM_COLUMNS = `
   id,
   event_id,
   submitter_wallet,
@@ -91,30 +95,25 @@ const CLAIM_COLUMNS_BASE = `
   description,
   receipt_analysis,
   decision,
+  review_action,
+  reviewer_wallet,
+  review_reason,
+  reviewed_at,
   payment,
   created_at,
   updated_at,
   event_members!claims_active_member_fk(display_name)
 `;
 
-/**
- * `claims.review` arrives in a migration this app cannot apply itself, so every
- * read has to work on a database that does not have it yet. The column is asked
- * for once; PostgREST answers 42703 if it is absent, and it is dropped from the
- * projection from then on.
- */
-let reviewColumn: 'unknown' | 'present' | 'absent' = 'unknown';
-
-const UNDEFINED_COLUMN = '42703';
-
-function claimColumns(): string {
-  return reviewColumn === 'absent' ? CLAIM_COLUMNS_BASE : `${CLAIM_COLUMNS_BASE}, review`;
-}
-
 const EVENT_POLICY_COLUMNS =
   'treasurer_wallet, mandate_object_id, allowed_categories, starts_at, expires_at';
 
 const CANONICAL_SUI_ID = /^0x[0-9a-f]{64}$/;
+const REVIEW_ACTIONS: readonly ClaimReviewAction[] = [
+  'approve',
+  'reject',
+  'request_correction',
+];
 
 function databaseFailure(error: DatabaseError | null): ServerError {
   return new ServerError('database_failed', 500, 'The database operation failed', {
@@ -122,7 +121,7 @@ function databaseFailure(error: DatabaseError | null): ServerError {
   });
 }
 
-function mapClaimRow(input: unknown): StoredClaim {
+export function mapClaimRow(input: unknown): StoredClaim {
   if (!input || typeof input !== 'object') {
     throw databaseFailure(null);
   }
@@ -134,6 +133,33 @@ function mapClaimRow(input: unknown): StoredClaim {
   const updatedAtMs = Date.parse(row.updated_at);
   if (!membership?.display_name || !Number.isFinite(createdAtMs) || !Number.isFinite(updatedAtMs)) {
     throw databaseFailure(null);
+  }
+
+  let review: ClaimReview | null = null;
+  if (
+    row.review_action !== null ||
+    row.reviewer_wallet !== null ||
+    row.review_reason !== null ||
+    row.reviewed_at !== null
+  ) {
+    const reviewedAtMs = Date.parse(row.reviewed_at ?? '');
+    if (
+      row.review_action === null ||
+      !REVIEW_ACTIONS.includes(row.review_action) ||
+      row.reviewer_wallet === null ||
+      !CANONICAL_SUI_ID.test(row.reviewer_wallet) ||
+      !Number.isFinite(reviewedAtMs) ||
+      ((row.review_action === 'reject' || row.review_action === 'request_correction') &&
+        row.review_reason === null)
+    ) {
+      throw databaseFailure(null);
+    }
+    review = {
+      action: row.review_action,
+      reviewer: row.reviewer_wallet,
+      reason: row.review_reason,
+      reviewedAtMs,
+    };
   }
 
   const claim: Claim = {
@@ -151,7 +177,7 @@ function mapClaimRow(input: unknown): StoredClaim {
     receiptHash: row.receipt_sha256,
     analysis: row.receipt_analysis,
     decision: row.decision,
-    review: row.review ?? null,
+    review,
     payment: row.payment,
     createdAtMs,
     updatedAtMs,
@@ -200,19 +226,6 @@ function query(client: SupabaseDataClient, table: string): QueryBuilder {
 export function createSupabaseClaimRepository(
   client: SupabaseDataClient,
 ): ClaimRepository {
-  let probe: Promise<void> | undefined;
-
-  /* Asked once per process, not per query, so a database without the column
-     costs one extra round trip in total rather than a failed read each time. */
-  async function ensureReviewColumn(): Promise<void> {
-    if (reviewColumn !== 'unknown') return;
-    probe ??= (async () => {
-      const { error } = await query(client, 'claims').select('review').limit(1);
-      reviewColumn = error?.code === UNDEFINED_COLUMN ? 'absent' : 'present';
-    })();
-    await probe;
-  }
-
   /*
    * Two reads rather than an embed. `claims.event_id` reaches an event only
    * through the composite key that ties a claim to a member of that event, so
@@ -221,9 +234,8 @@ export function createSupabaseClaimRepository(
    * inferable relationship.
    */
   async function getProcessContext(claimId: string) {
-    await ensureReviewColumn();
     const { data: claimRow, error: claimError } = await query(client, 'claims')
-      .select(claimColumns())
+      .select(CLAIM_COLUMNS)
       .eq('id', claimId)
       .maybeSingle();
 
@@ -272,7 +284,7 @@ export function createSupabaseClaimRepository(
       .eq('id', input.claimId)
       .eq('state', input.expectedState)
       .is('payment', null)
-      .select(claimColumns())
+      .select(CLAIM_COLUMNS)
       .maybeSingle();
 
     if (error && error.code !== 'PGRST116') {
@@ -324,6 +336,40 @@ export function createSupabaseClaimRepository(
       }
     },
 
+    async assertEventViewer(eventId, viewer) {
+      const { data, error } = await query(client, 'events')
+        .select('treasurer_wallet')
+        .eq('id', eventId)
+        .maybeSingle();
+      if (error && error.code !== 'PGRST116') throw databaseFailure(error);
+      if (!data) {
+        throw new ServerError('event_not_found', 404, 'Event not found', {
+          cause: error ?? undefined,
+        });
+      }
+      const treasurer = (data as { treasurer_wallet?: unknown }).treasurer_wallet;
+      if (typeof treasurer !== 'string') throw databaseFailure(null);
+      if (treasurer.toLowerCase() === viewer.toLowerCase()) return;
+
+      const membership = await query(client, 'event_members')
+        .select('event_id')
+        .eq('event_id', eventId)
+        .eq('wallet_address', viewer)
+        .eq('active', true)
+        .maybeSingle();
+      if (membership.error && membership.error.code !== 'PGRST116') {
+        throw databaseFailure(membership.error);
+      }
+      if (!membership.data) {
+        throw new ServerError(
+          'member_not_found',
+          403,
+          'Event access requires active membership or the configured treasurer',
+          { cause: membership.error ?? undefined },
+        );
+      }
+    },
+
     async findDuplicateReceipt(eventId, receiptHash): Promise<DuplicateReceipt | null> {
       const { data, error } = await query(client, 'claims')
         .select('id, receipt_analysis, receipt_object_path')
@@ -348,8 +394,7 @@ export function createSupabaseClaimRepository(
       };
     },
 
-    async create(input: CreateClaimRequest): Promise<Claim> {
-      await ensureReviewColumn();
+    async create(input: LegacyCreateClaimRequest): Promise<Claim> {
       const { data, error } = await query(client, 'claims')
         .insert({
           event_id: input.eventId,
@@ -366,7 +411,7 @@ export function createSupabaseClaimRepository(
           description: input.description,
           receipt_analysis: input.analysis,
         })
-        .select(claimColumns())
+        .select(CLAIM_COLUMNS)
         .single();
 
       if (error?.code === '23505') {
@@ -401,9 +446,8 @@ export function createSupabaseClaimRepository(
     },
 
     async listByEvent(eventId): Promise<StoredClaim[]> {
-      await ensureReviewColumn();
-      const { data, error } = await query(client, 'claims')
-        .select(claimColumns())
+        const { data, error } = await query(client, 'claims')
+        .select(CLAIM_COLUMNS)
         .eq('event_id', eventId)
         .order('created_at', { ascending: false })
         .order('id', { ascending: false })
@@ -420,9 +464,40 @@ export function createSupabaseClaimRepository(
 
     getProcessContext,
 
+    async applyReview(input) {
+      const nextStateByAction = {
+        approve: 'approved',
+        reject: 'rejected',
+        request_correction: 'needs_correction',
+      } as const;
+      const { data, error } = await query(client, 'claims')
+        .update({
+          state: nextStateByAction[input.review.action],
+          review_action: input.review.action,
+          reviewer_wallet: input.review.reviewer,
+          review_reason: input.review.reason,
+          reviewed_at: new Date(input.review.reviewedAtMs).toISOString(),
+        })
+        .eq('id', input.claimId)
+        .eq('state', 'awaiting_review')
+        .is('review_action', null)
+        .is('payment', null)
+        .select(CLAIM_COLUMNS)
+        .maybeSingle();
+
+      if (error && error.code !== 'PGRST116') {
+        throw databaseFailure(error);
+      }
+      if (data) {
+        return { status: 'saved', claim: mapClaimRow(data).claim };
+      }
+
+      const current = await getProcessContext(input.claimId);
+      return { status: 'lost_race', claim: current.claim };
+    },
+
     async reservePayment(claimId) {
-      await ensureReviewColumn();
-      return mutatePayment({
+        return mutatePayment({
         claimId,
         expectedState: 'approved',
         nextState: 'paying',
@@ -430,8 +505,7 @@ export function createSupabaseClaimRepository(
     },
 
     async failApprovedPayment(input) {
-      await ensureReviewColumn();
-      return mutatePayment({
+        return mutatePayment({
         claimId: input.claimId,
         expectedState: 'approved',
         nextState: 'payment_failed',
@@ -440,8 +514,7 @@ export function createSupabaseClaimRepository(
     },
 
     async finishPayment(input) {
-      await ensureReviewColumn();
-      return mutatePayment({
+        return mutatePayment({
         claimId: input.claimId,
         expectedState: 'paying',
         nextState: input.state,
@@ -461,8 +534,7 @@ export function createSupabaseClaimRepository(
      * claim came back, and the next review overwrites it anyway.
      */
     async resubmit(input) {
-      await ensureReviewColumn();
-
+  
       const { data, error } = await query(client, 'claims')
         .update({
           merchant: input.corrections.merchant,
@@ -475,7 +547,7 @@ export function createSupabaseClaimRepository(
         })
         .eq('id', input.claimId)
         .eq('state', 'needs_correction')
-        .select(claimColumns())
+        .select(CLAIM_COLUMNS)
         .maybeSingle();
 
       if (error && error.code !== 'PGRST116') {
@@ -492,53 +564,13 @@ export function createSupabaseClaimRepository(
       throw databaseFailure(null);
     },
 
-    async saveReview(input) {
-      await ensureReviewColumn();
-
-      /* Refused before the write rather than after it. A review whose reason
-         cannot be stored is not a review anybody can audit later, and a state
-         change without one would be worse than no change at all. */
-      if (reviewColumn === 'absent') {
-        throw new ServerError(
-          'database_failed',
-          503,
-          'Recording a review needs the claims.review column. Apply migration 20260902000000_add_claim_review.sql.',
-        );
-      }
-
-      const { data, error } = await query(client, 'claims')
-        .update({ review: input.review, state: input.state })
-        .eq('id', input.claimId)
-        .eq('state', 'awaiting_review')
-        .select(claimColumns())
-        .maybeSingle();
-
-      if (error && error.code !== 'PGRST116') {
-        throw databaseFailure(error);
-      }
-      if (data) {
-        return { status: 'saved', claim: mapClaimRow(data).claim };
-      }
-
-      const current = await getProcessContext(input.claimId);
-      if (current.claim.review) {
-        return { status: 'lost_race', claim: current.claim };
-      }
-      throw new ServerError(
-        'processing_conflict',
-        409,
-        `This claim is ${current.claim.state.replace(/_/g, ' ')}, so it is not waiting for a review`,
-      );
-    },
-
     async saveDecision(input) {
-      await ensureReviewColumn();
-      const { data, error } = await query(client, 'claims')
+        const { data, error } = await query(client, 'claims')
         .update({ decision: input.decision, state: input.state })
         .eq('id', input.claimId)
         .eq('state', 'submitted')
         .is('decision', null)
-        .select(claimColumns())
+        .select(CLAIM_COLUMNS)
         .maybeSingle();
 
       if (error && error.code !== 'PGRST116') {

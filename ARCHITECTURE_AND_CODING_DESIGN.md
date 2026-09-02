@@ -11,11 +11,11 @@ Next.js API route
       |
       v
 Application service
-  |       |       |          |
-  v       v       v          v
-Gemini  Claim    Receipt   PaymentExecutor
-adapter repository store    (Sui Testnet)
-          |        |
+  |       |          |          |
+  v       v          v          v
+Gemini  Auth +     Receipt   PaymentExecutor
+adapter draft/claim store    (Sui Testnet)
+          |          |
           +--- Supabase
 ```
 
@@ -32,6 +32,8 @@ adapter repository store    (Sui Testnet)
   safe failure classification and fake-only tests.
 - `src/server/supabase` owns privileged client construction, database row mapping,
   private uploads and signed URLs.
+- `src/server/auth` issues/verifies signed challenges, hashes opaque tokens,
+  enforces exact origins, and resolves session identity with invalid-cookie precedence.
 - `src/server/dependencies.ts` composes production adapters lazily so importing a
   route never reads secrets.
 - `src/app/api` contains thin Node.js route handlers and testable handler factories.
@@ -42,6 +44,10 @@ and its cap and budget checks remain deferred until a future quote module stores
 explicit converted USDC payout. The original analysis remains unchanged when a
 member corrects the confirmed claim fields.
 
+The claim boundary and database accept three-letter ISO currency codes plus the
+explicit four-letter `USDC` asset symbol. This keeps validation narrow while
+allowing the configured payment asset to persist end to end.
+
 ## Database design
 
 - `events` stores organisation, treasurer, mandate object, allowed categories and
@@ -49,7 +55,16 @@ member corrects the confirmed claim fields.
 - `event_members` uses `(event_id, wallet_address)` as its primary key and records
   whether membership is active.
 - `claims` stores positive integer base units, normalized receipt fields, analysis
-  JSON, internal object path and optional later decision/payment JSON.
+  JSON, internal object path, decision/payment JSON, and nullable review metadata.
+- `claim_review_events` is append-only. A security-definer `AFTER UPDATE` trigger
+  inserts its single audit row when review metadata changes from null to populated,
+  so the state transition and audit record commit together.
+- `wallet_auth_challenges` stores exact five-minute personal-sign messages and a
+  single consumed timestamp. `wallet_sessions` stores only unique SHA-256 token
+  hashes with fixed expiry/revocation timestamps.
+- `receipt_analysis_drafts` privately binds event, wallet, object path, hash and
+  immutable extraction for 15 minutes. A row lock consumes it and inserts one
+  claim in the same transaction; an insertion failure rolls back consumption.
 - `(event_id, receipt_sha256)` is unique. Receipt object paths are globally unique.
 - A composite membership foreign key preserves ownership history, while an insert
   trigger rejects claims by inactive members without preventing later member
@@ -60,10 +75,13 @@ member corrects the confirmed claim fields.
 The private `receipts` bucket has a 10 MiB limit and accepts only JPEG, PNG and
 WebP. Public URLs are never stored; list operations create 300-second signed URLs.
 
-Because wallet authentication is not part of this increment, all privileged
-receipt routes fail closed by default. Controlled local demos must explicitly
-enable insecure demo identity mode; claim listing also requires an active member
-viewer address. This is not production authentication.
+Browser wallets connect through Testnet-only `@mysten/dapp-kit-react` and
+`SuiGrpcClient`. Connection alone is not authentication: the user explicitly
+signs the stored challenge. The raw random 256-bit session token is returned only
+as an HTTP-only strict cookie and never reaches application JSON or persistence.
+Disconnect/account change revokes the current client session. Local compatibility
+identity is possible only with no cookie and an explicit insecure flag; hosted
+deployments disable it.
 
 ## Deterministic policy design
 
@@ -88,10 +106,9 @@ remains the final authority and rechecks its rules at execution time.
 
 ## Claim-processing design
 
-`POST /api/claims/:id/process` is a thin route behind the existing fail-closed demo
-identity gate. Its injected service validates the claim and processor, loads the
-claim plus event policy, and permits only the configured treasurer. The processor
-address remains an insecure demo identity until wallet authentication exists.
+`POST /api/claims/:id/process` derives its processor from the fixed-expiry wallet
+session, validates the claim, loads claim plus event policy, and permits only the
+configured treasurer. The browser payload contains no processor address.
 
 For a new submitted claim, a read-only Sui adapter composes `createTestnetClient`,
 `readMandate` and `toMandateView`. The adapter rejects a mandate with a different
@@ -112,6 +129,30 @@ transition to `paid` or `payment_failed`. Terminal results are returned
 idempotently. A transport or finality uncertainty leaves the row in `paying`; later
 requests return a reconciliation conflict and never sign a replacement payment.
 
+## Treasurer-review design
+
+`POST /api/claims/:id/review` uses the same authenticated treasurer identity as
+claim processing. The service validates the discriminated request, loads trusted
+claim/event context, and requires the configured treasurer. Supabase applies one
+guarded update filtered by claim ID, `state = awaiting_review`,
+`review_action IS NULL`, and `payment IS NULL`. Rejection and correction finish at
+`rejected` and `needs_correction`; approval reserves payment immediately by moving
+directly to `paying`.
+
+Before approval changes state, the service validates the signer, reads the current
+mandate, verifies its object ID, and re-runs all policy checks. Only category,
+receipt-date, and extraction-confidence failures are human-overridable. Currency
+readiness and every on-chain rule remain mandatory. Only the compare-and-set winner
+invokes the injected `PaymentExecutor`; terminal outcomes reuse the existing
+guarded `paying -> paid|payment_failed` persistence. Exact replays return stored
+results, while an in-flight/uncertain approval remains `paying` and cannot be
+automatically retried.
+
+The treasury client uses one review dialog. Approval explicitly names the testnet
+USDC payment consequence; rejection and correction validate their reason before
+sending. Successful writes reload persisted claims, and terminal payment responses
+also refresh the server-rendered mandate snapshot.
+
 `createSuiPaymentExecutor` is lazy: factory creation and route import do not read
 `AGENT_PRIVATE_KEY`. `assertReady` accepts only testnet, parses the server-only
 Ed25519 key and canonical `AgentCap`, and caches the validated runtime. Its internal
@@ -131,6 +172,12 @@ Submission or post-submission uncertainty returns
 `payment_submission_uncertain` without persisting provider text, signatures or
 private-key material.
 
+Authentication failures intentionally collapse missing/invalid/replayed
+challenge details into safe 401 responses. Consumed or ownership-mismatched
+drafts return a non-disclosing 409; expiry returns 410 so the client can show
+“Analyze again.” Signatures, session tokens, private paths, RPC text and database
+messages are never serialized.
+
 ## Testing strategy
 
 - Vitest tests use injected Gemini, repository, storage and service boundaries.
@@ -144,11 +191,18 @@ private-key material.
   mapping, payment readiness, preflight policy changes, single-winner signing,
   terminal idempotency, uncertainty handling, route validation and sanitized
   adapter failures.
+- Review tests cover request validation, authorization, all three compare-and-set
+  transitions, audit mapping, exact replay/conflict behavior, fresh mandate
+  failures, single-winner signing, terminal payment classification, uncertainty,
+  client payloads, dialog copy, reason validation and queue rules.
 - Payment-adapter tests use generated credentials and injected operations to cover
   lazy configuration, success, Move rejection and failure classification without
   a network request or transaction broadcast.
 - pgTAP applies the migration to a clean database and checks constraints,
   privileges, RLS, storage configuration and duplicate behavior.
+- Real Ed25519 and Secp256k1 personal signatures cover correct/wrong addresses,
+  replay, expiry and malformed input; cookie/origin tests cover fixed expiry,
+  logout and invalid-cookie precedence.
 - Repository completion requires build, typecheck, tests, audit, secret scan and
   attribution scan.
 
@@ -170,6 +224,17 @@ created the fixed demo event and Kian Xiang membership; migration
 `20260831010000` added Shu Heng and Lim Wey Cheng without rewriting the applied
 seed or deleting other members. Both migrations were applied to the hosted
 project and the three active mappings were catalog-verified on 31 August 2026.
+
+After PR #17, migration `20260901000000` adds the direct claims-to-events
+relationship and `20260901010000` adds payroll runs. Review persistence therefore
+uses `20260901020000_claim_review_actions.sql`, preserving a unique chronological
+migration version.
+
+Migration `20260901030000_wallet_auth_and_analysis_drafts.sql` adds the three
+private auth/draft tables plus service-role-only atomic challenge and draft
+functions. After merge it must be pushed to hosted Supabase, `TALI_APP_ORIGIN`
+must equal the deployed HTTPS origin, and the member/treasurer browser flows must
+be verified manually. No automated verification broadcasts a Sui transaction.
 
 Local Logflare analytics and its Vector collector are intentionally disabled. On
 Windows the collector otherwise requires Docker Desktop's unauthenticated TCP API

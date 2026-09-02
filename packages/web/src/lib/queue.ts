@@ -9,12 +9,12 @@ import { add } from '@tali/shared';
  * Everything still waiting on the treasurer, which includes `approved`: the
  * decision is made but the transfer is a separate step, so an approved claim
  * that dropped out of this list would leave the payment with nowhere to be
- * released from.
+ * released from. `needs_correction` is not here — that claim is with the
+ * member, and nothing the treasurer does moves it.
  */
 const REVIEW_STATES: ReadonlySet<Claim['state']> = new Set([
   'submitted',
   'awaiting_review',
-  'needs_correction',
   'approved',
   'paying',
 ]);

@@ -45,22 +45,6 @@ export type ClaimChip =
   | 'rejected'
   | 'payment_failed';
 
-export type ReviewAction = 'approve' | 'reject' | 'request_correction';
-
-/**
- * What a treasurer decided about a claim the policy engine sent to review.
- *
- * Kept apart from `PolicyDecision`, which is the engine's own output. They are
- * different authorities, and merging them would lose which one spoke.
- */
-export interface ClaimReview {
-  action: ReviewAction;
-  reviewer: Address;
-  reviewedAt: string;
-  /** Required for a rejection or a correction request, absent on approval. */
-  reason?: string;
-}
-
 export const CLAIM_CHIP: Record<ClaimState, ClaimChip> = {
   draft: 'draft',
   analysing: 'analysing',
@@ -153,6 +137,22 @@ export interface PaymentResult {
   budgetAfter: Amount;
 }
 
+export type ClaimReviewAction = 'approve' | 'reject' | 'request_correction';
+
+/**
+ * What a treasurer decided about a claim the policy engine sent to review.
+ *
+ * Kept apart from `PolicyDecision`, which is the engine's own output. They are
+ * different authorities, and merging them would lose which one spoke.
+ */
+export interface ClaimReview {
+  action: ClaimReviewAction;
+  reviewer: Address;
+  /** Required for a rejection or a correction request, null on approval. */
+  reason: string | null;
+  reviewedAtMs: number;
+}
+
 export interface Claim {
   id: string;
   eventId: string;
@@ -200,6 +200,7 @@ export type AuditKind =
   | 'agent_auto_approved'
   | 'approved_by_human'
   | 'rejected_by_human'
+  | 'correction_requested_by_human'
   | 'payment_sent'
   | 'payment_rejected'
   | 'mandate_created'

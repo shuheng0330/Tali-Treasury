@@ -48,11 +48,15 @@ describe('toReviewQueue', () => {
     expect(item?.decision.reason).toBe('Awaiting server policy evaluation.');
   });
 
+  it('keeps correction requests out of the treasurer review queue', () => {
+    expect(toReviewQueue([claim({ state: 'needs_correction' })])).toEqual([]);
+  });
+
   it('keeps every claim still waiting on the treasurer', () => {
     // `approved` in particular: the decision is made but the transfer is a
     // separate step, so dropping it here would leave the payment with nowhere
     // to be released from.
-    for (const state of ['submitted', 'awaiting_review', 'needs_correction', 'approved', 'paying'] as const) {
+    for (const state of ['submitted', 'awaiting_review', 'approved', 'paying'] as const) {
       expect(toReviewQueue([claim({ state })]), state).toHaveLength(1);
     }
   });

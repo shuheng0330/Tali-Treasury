@@ -1,7 +1,8 @@
-import { z } from 'zod';
-import { EXPENSE_CATEGORIES } from '@tali/shared';
+import { ZodError } from 'zod';
+import type { Claim } from '@tali/shared';
 
-import { requireDemoIdentityEnabled } from '../../../../../server/demo-auth';
+import { assertSameOrigin, resolveWalletIdentity } from '../../../../../server/auth/session';
+import { parseResubmitClaimInput } from '../../../../../server/claims/validation';
 import { getBackendServices } from '../../../../../server/dependencies';
 import { ServerError, toApiError } from '../../../../../server/errors';
 
@@ -11,51 +12,100 @@ interface RouteContext {
   params: Promise<{ id: string }>;
 }
 
-const [first, ...rest] = EXPENSE_CATEGORIES;
+type ResubmitClaimService = (input: {
+  claimId: string;
+  submitter: string;
+  merchant: string;
+  amount: string;
+  receiptDate: string;
+  category: Claim['category'];
+  description: string;
+}) => Promise<{ claim: Claim; accepted: boolean }>;
 
-const resubmitSchema = z
-  .object({
-    submitter: z.string().regex(/^0x[0-9a-fA-F]{1,64}$/, 'invalid Sui address'),
-    merchant: z.string().trim().min(1).max(200),
-    amount: z
-      .string()
-      .regex(/^[0-9]{1,30}$/, 'amount must be base units')
-      .refine((value) => BigInt(value) > 0n, 'amount must be greater than zero'),
-    receiptDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'receiptDate must be YYYY-MM-DD'),
-    category: z.enum([first!, ...rest]),
-    description: z.string().trim().max(500),
-  })
-  .strict();
+type ResolveIdentity = (request: Request, legacyAddress?: string) => Promise<string>;
 
-export async function POST(
-  request: Request,
-  context: RouteContext,
-): Promise<Response> {
-  try {
-    requireDemoIdentityEnabled();
+/** Names the field, so six required fields do not share one message. */
+function invalidCorrection(error: ZodError): ServerError {
+  const issue = error.issues[0];
+  const field = issue?.path.join('.');
+  return new ServerError(
+    'invalid_request',
+    400,
+    field ? `${field}: ${issue?.message}` : 'Invalid correction',
+    { cause: error },
+  );
+}
 
-    let body: unknown;
+export function createResubmitClaimHandler(
+  service: ResubmitClaimService,
+  resolveIdentity?: ResolveIdentity,
+  appOrigin?: string,
+) {
+  return async (request: Request, context: RouteContext): Promise<Response> => {
     try {
-      body = await request.json();
+      let body: unknown;
+      try {
+        body = await request.json();
+      } catch (error) {
+        throw new ServerError('invalid_request', 400, 'Expected valid JSON', {
+          cause: error,
+        });
+      }
+      if (!body || typeof body !== 'object') {
+        throw new ServerError('invalid_request', 400, 'A correction is required');
+      }
+
+      const submitted = (body as { submitter?: unknown }).submitter;
+      if (submitted !== undefined && typeof submitted !== 'string') {
+        throw new ServerError('invalid_request', 400, 'submitter must be a Sui address');
+      }
+
+      if (appOrigin) assertSameOrigin(request, appOrigin);
+      const submitter = resolveIdentity
+        ? await resolveIdentity(request, submitted)
+        : submitted;
+      if (typeof submitter !== 'string') {
+        throw new ServerError(
+          'authentication_required',
+          401,
+          'A valid wallet session is required',
+        );
+      }
+
+      const { id } = await context.params;
+      const { submitter: _legacy, ...corrections } = body as Record<string, unknown>;
+
+      let parsed;
+      try {
+        parsed = parseResubmitClaimInput({ claimId: id, submitter, ...corrections });
+      } catch (error) {
+        if (error instanceof ZodError) throw invalidCorrection(error);
+        throw error;
+      }
+
+      return Response.json(await service(parsed));
     } catch (error) {
-      throw new ServerError('invalid_request', 400, 'Expected valid JSON', { cause: error });
+      const { body, status } = toApiError(error);
+      return Response.json(body, { status });
     }
+  };
+}
 
-    const parsed = resubmitSchema.safeParse(body);
-    if (!parsed.success) {
-      throw new ServerError(
-        'invalid_request',
-        400,
-        parsed.error.issues[0]?.message ?? 'Invalid correction',
-      );
-    }
-
-    const { id } = await context.params;
-    if (!id) throw new ServerError('invalid_request', 400, 'A claim id is required');
-
-    return Response.json(
-      await getBackendServices().resubmitClaim({ claimId: id, ...parsed.data }),
-    );
+export async function POST(request: Request, context: RouteContext): Promise<Response> {
+  try {
+    const services = getBackendServices();
+    return createResubmitClaimHandler(
+      (input) => services.resubmitClaim(input),
+      async (currentRequest, legacyAddress) =>
+        (
+          await resolveWalletIdentity({
+            request: currentRequest,
+            auth: services.auth,
+            legacyAddress,
+          })
+        ).address,
+      services.appOrigin,
+    )(request, context);
   } catch (error) {
     const { body, status } = toApiError(error);
     return Response.json(body, { status });

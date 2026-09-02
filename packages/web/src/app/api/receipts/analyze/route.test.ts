@@ -21,7 +21,8 @@ const response: AnalyzeReceiptResponse = {
     receiptHash,
     fuzzyKey: 'campus print shop|2026-08-30|4500000',
   },
-  storagePath: `${eventId}/${receiptHash}.png`,
+  draftId: '11111111-1111-4111-8111-111111111111',
+  draftExpiresAt: '2026-09-01T12:15:00.000Z',
   duplicateOf: null,
 };
 

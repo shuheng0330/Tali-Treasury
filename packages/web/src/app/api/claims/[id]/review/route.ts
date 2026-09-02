@@ -1,6 +1,6 @@
-import { z } from 'zod';
+import type { ReviewClaimResponse } from '@tali/shared';
 
-import { requireDemoIdentityEnabled } from '../../../../../server/demo-auth';
+import { assertSameOrigin, resolveWalletIdentity } from '../../../../../server/auth/session';
 import { getBackendServices } from '../../../../../server/dependencies';
 import { ServerError, toApiError } from '../../../../../server/errors';
 
@@ -10,43 +10,78 @@ interface RouteContext {
   params: Promise<{ id: string }>;
 }
 
-const reviewSchema = z
-  .object({
-    reviewer: z.string().regex(/^0x[0-9a-fA-F]{1,64}$/, 'invalid Sui address'),
-    action: z.enum(['approve', 'reject', 'request_correction']),
-    reason: z.string().trim().min(1).max(500).optional(),
-  })
-  .strict();
+type ReviewClaimService = (input: unknown) => Promise<ReviewClaimResponse>;
+
+type ResolveIdentity = (request: Request, legacyAddress?: string) => Promise<string>;
+
+export function createReviewClaimHandler(
+  service: ReviewClaimService,
+  resolveIdentity?: ResolveIdentity,
+  appOrigin?: string,
+) {
+  return async (request: Request, context: RouteContext): Promise<Response> => {
+    try {
+      let body: unknown;
+      try {
+        body = await request.json();
+      } catch (error) {
+        throw new ServerError('invalid_request', 400, 'Expected valid JSON', {
+          cause: error,
+        });
+      }
+      if (!body || typeof body !== 'object') {
+        throw new ServerError('invalid_request', 400, 'Review payload is required');
+      }
+      const payload = body as Record<string, unknown>;
+      if (
+        typeof payload.action !== 'string' ||
+        (payload.reviewer !== undefined && typeof payload.reviewer !== 'string') ||
+        (payload.reason !== undefined && typeof payload.reason !== 'string') ||
+        ((payload.action === 'reject' || payload.action === 'request_correction') &&
+          typeof payload.reason !== 'string')
+      ) {
+        throw new ServerError('invalid_request', 400, 'Invalid review payload');
+      }
+
+      if (appOrigin) assertSameOrigin(request, appOrigin);
+      const reviewer = resolveIdentity
+        ? await resolveIdentity(
+            request,
+            typeof payload.reviewer === 'string' ? payload.reviewer : undefined,
+          )
+        : payload.reviewer;
+      if (typeof reviewer !== 'string') {
+        throw new ServerError('authentication_required', 401, 'A valid wallet session is required');
+      }
+
+      const { id } = await context.params;
+      const { reviewer: _legacy, ...action } = payload;
+      return Response.json(await service({ claimId: id, ...action, reviewer }));
+    } catch (error) {
+      const { body, status } = toApiError(error);
+      return Response.json(body, { status });
+    }
+  };
+}
 
 export async function POST(
   request: Request,
   context: RouteContext,
 ): Promise<Response> {
   try {
-    requireDemoIdentityEnabled();
-
-    let body: unknown;
-    try {
-      body = await request.json();
-    } catch (error) {
-      throw new ServerError('invalid_request', 400, 'Expected valid JSON', { cause: error });
-    }
-
-    const parsed = reviewSchema.safeParse(body);
-    if (!parsed.success) {
-      throw new ServerError(
-        'invalid_request',
-        400,
-        parsed.error.issues[0]?.message ?? 'Invalid review',
-      );
-    }
-
-    const { id } = await context.params;
-    if (!id) throw new ServerError('invalid_request', 400, 'A claim id is required');
-
-    return Response.json(
-      await getBackendServices().reviewClaim({ claimId: id, ...parsed.data }),
-    );
+    const services = getBackendServices();
+    return createReviewClaimHandler(
+      (input) => services.reviewClaim(input),
+      async (currentRequest, legacyAddress) =>
+        (
+          await resolveWalletIdentity({
+            request: currentRequest,
+            auth: services.auth,
+            legacyAddress,
+          })
+        ).address,
+      services.appOrigin,
+    )(request, context);
   } catch (error) {
     const { body, status } = toApiError(error);
     return Response.json(body, { status });

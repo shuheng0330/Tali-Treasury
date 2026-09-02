@@ -27,12 +27,13 @@ Status words are intentionally precise:
 | Overspend and recipient protections | **Live** | Both invalid transactions rejected on-chain |
 | TypeScript Sui integration | **Complete locally** | Reads, PTB builders, amount helpers, error mapping |
 | Treasurer mandate dashboard | **Live** (read-only) | Server reads the current mandate from Sui Testnet |
-| Claim receipt submission UI | **Complete locally** | Real analyze, create, and list API calls; Production remains fail-closed pending wallet auth |
+| Claim receipt submission UI | **Complete locally** | Authenticated analyze/create/list with one-time 15-minute drafts |
 | Claim policy processing | **Complete locally** | Treasurer action invokes the server evaluator and persists the decision |
-| Review, revoke, payment UI, and Safety Test interactions | **Mocked** | Clearly labelled; no browser signing or state changes |
-| Gemini receipt analysis and Supabase claims | **Hosted schema ready** | API-backed UI integration, 42 pgTAP assertions, and all three active team members verified |
+| Treasurer review actions | **Complete locally** | Real approve/reject/correction API and UI; eligible USDC approval enters the guarded testnet signer |
+| Revoke and Safety Test interactions | **Mocked** | Clearly labelled previews; no browser signing or state changes |
+| Gemini receipt analysis and Supabase claims | **Complete locally; rollout pending** | Private drafts, authenticated access and 91 pgTAP assertions |
 | Deterministic policy and backend agent signing | **Complete locally** | Testnet-only, treasurer-triggered, race-safe and fake-operation verified; no transaction broadcast in this increment |
-| Wallet connection and live UI writes | **Pending** | Add after backend/signing boundary is agreed |
+| Wallet connection and live UI writes | **Complete locally** | Testnet connect, explicit sign-in, one-hour HTTP-only session and sign-out |
 | Web hosting | **Live** | [`tali-treasury.vercel.app`](https://tali-treasury.vercel.app) |
 | Submission pack | **Pending** | Final hackathon phase |
 
@@ -54,10 +55,10 @@ has paid `3 USDC`, and has `17 USDC` remaining.
 ## How the pieces fit
 
 ```text
-Member receipt UI (real analyze, create, and list API calls)
+Member receipt UI (Testnet wallet session; real analyze, create and list)
              |
              v
-Gemini receipt + private Supabase claims (hosted; auth-gated; team verified)
+Gemini receipt + private one-time analysis draft + Supabase claims
              |
              v
 Deterministic policy + persisted decision (complete locally)
@@ -71,12 +72,15 @@ Server-only testnet signer (complete locally)
              v
 Sui Testnet Mandate<USDC> (live enforcement and audit events)
 
-Non-USDC receipts stay in review pending a trusted conversion quote.
+Non-USDC receipts stay in review pending a trusted conversion quote. Eligible
+USDC review claims can be approved by the treasurer and enter the atomic payment
+flow; rejection and correction are durably audited.
 ```
 
 The web application reads public mandate state without a key. The process API can
 sign an eligible `auto_pay` claim with a server-only testnet agent after an atomic
-reservation; browser payment interactions remain outside the current UI integration.
+reservation. The review API uses the same guarded executor after a human approval;
+the browser never receives or uses the signing key.
 
 ## Repository structure
 
@@ -121,11 +125,11 @@ npm run dev
 ```
 
 Then open `http://localhost:3000/treasury`. The page should say **Live from Sui
-Testnet** and display the current mandate state. `/claim` uses the real receipt
-and claim APIs when demo identity is explicitly enabled. The process API has real
-and claim APIs when demo identity is explicitly enabled. The treasury process API
+Testnet** and display the current mandate state. Connect a Sui Testnet browser
+wallet, then use the separate **Sign in** action before protected APIs activate.
+The treasury process API
 persists real policy decisions and can run the server-only testnet signer for USDC
-`auto_pay` claims. Review actions, browser payment presentation, revoke, and Safety
+`auto_pay` claims. Treasurer review actions are real API writes. Revoke and Safety
 Test writes remain clearly marked simulations or previews.
 
 Run Move tests separately:
@@ -167,15 +171,17 @@ AGENT_PRIVATE_KEY=
 AGENT_CAP_ID=
 SUI_NETWORK=testnet
 TALI_ALLOW_INSECURE_DEMO_IDENTITY=false
+TALI_APP_ORIGIN=http://localhost:3000
 ```
 
 `SUPABASE_SERVICE_ROLE_KEY` remains a temporary fallback for an existing project,
 but `SUPABASE_SECRET_KEY` is preferred. Never add either value to a
 `NEXT_PUBLIC_` variable.
 
-The receipt APIs fail closed unless `TALI_ALLOW_INSECURE_DEMO_IDENTITY=true`.
-Enable it only for a controlled local hackathon demo. Leave it `false` on a
-hosted deployment until wallet-signature or session authentication is added.
+`TALI_APP_ORIGIN` must exactly match the browser origin. Hosted deployments must
+use their HTTPS origin and keep `TALI_ALLOW_INSECURE_DEMO_IDENTITY=false`. The
+compatibility identity is local-only, works only when no session cookie exists,
+and never overrides an invalid or expired cookie.
 
 Run the local database checks:
 
@@ -197,19 +203,22 @@ npm exec supabase -- db push
 Verify in Supabase that the `receipts` bucket is private, limited to 10 MiB, and
 accepts only JPEG, PNG, and WebP. The server exposes:
 
-- `POST /api/receipts/analyze` — multipart fields `receipt`, `eventId`, and
-  `submitter`;
-- `POST /api/claims` — the shared `CreateClaimRequest` JSON body;
-- `GET /api/events/:id/claims?viewer=0x...` — persisted claims with 300-second
-  receipt URLs after active event-membership checking;
+- `POST /api/auth/challenge` and `POST|GET|DELETE /api/auth/session` — signed
+  Sui Testnet challenge and fixed one-hour opaque session;
+- `POST /api/receipts/analyze` — multipart fields `receipt` and `eventId`, returning
+  extraction plus a nullable 15-minute `draftId` and never a private path;
+- `POST /api/claims` — confirmed fields plus `draftId`; trusted event, wallet,
+  hash, path, currency and original extraction come from the stored draft;
+- `GET /api/events/:id/claims` — persisted claims with 300-second receipt URLs
+  for an active member or configured treasurer;
 - `POST /api/claims/:id/process` — treasurer-triggered deterministic policy and,
   for `auto_pay` only, an atomic server-agent payment attempt.
+- `POST /api/claims/:id/review` — one atomic treasurer approval, rejection, or
+  correction request; eligible USDC approval immediately starts testnet payment.
 
-When explicitly enabled, this hackathon slice treats the submitted wallet address
-as demo identity and checks event membership, but it does not verify a wallet signature. The analyze
-response is also not yet signed or persisted as a one-time draft before claim
-creation. Add wallet authentication and a signed analysis token or server-side
-draft before production use or real-fund authorization.
+See [`docs/API.md`](docs/API.md) for request/response and error details. Protected
+writes require the exact configured Origin header. Wallet connection alone does
+not authenticate; the explicit personal-message signature creates the session.
 
 ## Integration handoff
 
@@ -229,16 +238,18 @@ Backend:
 
 Immediate next vertical slice:
 
-1. Configure server-only Gemini and Supabase credentials in the deployment.
-2. Add wallet-signature authentication and bind analysis to claim creation.
-3. Configure the testnet agent key and owned `AgentCap` server-side.
-4. With separate authorization, run one small funded smoke claim and record its
+1. Apply migration `20260901030000`, configure the hosted origin and verify both
+   wallet roles manually.
+2. Configure server-only Gemini and Supabase credentials in the deployment.
+3. Add member correction/resubmission and trusted MYR-to-USDC quotations.
+4. Configure the testnet agent key and owned `AgentCap` server-side.
+5. With separate authorization, run one small funded smoke claim and record its
    real digest; automated tests intentionally never broadcast.
-5. Add reconciliation for uncertain submissions and refresh the live mandate
-   dashboard after finality.
+6. Add reconciliation for uncertain submissions.
 
 ## Documentation index
 
+- [`docs/API.md`](docs/API.md) — authenticated session, receipt draft and claim endpoint contracts.
 - [`docs/PROGRESS.md`](docs/PROGRESS.md) — authoritative team status and next work.
 - [`docs/NEXT_STEPS.md`](docs/NEXT_STEPS.md) — production implementation order and acceptance criteria.
 - [`docs/HOSTED_SUPABASE_VERIFICATION.md`](docs/HOSTED_SUPABASE_VERIFICATION.md) — hosted schema verification scope and reproducible checks.

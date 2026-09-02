@@ -2,11 +2,14 @@ import type { ApiError } from '@tali/shared';
 
 export type ServerErrorCode =
   | 'authentication_required'
+  | 'authentication_failed'
+  | 'origin_forbidden'
   | 'invalid_request'
   | 'unsupported_receipt'
   | 'event_not_found'
   | 'member_not_found'
   | 'processor_forbidden'
+  | 'reviewer_forbidden'
   | 'claim_not_found'
   | 'payroll_run_not_found'
   | 'stream_not_found'
@@ -15,6 +18,9 @@ export type ServerErrorCode =
   | 'payment_configuration_failed'
   | 'payment_submission_uncertain'
   | 'duplicate_receipt'
+  | 'analysis_draft_consumed'
+  | 'analysis_draft_expired'
+  | 'analysis_draft_forbidden'
   | 'analysis_failed'
   | 'storage_failed'
   | 'database_failed';

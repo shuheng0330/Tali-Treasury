@@ -1,6 +1,6 @@
-import { useState } from 'react';
 import { Money } from '@/components/Money';
-import type { ReviewAction, ReviewQueueItem } from '@tali/shared';
+import type { ClaimReviewAction, ReviewQueueItem } from '@tali/shared';
+import { approvalBlockReason } from '@/lib/review-actions';
 
 function Verdict({ passed }: { passed: boolean }) {
   return passed ? (
@@ -45,35 +45,31 @@ function relative(atMs: number) {
 interface Props {
   item: ReviewQueueItem;
   processing: boolean;
-  reviewing: boolean;
-  reviewsRecordable: boolean;
+  pendingAction: ClaimReviewAction | null;
   onProcess: (id: string) => void;
-  onReview: (id: string, action: ReviewAction, reason?: string) => void;
+  onReview: (id: string, action: ClaimReviewAction) => void;
   onPay: (id: string) => void;
+  paying: boolean;
+  actionsDisabled?: boolean;
+  /** Carried by every greyed review control, not only the first one. */
+  disabledReason?: string;
 }
 
 export function ClaimRow({
   item,
   processing,
-  reviewing,
-  reviewsRecordable,
+  pendingAction,
   onProcess,
   onReview,
   onPay,
+  paying,
+  actionsDisabled = false,
+  disabledReason,
 }: Props) {
   const { claim, decision, agentNote, reason } = item;
-  const [asking, setAsking] = useState<Exclude<ReviewAction, 'approve'> | null>(null);
-  const [note, setNote] = useState('');
-  const immutableFailure = decision.checks.some((check) => check.onChain && !check.passed);
-
-  /* The note is cleared on every switch: a reason written for a rejection is
-     not the reason a correction request needs, and carrying it over would put
-     the wrong words in front of the member. */
-  function ask(next: Exclude<ReviewAction, 'approve'>) {
-    setAsking((open) => (open === next ? null : next));
-    setNote('');
-  }
+  const approvalBlocked = approvalBlockReason(claim, decision);
   const awaitingPolicy = claim.state === 'submitted' && claim.decision === null;
+  const reviewPending = pendingAction !== null;
 
   return (
     <li className="flex flex-col gap-3 px-4 py-4">
@@ -139,11 +135,11 @@ export function ClaimRow({
           <>
             <button
               type="button"
-              disabled={reviewing}
+              disabled={paying || actionsDisabled}
               onClick={() => onPay(claim.id)}
               className="btn btn--primary h-9 px-5 text-label"
             >
-              {reviewing ? 'Paying…' : 'Release the payment'}
+              {paying ? 'Paying…' : 'Release the payment'}
             </button>
             <p className="text-caption text-ink-3">
               Approved. The transfer is a separate step, so a signing failure never
@@ -153,7 +149,7 @@ export function ClaimRow({
         ) : awaitingPolicy ? (
           <button
             type="button"
-            disabled={processing}
+            disabled={processing || actionsDisabled}
             onClick={() => onProcess(claim.id)}
             className="btn btn--primary h-9 px-5 text-label"
           >
@@ -163,87 +159,40 @@ export function ClaimRow({
           <>
             <button
               type="button"
-              disabled={immutableFailure || reviewing || !reviewsRecordable}
+              disabled={approvalBlocked !== null || reviewPending || actionsDisabled}
               onClick={() => onReview(claim.id, 'approve')}
               className="btn btn--primary h-9 px-5 text-label"
-              title={
-                immutableFailure
-                  ? 'This claim violates an immutable on-chain rule'
-                  : !reviewsRecordable
-                    ? 'The database cannot store a decision yet'
-                    : undefined
-              }
+              title={approvalBlocked ?? (actionsDisabled ? disabledReason : undefined)}
             >
-              {immutableFailure ? 'Cannot approve' : reviewing ? 'Recording…' : 'Approve'}
+              {approvalBlocked
+                ? 'Cannot approve'
+                : pendingAction === 'approve'
+                  ? 'Approving…'
+                  : 'Approve'}
             </button>
             <button
               type="button"
-              disabled={reviewing || !reviewsRecordable}
-              onClick={() => ask('request_correction')}
-              className="btn btn--ghost h-9 px-5 text-label"
+              disabled={reviewPending || actionsDisabled}
+              onClick={() => onReview(claim.id, 'reject')}
+              className="btn btn--danger h-9 px-5 text-label"
+              title={actionsDisabled ? disabledReason : undefined}
             >
-              Send back
+              {pendingAction === 'reject' ? 'Rejecting…' : 'Reject'}
             </button>
             <button
               type="button"
-              disabled={reviewing || !reviewsRecordable}
-              onClick={() => ask('reject')}
+              disabled={reviewPending || actionsDisabled}
+              onClick={() => onReview(claim.id, 'request_correction')}
               className="btn btn--ghost h-9 px-5 text-label"
+              title={actionsDisabled ? disabledReason : undefined}
             >
-              Reject
+              {pendingAction === 'request_correction'
+                ? 'Requesting…'
+                : 'Request correction'}
             </button>
-            {immutableFailure ? (
-              <p className="text-caption text-ink-3">
-                A rule the contract enforces already refuses this claim.
-              </p>
-            ) : null}
           </>
         )}
       </div>
-
-      {asking ? (
-        <form
-          className="ml-7 flex flex-col gap-2"
-          onSubmit={(event) => {
-            event.preventDefault();
-            onReview(claim.id, asking, note.trim());
-            setAsking(null);
-            setNote('');
-          }}
-        >
-          <label className="text-caption text-ink-2" htmlFor={`reason-${claim.id}`}>
-            {asking === 'reject'
-              ? 'Why is this being rejected? The member reads this.'
-              : `What does ${claim.submitterName} need to fix? They see this on their claim.`}
-          </label>
-          <textarea
-            id={`reason-${claim.id}`}
-            value={note}
-            onChange={(event) => setNote(event.target.value)}
-            rows={2}
-            maxLength={500}
-            required
-            className="w-full rounded-control border border-rule bg-surface px-3 py-2 text-body"
-          />
-          <div className="flex gap-2">
-            <button
-              type="submit"
-              disabled={note.trim().length === 0 || reviewing}
-              className="btn btn--primary h-9 px-5 text-label"
-            >
-              {asking === 'reject' ? 'Record the rejection' : 'Send it back'}
-            </button>
-            <button
-              type="button"
-              onClick={() => setAsking(null)}
-              className="btn btn--ghost h-9 px-5 text-label"
-            >
-              Cancel
-            </button>
-          </div>
-        </form>
-      ) : null}
-
     </li>
   );
 }

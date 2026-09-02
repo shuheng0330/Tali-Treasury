@@ -10,7 +10,7 @@ keeping treasury limits enforceable by the existing Sui Move mandate.
 The current backend increment must:
 
 - accept one JPEG, PNG, or WebP receipt up to 10 MiB;
-- require an event UUID and canonical Sui submitter address;
+- require an event UUID and derive the canonical submitter from a wallet session;
 - require the submitter to be an active event member;
 - calculate SHA-256 from the original receipt bytes;
 - detect exact duplicates within the same event while allowing the same bytes in
@@ -21,8 +21,10 @@ The current backend increment must:
 - store receipt objects in a private Supabase bucket;
 - persist claims using the categories, states and response types from
   `@tali/shared`;
-- return short-lived signed receipt URLs only after checking the explicit demo
-  viewer is an active event member;
+- create a private 15-minute analysis draft and expose only its opaque ID;
+- consume each draft atomically once when creating its claim;
+- return short-lived signed receipt URLs only after checking the session wallet
+  is an active event member or the configured treasurer;
 - expose analyze, create-claim and list-claims API routes;
 - return stable, sanitized API errors without credentials or provider details.
 
@@ -56,8 +58,7 @@ still the final payment authority.
 
 The claim-processing endpoint must:
 
-- remain disabled unless insecure demo identity mode is explicitly enabled;
-- accept a claim UUID and canonical processor address;
+- accept a claim UUID and derive the processor from the session;
 - allow only the event's configured treasurer to trigger processing;
 - return a stored decision idempotently without rereading Sui;
 - load the current read-only mandate snapshot for a new submitted claim;
@@ -82,6 +83,29 @@ The claim-processing endpoint must:
 The backend signer is restricted to Sui Testnet. Its private key and owned
 `AgentCap` ID are server-only values and must never enter a client bundle.
 
+## Implemented treasurer-review scope
+
+The review endpoint and treasury UI must:
+
+- support one durable `approve`, `reject`, or `request_correction` action for an
+  `awaiting_review` claim;
+- require the authenticated wallet to be the event's configured treasurer;
+- require a trimmed 1–500 character reason for rejection and correction;
+- store review metadata on the claim and append exactly one immutable audit row
+  in the same database transaction;
+- use a compare-and-set transition so concurrent approvals can sign at most once;
+- move approval directly to `paying`, rejection to `rejected`, and correction to
+  `needs_correction`;
+- allow human approval to override only category, receipt-date, or extraction
+  confidence review failures;
+- prohibit approval for non-USDC claims or any failed current on-chain check;
+- re-read and re-evaluate the Sui mandate before recording approval;
+- persist confirmed payment success or rejection, while leaving uncertain
+  submissions in `paying` for reconciliation;
+- return exact replays idempotently and reject conflicting review actions; and
+- reload persisted claims after success and refresh mandate state after a
+  completed payment.
+
 ## Security and business rules
 
 - Gemini and Supabase credentials are server-only and must never use a
@@ -91,8 +115,14 @@ The backend signer is restricted to Sui Testnet. Its private key and owned
 - Application tables use Row Level Security with no browser policies and no
   `anon` or `authenticated` table privileges.
 - Only the server role may access application tables and private receipt objects.
-- Service-role-backed APIs fail closed unless controlled demo identity mode is
-  explicitly enabled; hosted use requires real wallet/session authentication.
+- A five-minute human-readable Sui Testnet challenge must be single-use and bind
+  the exact origin, wallet address, nonce, issue time, expiry and no-transaction statement.
+- Valid wallet signatures create fixed one-hour opaque sessions; only SHA-256
+  token hashes are persisted and raw tokens exist only in `tali_session`.
+- The session cookie is `HttpOnly`, `SameSite=Strict`, path `/`, and `Secure` on HTTPS.
+- Protected writes require the exact configured `TALI_APP_ORIGIN` header.
+- A present invalid or expired cookie must never fall back to local demo identity.
+- Hosted deployments keep `TALI_ALLOW_INSECURE_DEMO_IDENTITY=false`.
 - Amounts must be positive integers below 10^30 base units.
 - Sui addresses and object IDs must be canonical lowercase 32-byte hex values.
 - Preserve the original validated receipt analysis when a member corrects the
@@ -109,16 +139,13 @@ The backend signer is restricted to Sui Testnet. Its private key and owned
 
 ## Explicitly out of scope for this increment
 
-- wallet-signature authentication;
-- cryptographic or one-time binding between analysis and claim creation;
 - trusted MYR-to-USDC quote ingestion, quote expiry and converted payout storage;
-- treasurer review actions and review-driven claim-state transitions;
 - automatic reconciliation of a `paying` claim after an uncertain submission;
 - Sui Mainnet signing or any real-value payment;
 - a live funded smoke transaction for this increment (automated verification uses
   injected fake operations and never broadcasts);
-- frontend replacement of remaining mock review and payment-presentation data;
-- production readiness; the schema is hosted, but real identity, deployed API
-  configuration and end-to-end verification remain pending.
+- member correction and resubmission after `request_correction`;
+- live browser presentation for payments initiated outside the review flow;
+- production rollout of this new migration and hosted wallet-flow verification.
 
 These boundaries must be resolved before real-fund authorization.

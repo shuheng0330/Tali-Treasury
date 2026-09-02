@@ -25,6 +25,19 @@ export interface StoredClaim {
   storagePath: string;
 }
 
+/** Internal persistence shape; API callers never provide these trusted fields. */
+export interface LegacyCreateClaimRequest {
+  eventId: string;
+  submitter: Address;
+  amount: string;
+  merchant: string;
+  receiptDate: string;
+  category: ExpenseCategory;
+  description: string;
+  storagePath: string;
+  analysis: ReceiptAnalysis;
+}
+
 export interface ClaimProcessContext {
   claim: Claim;
   event: PolicyEventSnapshot & {
@@ -66,6 +79,10 @@ export type PaymentMutationResult =
   | { status: 'saved'; claim: Claim }
   | { status: 'lost_race'; claim: Claim };
 
+export type ReviewMutationResult =
+  | { status: 'saved'; claim: Claim }
+  | { status: 'lost_race'; claim: Claim };
+
 export type PaymentExecutionResult =
   | { status: 'paid'; payment: PaymentResult }
   | { status: 'rejected'; payment: PaymentResult };
@@ -88,11 +105,12 @@ export interface PaymentExecutor {
 export interface ClaimRepository {
   assertEventExists(eventId: string): Promise<void>;
   assertActiveMember(eventId: string, submitter: Address): Promise<void>;
+  assertEventViewer(eventId: string, viewer: Address): Promise<void>;
   findDuplicateReceipt(
     eventId: string,
     receiptHash: string,
   ): Promise<DuplicateReceipt | null>;
-  create(input: CreateClaimRequest): Promise<Claim>;
+  create(input: LegacyCreateClaimRequest): Promise<Claim>;
   listByEvent(eventId: string): Promise<StoredClaim[]>;
   getProcessContext(claimId: string): Promise<ClaimProcessContext>;
   saveDecision(input: {
@@ -104,11 +122,10 @@ export interface ClaimRepository {
     claimId: string;
     corrections: ClaimCorrections;
   }): Promise<ResubmitResult>;
-  saveReview(input: {
+  applyReview(input: {
     claimId: string;
     review: ClaimReview;
-    state: ReviewedClaimState;
-  }): Promise<SaveReviewResult>;
+  }): Promise<ReviewMutationResult>;
   reservePayment(claimId: string): Promise<PaymentMutationResult>;
   failApprovedPayment(input: {
     claimId: string;
@@ -129,4 +146,26 @@ export interface ReceiptStore {
     mimeType: ReceiptMimeType;
   }): Promise<string>;
   createSignedUrl(path: string, expiresInSeconds: number): Promise<string>;
+}
+
+export interface AnalysisDraftRepository {
+  create(input: {
+    eventId: string;
+    walletAddress: Address;
+    storagePath: string;
+    receiptHash: string;
+    analysis: ReceiptAnalysis;
+    expiresAtMs: number;
+    createdAtMs: number;
+  }): Promise<{ id: string; expiresAtMs: number }>;
+  consumeToClaim(input: {
+    draftId: string;
+    walletAddress: Address;
+    amount: string;
+    merchant: string;
+    receiptDate: string;
+    category: string;
+    description: string;
+    nowMs: number;
+  }): Promise<Claim>;
 }
