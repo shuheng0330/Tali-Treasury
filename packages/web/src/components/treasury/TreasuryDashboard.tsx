@@ -12,11 +12,14 @@ import { reviewQueue, settledClaims } from '@/lib/mock/api';
 import { settledFrom, toReviewQueue } from '@/lib/queue';
 import { useClaims } from '@/lib/api/useClaims';
 import { tryProcessClaim, tryReviewClaim } from '@/lib/api/demo';
+import { reconcileClaim, TaliApiError } from '@/lib/api/client';
+import { pollPaymentReconciliation } from '@/lib/api/reconciliation';
 import { DataNotice } from '@/components/DataNotice';
 import { ClaimRow } from './ClaimRow';
 import { MandateHeader } from './MandateHeader';
 import { RevokeDialog } from './RevokeDialog';
 import { ReviewActionDialog } from './ReviewActionDialog';
+import { PaymentReconciliationStatus } from './PaymentReconciliationStatus';
 import { useWalletSession } from '@/components/wallet/WalletSessionProvider';
 
 type Tab = 'review' | 'paid' | 'all';
@@ -50,6 +53,10 @@ export function TreasuryDashboard({ apiEnabled, initialMandate: mandate, readErr
   } | null>(null);
   const [reviewPending, setReviewPending] = useState(false);
   const [reviewError, setReviewError] = useState<string | null>(null);
+  const [reconcilingId, setReconcilingId] = useState<string | null>(null);
+  const [reconciliationNotice, setReconciliationNotice] = useState<string | null>(null);
+  const [reconciliationError, setReconciliationError] = useState<string | null>(null);
+  const [refreshingPayments, setRefreshingPayments] = useState(false);
 
   const live = useClaims(authenticated);
 
@@ -125,6 +132,57 @@ export function TreasuryDashboard({ apiEnabled, initialMandate: mandate, readErr
     }
   }
 
+  function safeReconciliationMessage(error: unknown) {
+    return error instanceof TaliApiError
+      ? error.message
+      : 'Payment status could not be confirmed. No second payment was submitted.';
+  }
+
+  async function checkPayment(claimId: string) {
+    setReconcilingId(claimId);
+    setReconciliationError(null);
+    setReconciliationNotice('Checking the stored transaction digest on Sui Testnet…');
+    try {
+      const result = await pollPaymentReconciliation(() => reconcileClaim(claimId));
+      if (result.status === 'pending') {
+        setReconciliationNotice(
+          'The transaction is still pending or not yet visible. Tali did not sign or submit another payment.',
+        );
+      } else {
+        setReconciliationNotice(
+          result.status === 'paid'
+            ? 'Payment confirmed on Sui Testnet.'
+            : 'Sui confirmed that the payment was rejected.',
+        );
+        startRefresh(() => router.refresh());
+      }
+      live.reload();
+    } catch (error) {
+      setReconciliationNotice(null);
+      setReconciliationError(safeReconciliationMessage(error));
+    } finally {
+      setReconcilingId(null);
+    }
+  }
+
+  async function refreshChainState() {
+    setRefreshingPayments(true);
+    setReconciliationError(null);
+    const payingClaims =
+      live.source === 'live'
+        ? live.claims.filter((claim) => claim.state === 'paying' && claim.paymentAttempt)
+        : [];
+    try {
+      await Promise.all(payingClaims.map((claim) => reconcileClaim(claim.id)));
+      live.reload();
+      startRefresh(() => router.refresh());
+    } catch (error) {
+      setReconciliationError(safeReconciliationMessage(error));
+    } finally {
+      setRefreshingPayments(false);
+    }
+  }
+
   if (mandate === null) {
     return (
       <div className="mx-auto flex w-full max-w-4xl flex-col gap-4 px-5 py-8">
@@ -163,11 +221,11 @@ export function TreasuryDashboard({ apiEnabled, initialMandate: mandate, readErr
         </div>
         <button
           type="button"
-          disabled={refreshing}
-          onClick={() => startRefresh(() => router.refresh())}
+          disabled={refreshing || refreshingPayments}
+          onClick={refreshChainState}
           className="btn btn--ghost h-10 px-5 text-label"
         >
-          {refreshing ? 'Refreshing…' : 'Refresh chain state'}
+          {refreshing || refreshingPayments ? 'Refreshing…' : 'Refresh chain state'}
         </button>
       </div>
 
@@ -183,6 +241,16 @@ export function TreasuryDashboard({ apiEnabled, initialMandate: mandate, readErr
           {processError ? (
             <p className="mt-3 rounded-control border border-no-line bg-no-soft p-3 text-caption text-no" role="alert">
               Could not evaluate the claim: {processError}.
+            </p>
+          ) : null}
+          {reconciliationNotice ? (
+            <p className="mt-3 rounded-control border border-wait-line bg-wait-soft p-3 text-caption text-ink-2" role="status">
+              {reconciliationNotice}
+            </p>
+          ) : null}
+          {reconciliationError ? (
+            <p className="mt-3 rounded-control border border-no-line bg-no-soft p-3 text-caption text-no" role="alert">
+              Reconciliation failed: {reconciliationError}
             </p>
           ) : null}
         </div>
@@ -254,6 +322,11 @@ export function TreasuryDashboard({ apiEnabled, initialMandate: mandate, readErr
                   </span>
                 </div>
                 <Money amount={claim.amount} unit={claim.analysis?.currency ?? 'USDC'} size="row" />
+                <PaymentReconciliationStatus
+                  claim={claim}
+                  pending={reconcilingId === claim.id}
+                  onCheck={checkPayment}
+                />
               </li>
             ))}
           </ul>

@@ -105,6 +105,21 @@ export interface ReviewClaimResponse {
   payment: PaymentResult | null;
 }
 
+/** POST /api/claims/:id/reconcile */
+export interface ReconcileClaimRequest {
+  /** Local-only compatibility identity; authenticated clients omit this. */
+  reconciler?: Address;
+}
+
+export type ReconciliationStatus = 'pending' | 'paid' | 'payment_failed';
+
+export interface ReconcileClaimResponse {
+  claim: Claim;
+  status: ReconciliationStatus;
+  digest: string;
+  payment: PaymentResult | null;
+}
+
 /** GET /api/events/:id */
 export interface GetEventResponse {
   event: Event;

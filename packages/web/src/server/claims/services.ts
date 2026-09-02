@@ -6,6 +6,7 @@ import type {
   PaymentResult,
   PolicyOutcome,
   ProcessClaimResponse,
+  ReconcileClaimResponse,
   ReviewClaimResponse,
   RuleId,
 } from '@tali/shared';
@@ -423,14 +424,32 @@ export function createProcessClaimService(deps: {
 
     let execution;
     try {
-      execution = await deps.payments.execute({
-        claimId: approvedClaim.id,
-        mandateId: context.event.mandateId,
-        recipient: approvedClaim.submitter,
-        amount: approvedClaim.amount,
-        budgetBefore: currentMandate.remainingBudget,
-      });
+      execution = await deps.payments.execute(
+        {
+          claimId: approvedClaim.id,
+          mandateId: context.event.mandateId,
+          recipient: approvedClaim.submitter,
+          amount: approvedClaim.amount,
+          budgetBefore: currentMandate.remainingBudget,
+        },
+        async (attempt) => {
+          let recorded;
+          try {
+            recorded = await deps.claims.recordPaymentAttempt({
+              claimId: approvedClaim.id,
+              budgetBefore: currentMandate.remainingBudget,
+              ...attempt,
+            });
+          } catch (error) {
+            throw databaseError(error);
+          }
+          if (recorded.status !== 'saved') {
+            throw conflict('A different payment attempt is already recorded');
+          }
+        },
+      );
     } catch (error) {
+      if (isServerError(error)) throw error;
       if (error instanceof PaymentSubmissionUncertainError) {
         throw new ServerError(
           'payment_submission_uncertain',
@@ -625,14 +644,32 @@ export function createReviewClaimService(deps: {
 
     let execution;
     try {
-      execution = await deps.payments.execute({
-        claimId: context.claim.id,
-        mandateId: context.event.mandateId,
-        recipient: context.claim.submitter,
-        amount: context.claim.amount,
-        budgetBefore: mandate.remainingBudget,
-      });
+      execution = await deps.payments.execute(
+        {
+          claimId: context.claim.id,
+          mandateId: context.event.mandateId,
+          recipient: context.claim.submitter,
+          amount: context.claim.amount,
+          budgetBefore: mandate.remainingBudget,
+        },
+        async (attempt) => {
+          let recorded;
+          try {
+            recorded = await deps.claims.recordPaymentAttempt({
+              claimId: context.claim.id,
+              budgetBefore: mandate.remainingBudget,
+              ...attempt,
+            });
+          } catch (error) {
+            throw databaseError(error);
+          }
+          if (recorded.status !== 'saved') {
+            throw conflict('A different payment attempt is already recorded');
+          }
+        },
+      );
     } catch (error) {
+      if (isServerError(error)) throw error;
       throw new ServerError(
         'payment_submission_uncertain',
         502,
@@ -658,5 +695,132 @@ export function createReviewClaimService(deps: {
       return { claim: finished.claim, payment: finished.claim.payment };
     }
     throw uncertain();
+  };
+}
+
+export function createReconcileClaimService(deps: {
+  claims: ClaimRepository;
+  payments: PaymentExecutor;
+  now?: () => number;
+}): (input: unknown) => Promise<ReconcileClaimResponse> {
+  return async (input) => {
+    const value = input as { claimId?: unknown; reconciler?: unknown };
+    let request: { claimId: string; processor: string };
+    try {
+      request = parseProcessClaimInput({
+        claimId: value?.claimId,
+        processor: value?.reconciler,
+      });
+    } catch (error) {
+      throw new ServerError('invalid_request', 400, 'Invalid reconciliation request', {
+        cause: error,
+      });
+    }
+
+    let context: ClaimProcessContext;
+    try {
+      context = await deps.claims.getProcessContext(request.claimId);
+    } catch (error) {
+      throw databaseError(error);
+    }
+    if (request.processor.toLowerCase() !== context.event.treasurer.toLowerCase()) {
+      throw new ServerError(
+        'reviewer_forbidden',
+        403,
+        'Only the event treasurer may reconcile payments',
+      );
+    }
+
+    const terminal = (claim: Claim): ReconcileClaimResponse | null => {
+      if (
+        (claim.state !== 'paid' && claim.state !== 'payment_failed') ||
+        !claim.payment ||
+        !claim.paymentAttempt
+      ) {
+        return null;
+      }
+      return {
+        claim,
+        status: claim.state,
+        digest: claim.paymentAttempt.digest,
+        payment: claim.payment,
+      };
+    };
+    const storedTerminal = terminal(context.claim);
+    if (storedTerminal) return storedTerminal;
+    if (context.claim.state !== 'paying') {
+      throw new ServerError(
+        'processing_conflict',
+        409,
+        'Claim is not awaiting payment reconciliation',
+      );
+    }
+    const attempt = context.claim.paymentAttempt;
+    if (!attempt || context.paymentAttemptBudgetBefore === null) {
+      throw new ServerError(
+        'payment_reconciliation_unavailable',
+        409,
+        'This payment has no durable transaction digest to reconcile',
+      );
+    }
+
+    let result;
+    try {
+      result = await deps.payments.reconcile({
+        claimId: context.claim.id,
+        mandateId: context.event.mandateId,
+        recipient: context.claim.submitter,
+        amount: context.claim.amount,
+        budgetBefore: context.paymentAttemptBudgetBefore,
+        digest: attempt.digest,
+        preparedAtMs: attempt.preparedAtMs,
+      });
+    } catch (error) {
+      throw new ServerError(
+        'payment_reconciliation_failed',
+        502,
+        'Sui payment status could not be confirmed',
+        { cause: error },
+      );
+    }
+
+    let checked;
+    try {
+      checked = await deps.claims.markPaymentAttemptChecked({
+        claimId: context.claim.id,
+        digest: attempt.digest,
+        checkedAtMs: deps.now?.() ?? Date.now(),
+      });
+    } catch (error) {
+      throw databaseError(error);
+    }
+    const checkedTerminal = terminal(checked.claim);
+    if (checkedTerminal) return checkedTerminal;
+    if (result.status === 'pending') {
+      return {
+        claim: checked.claim,
+        status: 'pending',
+        digest: attempt.digest,
+        payment: null,
+      };
+    }
+
+    let finished;
+    try {
+      finished = await deps.claims.finishPayment({
+        claimId: context.claim.id,
+        state: result.status === 'paid' ? 'paid' : 'payment_failed',
+        payment: result.payment,
+      });
+    } catch (error) {
+      throw databaseError(error);
+    }
+    const finishedTerminal = terminal(finished.claim);
+    if (finishedTerminal) return finishedTerminal;
+    throw new ServerError(
+      'processing_conflict',
+      409,
+      'Payment reconciliation was completed by another request',
+    );
   };
 }

@@ -1,4 +1,5 @@
 import { Ed25519Keypair } from '@mysten/sui/keypairs/ed25519';
+import { TransactionDataBuilder } from '@mysten/sui/transactions';
 import {
   buildSpendTransaction,
   createTestnetClient,
@@ -10,12 +11,13 @@ import {
   type TreasuryConfig,
 } from '@tali/treasury-sui';
 
-import type { PaymentExecutor } from '../claims/ports';
+import type { PaymentExecutionResult, PaymentExecutor } from '../claims/ports';
 import {
   moveAbortCode,
   netGasUsed,
   signTransaction,
   submitTransaction,
+  readTransaction,
   type ConfirmedTransaction,
   type PreparedTransaction,
 } from './transaction';
@@ -28,9 +30,12 @@ export class PaymentConfigurationError extends Error {
 }
 
 export class PaymentSubmissionUncertainError extends Error {
-  constructor(options?: ErrorOptions) {
+  readonly digest: string | null;
+
+  constructor(digest: string | null = null, options?: ErrorOptions) {
     super('Sui payment submission status is uncertain', options);
     this.name = 'PaymentSubmissionUncertainError';
+    this.digest = digest;
   }
 }
 
@@ -45,6 +50,7 @@ export interface PaymentOperations {
     amount: bigint;
   }): Promise<PreparedPayment>;
   submit(input: PreparedPayment): Promise<ConfirmedPayment>;
+  lookup(digest: string): Promise<ConfirmedPayment | null>;
   readBudget(mandateId: string): Promise<string>;
 }
 
@@ -82,6 +88,10 @@ function createDefaultOperations(input: {
       return submitTransaction(client, payment);
     },
 
+    async lookup(digest) {
+      return readTransaction(client, digest);
+    },
+
     async readBudget(mandateId) {
       const mandate = await readMandate(client, input.config, mandateId);
       return mandate.remainingBudget.toString();
@@ -98,14 +108,36 @@ export function createSuiPaymentExecutor(
   let runtime:
     | { agentCapId: string; operations: PaymentOperations }
     | undefined;
+  let readOperations: Pick<PaymentOperations, 'lookup' | 'readBudget'> | undefined;
+
+  function assertTestnet() {
+    if ((env.SUI_NETWORK ?? 'testnet').trim().toLowerCase() !== 'testnet') {
+      throw new PaymentConfigurationError();
+    }
+  }
+
+  function getReadOperations() {
+    assertTestnet();
+    if (options.operations) return options.operations;
+    if (runtime) return runtime.operations;
+    if (!readOperations) {
+      const client = createTestnetClient(env.SUI_GRPC_URL);
+      readOperations = {
+        lookup: (digest) => readTransaction(client, digest),
+        async readBudget(mandateId) {
+          const mandate = await readMandate(client, config, mandateId);
+          return mandate.remainingBudget.toString();
+        },
+      };
+    }
+    return readOperations;
+  }
 
   function getRuntime() {
     if (runtime) return runtime;
 
     try {
-      if ((env.SUI_NETWORK ?? 'testnet').trim().toLowerCase() !== 'testnet') {
-        throw new Error('Unsupported Sui network');
-      }
+      assertTestnet();
       const privateKey = env.AGENT_PRIVATE_KEY?.trim();
       const capId = env.AGENT_CAP_ID?.trim();
       if (!privateKey || !capId) throw new Error('Missing payment credentials');
@@ -133,7 +165,7 @@ export function createSuiPaymentExecutor(
       getRuntime();
     },
 
-    async execute(input) {
+    async execute(input, recordAttempt) {
       const ready = getRuntime();
       let prepared: PreparedPayment;
       try {
@@ -162,14 +194,47 @@ export function createSuiPaymentExecutor(
         };
       }
 
-      const startedAt = now();
+      const preparedAtMs = now();
+      const digest = TransactionDataBuilder.getDigestFromBytes(prepared.bytes);
+      await recordAttempt({ digest, preparedAtMs });
       let confirmed: ConfirmedPayment;
       try {
         confirmed = await ready.operations.submit(prepared);
       } catch {
-        throw new PaymentSubmissionUncertainError();
+        throw new PaymentSubmissionUncertainError(digest);
       }
-      const finalityMs = Math.max(0, now() - startedAt);
+      if (confirmed.digest !== digest) {
+        throw new PaymentSubmissionUncertainError(digest);
+      }
+      return mapConfirmed(confirmed, input, ready.operations, preparedAtMs);
+    },
+
+    async reconcile(input) {
+      const operations = getReadOperations();
+      let confirmed: ConfirmedPayment | null;
+      try {
+        confirmed = await operations.lookup(input.digest);
+      } catch {
+        throw new PaymentSubmissionUncertainError(input.digest);
+      }
+      if (confirmed === null) return { status: 'pending', digest: input.digest };
+      if (confirmed.digest !== input.digest) {
+        throw new PaymentSubmissionUncertainError(input.digest);
+      }
+      return mapConfirmed(confirmed, input, operations, input.preparedAtMs);
+    },
+  };
+
+  async function mapConfirmed(
+    confirmed: ConfirmedPayment,
+    input: {
+      mandateId: string;
+      budgetBefore: string;
+    },
+    operations: Pick<PaymentOperations, 'readBudget'>,
+    preparedAtMs: number,
+  ): Promise<PaymentExecutionResult> {
+      const finalityMs = Math.max(0, now() - preparedAtMs);
       if (!confirmed.status.success) {
         const code = moveAbortCode(confirmed.status.error);
         const treasuryError =
@@ -196,9 +261,9 @@ export function createSuiPaymentExecutor(
 
       let budgetAfter: string;
       try {
-        budgetAfter = await ready.operations.readBudget(input.mandateId);
+        budgetAfter = await operations.readBudget(input.mandateId);
       } catch {
-        throw new PaymentSubmissionUncertainError();
+        throw new PaymentSubmissionUncertainError(confirmed.digest);
       }
 
       return {
@@ -217,6 +282,5 @@ export function createSuiPaymentExecutor(
           budgetAfter,
         },
       };
-    },
-  };
+  }
 }

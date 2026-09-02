@@ -1,8 +1,9 @@
 # Next implementation plan
 
-The current safe boundary is: a member can submit a receipt, the treasurer can run
-the real server policy, and no code claims that approval means payment. Non-USDC
-receipts cannot auto-pay until a conversion quote exists.
+The current safe boundary is: an authenticated member can submit a receipt, the
+treasurer can process and review it, eligible USDC approval can start payment, and
+an uncertain payment can be reconciled by its stored digest without retrying.
+Non-USDC receipts cannot auto-pay until a conversion quote exists.
 
 ## 1. Authenticated identity and analysis binding — complete locally
 
@@ -17,7 +18,7 @@ member/treasurer access is checked from the session; invalid cookies cannot fall
 back; and atomic claim failure leaves the draft usable. Rollout still requires the
 hosted migration, exact HTTPS origin configuration, and manual two-role testing.
 
-## 2. MYR-to-USDC quote
+## 2. MYR-to-USDC quote — teammate-owned parallel plan
 
 - Add original amount/currency and payout amount/currency as separate fields.
 - Store rate, provider, quoted time, expiry and integer rounding result.
@@ -28,7 +29,7 @@ hosted migration, exact HTTPS origin configuration, and manual two-role testing.
 Acceptance: no floating-point money, no implicit 1:1 conversion, deterministic
 rounding tests, and an expired or missing quote can never reach auto-pay.
 
-## 3. Treasurer review actions
+## 3. Treasurer review actions — complete locally
 
 - Implement approve, reject and request-correction endpoints with compare-and-set
   transitions and an audit event for every action.
@@ -38,17 +39,19 @@ rounding tests, and an expired or missing quote can never reach auto-pay.
 Acceptance: invalid transitions return 409, repeated requests are idempotent, and
 reviewing one claim cannot update another claim.
 
-## 4. Payment orchestration
+## 4. Payment orchestration and reconciliation — complete locally
 
 - Reserve budget before signing concurrent approved claims.
 - Move claims through `approved → paying → paid` or `payment_failed`.
 - Build transactions only through `@tali/treasury-sui`.
 - Keep the agent key server-side, wait for finality and store digest/checkpoint/gas.
-- Add retry and reconciliation for unknown finality without double payment.
+- Persist the signed transaction digest before broadcast and reconcile unknown
+  finality on demand without another signature or submission.
 
-Acceptance: one valid MYR receipt is quoted and paid end to end on Testnet; an
-overspend and unknown recipient are rejected by the contract; retrying cannot pay
-twice.
+Local acceptance: attempt persistence is required before submission, uncertain
+finality remains `paying`, exact-digest checks settle terminal results once, and
+neither a not-found transaction nor an RPC failure can trigger a second payment.
+The funded Testnet smoke remains a separately authorized rollout check.
 
 ## 5. Demo proof and submission
 

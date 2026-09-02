@@ -8,6 +8,8 @@ import type {
   ListClaimsResponse,
   ProcessClaimRequest,
   ProcessClaimResponse,
+  ReconcileClaimRequest,
+  ReconcileClaimResponse,
   ReviewClaimRequest,
   ReviewClaimResponse,
 } from '@tali/shared';
@@ -93,6 +95,19 @@ export async function processClaim(
   const request: ProcessClaimRequest = {};
   return responseJson<ProcessClaimResponse>(
     await fetch(`/api/claims/${encodeURIComponent(claimId)}/process`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(request),
+    }),
+  );
+}
+
+export async function reconcileClaim(
+  claimId: string,
+): Promise<ReconcileClaimResponse> {
+  const request: ReconcileClaimRequest = {};
+  return responseJson<ReconcileClaimResponse>(
+    await fetch(`/api/claims/${encodeURIComponent(claimId)}/reconcile`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify(request),

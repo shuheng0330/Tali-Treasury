@@ -55,6 +55,7 @@ const claim: Claim = {
   },
   decision: storedDecision,
   review: null,
+  paymentAttempt: null,
   payment: null,
   createdAtMs: nowMs - 2000,
   updatedAtMs: nowMs - 1000,
@@ -75,6 +76,7 @@ const mandate: MandateView = {
 
 const context = {
   claim,
+  paymentAttemptBudgetBefore: null,
   event: {
     treasurer,
     mandateId,
@@ -110,6 +112,8 @@ function repository(overrides: Partial<ClaimRepository> = {}): ClaimRepository {
     saveDecision: vi.fn(),
     applyReview: vi.fn(),
     reservePayment: vi.fn(),
+    recordPaymentAttempt: vi.fn(),
+    markPaymentAttemptChecked: vi.fn(),
     failApprovedPayment: vi.fn(),
     finishPayment: vi.fn(),
     ...overrides,
@@ -120,6 +124,7 @@ function executor(overrides: Partial<PaymentExecutor> = {}): PaymentExecutor {
   return {
     assertReady: vi.fn(),
     execute: vi.fn(async () => ({ status: 'paid' as const, payment })),
+    reconcile: vi.fn(),
     ...overrides,
   };
 }
@@ -173,12 +178,26 @@ describe('createReviewClaimService', () => {
   it('pays an eligible USDC approval only after winning the review transition', async () => {
     const expectedReview = review('approve', null);
     const paying = { ...claim, state: 'paying' as const, review: expectedReview };
-    const paid = { ...paying, state: 'paid' as const, payment };
+    const paymentAttempt = {
+      digest: '4'.repeat(44),
+      preparedAtMs: nowMs,
+      lastCheckedAtMs: null,
+    };
+    const paid = { ...paying, state: 'paid' as const, paymentAttempt, payment };
     const claims = repository({
       applyReview: vi.fn(async () => ({ status: 'saved' as const, claim: paying })),
+      recordPaymentAttempt: vi.fn(async () => ({
+        status: 'saved' as const,
+        claim: { ...paying, paymentAttempt },
+      })),
       finishPayment: vi.fn(async () => ({ status: 'saved' as const, claim: paid })),
     });
-    const payments = executor();
+    const payments = executor({
+      execute: vi.fn(async (_input, recordAttempt) => {
+        await recordAttempt({ digest: paymentAttempt.digest, preparedAtMs: nowMs });
+        return { status: 'paid' as const, payment };
+      }),
+    });
     const service = createReviewClaimService({
       claims,
       mandates: { read: vi.fn(async () => mandate) },
@@ -190,6 +209,12 @@ describe('createReviewClaimService', () => {
       service({ claimId, action: 'approve', reviewer: treasurer }),
     ).resolves.toEqual({ claim: paid, payment });
     expect(claims.applyReview).toHaveBeenCalledWith({ claimId, review: expectedReview });
+    expect(claims.recordPaymentAttempt).toHaveBeenCalledWith({
+      claimId,
+      digest: paymentAttempt.digest,
+      budgetBefore: mandate.remainingBudget,
+      preparedAtMs: nowMs,
+    });
     expect(payments.execute).toHaveBeenCalledTimes(1);
   });
 

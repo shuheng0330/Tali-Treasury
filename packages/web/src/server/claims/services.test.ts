@@ -63,6 +63,7 @@ const claim: Claim = {
   analysis,
   decision: null,
   review: null,
+  paymentAttempt: null,
   payment: null,
   createdAtMs: 1_788_048_000_000,
   updatedAtMs: 1_788_048_000_000,
@@ -86,6 +87,7 @@ const processContext = {
     ...claim,
     analysis: { ...analysis, currency: 'USDC' },
   },
+  paymentAttemptBudgetBefore: null,
   event: {
     treasurer,
     mandateId,
@@ -144,6 +146,8 @@ function createRepository(overrides: Partial<ClaimRepository> = {}): ClaimReposi
     saveDecision: vi.fn(),
     applyReview: vi.fn(),
     reservePayment: vi.fn(),
+    recordPaymentAttempt: vi.fn(),
+    markPaymentAttemptChecked: vi.fn(),
     failApprovedPayment: vi.fn(),
     finishPayment: vi.fn(),
     ...overrides,
@@ -177,6 +181,7 @@ function createPaymentExecutor(
   return {
     assertReady: vi.fn(),
     execute: vi.fn(async () => ({ status: 'paid' as const, payment })),
+    reconcile: vi.fn(),
     ...overrides,
   };
 }
@@ -525,6 +530,13 @@ describe('createProcessClaimService', () => {
           claim: { ...approvedClaim, state: 'paying' as const },
         };
       }),
+      recordPaymentAttempt: vi.fn(async () => {
+        calls.push('attempt');
+        return {
+          status: 'saved' as const,
+          claim: { ...approvedClaim, state: 'paying' as const },
+        };
+      }),
       finishPayment: vi.fn(async () => ({
         status: 'saved' as const,
         claim: paidClaim,
@@ -540,7 +552,8 @@ describe('createProcessClaimService', () => {
       assertReady: vi.fn(() => {
         calls.push('ready');
       }),
-      execute: vi.fn(async () => {
+      execute: vi.fn(async (_input, recordAttempt) => {
+        await recordAttempt({ digest: '4'.repeat(44), preparedAtMs: nowMs });
         calls.push('execute');
         return { status: 'paid' as const, payment };
       }),
@@ -559,19 +572,74 @@ describe('createProcessClaimService', () => {
       decision: approvedDecision,
       payment,
     });
-    expect(calls).toEqual(['read', 'ready', 'read', 'reserve', 'execute']);
-    expect(payments.execute).toHaveBeenCalledWith({
+    expect(calls).toEqual(['read', 'ready', 'read', 'reserve', 'attempt', 'execute']);
+    expect(payments.execute).toHaveBeenCalledWith(
+      {
+        claimId: claim.id,
+        mandateId,
+        recipient: submitter,
+        amount: claim.amount,
+        budgetBefore: mandate.remainingBudget,
+      },
+      expect.any(Function),
+    );
+    expect(claims.recordPaymentAttempt).toHaveBeenCalledWith({
       claimId: claim.id,
-      mandateId,
-      recipient: submitter,
-      amount: claim.amount,
+      digest: '4'.repeat(44),
       budgetBefore: mandate.remainingBudget,
+      preparedAtMs: nowMs,
     });
     expect(claims.finishPayment).toHaveBeenCalledWith({
       claimId: claim.id,
       state: 'paid',
       payment,
     });
+  });
+
+  it('does not broadcast when another payment attempt wins persistence', async () => {
+    let broadcast = false;
+    const claims = createRepository({
+      getProcessContext: vi.fn(async () => processContext),
+      saveDecision: vi.fn(async () => ({
+        status: 'saved' as const,
+        claim: approvedClaim,
+      })),
+      reservePayment: vi.fn(async () => ({
+        status: 'saved' as const,
+        claim: { ...approvedClaim, state: 'paying' as const },
+      })),
+      recordPaymentAttempt: vi.fn(async () => ({
+        status: 'lost_race' as const,
+        claim: {
+          ...approvedClaim,
+          state: 'paying' as const,
+          paymentAttempt: {
+            digest: '5'.repeat(44),
+            preparedAtMs: nowMs,
+            lastCheckedAtMs: null,
+          },
+        },
+      })),
+    });
+    const payments = createPaymentExecutor({
+      execute: vi.fn(async (_input, recordAttempt) => {
+        await recordAttempt({ digest: '4'.repeat(44), preparedAtMs: nowMs });
+        broadcast = true;
+        return { status: 'paid' as const, payment };
+      }),
+    });
+    const service = createProcessClaimService({
+      claims,
+      mandates: { read: vi.fn(async () => mandate) },
+      payments,
+      now: () => nowMs,
+    });
+
+    await expect(
+      service({ claimId: claim.id, processor: treasurer }),
+    ).rejects.toMatchObject({ code: 'processing_conflict', status: 409 });
+    expect(broadcast).toBe(false);
+    expect(claims.finishPayment).not.toHaveBeenCalled();
   });
 
   it('returns a stored paid result without reading Sui or signing again', async () => {

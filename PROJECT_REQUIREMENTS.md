@@ -106,6 +106,27 @@ The review endpoint and treasury UI must:
 - reload persisted claims after success and refresh mandate state after a
   completed payment.
 
+## Implemented payment-reconciliation scope
+
+The reconciliation endpoint and treasury UI must:
+
+- derive the Sui transaction digest from signed bytes and atomically persist it,
+  its prepared time, and the pre-payment budget before any broadcast;
+- allow at most one payment attempt per claim and never persist transaction bytes,
+  signatures, or keys;
+- prohibit submission when attempt persistence fails or loses its compare-and-set;
+- require the authenticated event treasurer and the exact configured origin for
+  `POST /api/claims/:id/reconcile`;
+- inspect only the stored digest for a `paying` claim and never sign or submit a
+  replacement transaction;
+- keep a transaction that is not yet found in `paying`, persist confirmed success
+  as `paid`, and persist a confirmed Move rejection as `payment_failed`;
+- return sanitized RPC uncertainty while preserving `paying`, and fail closed for
+  a legacy `paying` claim that has no stored digest;
+- return terminal reconciliation results idempotently; and
+- expose the digest, explorer link, explicit status check, and bounded 20-second
+  client polling in the treasury UI, with no scheduled background job.
+
 ## Security and business rules
 
 - Gemini and Supabase credentials are server-only and must never use a
@@ -140,7 +161,7 @@ The review endpoint and treasury UI must:
 ## Explicitly out of scope for this increment
 
 - trusted MYR-to-USDC quote ingestion, quote expiry and converted payout storage;
-- automatic reconciliation of a `paying` claim after an uncertain submission;
+- scheduled or automatic background reconciliation;
 - Sui Mainnet signing or any real-value payment;
 - a live funded smoke transaction for this increment (automated verification uses
   injected fake operations and never broadcasts);
