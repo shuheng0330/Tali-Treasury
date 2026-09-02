@@ -9,10 +9,11 @@ interface Props {
   remaining: string;
   pendingCount: number;
   onCancel: () => void;
-  onConfirm: () => void;
+  /** Fired once the chain has confirmed, so the screen behind can re-read. */
+  onRevoked: () => void;
 }
 
-export function RevokeDialog({ eventName, remaining, pendingCount, onCancel, onConfirm }: Props) {
+export function RevokeDialog({ eventName, remaining, pendingCount, onCancel, onRevoked }: Props) {
   const [typed, setTyped] = useState('');
   const [sending, setSending] = useState(false);
   const [outcome, setOutcome] = useState<RevokeOutcome | null>(null);
@@ -23,7 +24,10 @@ export function RevokeDialog({ eventName, remaining, pendingCount, onCancel, onC
     const result = await tryRevokeMandate({ confirm: typed, expected: eventName });
     setSending(false);
     setOutcome(result);
-    if (result.kind === 'revoked') onConfirm();
+    /* The dialog stays open on success: it holds the only link to the
+       transaction, and closing it here would take that away before it is
+       read. The treasurer closes it. */
+    if (result.kind === 'revoked') onRevoked();
   }
 
   useEffect(() => {

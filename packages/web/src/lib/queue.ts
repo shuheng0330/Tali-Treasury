@@ -1,4 +1,5 @@
-import type { Claim, PolicyDecision, ReviewQueueItem } from '@tali/shared';
+import type { Amount, Claim, PolicyDecision, ReviewQueueItem } from '@tali/shared';
+import { add } from '@tali/shared';
 
 /**
  * What a treasurer still has to look at. New claims land in `submitted`, and
@@ -17,8 +18,6 @@ const REVIEW_STATES: ReadonlySet<Claim['state']> = new Set([
   'approved',
   'paying',
 ]);
-
-/** Nothing tracks committed-but-unsettled claims yet, so the reserve is zero. */
 
 /**
  * An unprocessed claim gets a presentation-only pending decision. It contains
@@ -58,4 +57,18 @@ const SETTLED_STATES: ReadonlySet<Claim['state']> = new Set([
 
 export function settledFrom(claims: readonly Claim[]): Claim[] {
   return claims.filter((claim) => SETTLED_STATES.has(claim.state));
+}
+
+/**
+ * Money a decision has already spoken for but the chain has not moved yet: an
+ * approved claim waiting for its transfer, and one whose transfer is in flight.
+ * The mandate's remaining budget still counts it as available, so a treasurer
+ * reading only that figure would approve past what is really left.
+ */
+const COMMITTED_STATES: ReadonlySet<Claim['state']> = new Set(['approved', 'paying']);
+
+export function committedFrom(claims: readonly Claim[]): Amount {
+  return claims
+    .filter((claim) => COMMITTED_STATES.has(claim.state))
+    .reduce<Amount>((total, claim) => add(total, claim.amount), '0');
 }

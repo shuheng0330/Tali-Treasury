@@ -1,4 +1,5 @@
 import { TreasuryDashboard } from '@/components/treasury/TreasuryDashboard';
+import { claimReviewsAreRecordable } from '@/server/claims/review-availability';
 import { toMandateView } from '@tali/shared';
 import {
   createTestnetClient,
@@ -15,6 +16,7 @@ export const dynamic = 'force-dynamic';
 
 export default async function TreasuryPage() {
   const apiEnabled = process.env.TALI_ALLOW_INSECURE_DEMO_IDENTITY === 'true';
+  const reviewsRecordable = apiEnabled ? await claimReviewsAreRecordable() : true;
 
   try {
     const client = createTestnetClient(process.env.SUI_GRPC_URL);
@@ -22,12 +24,21 @@ export default async function TreasuryPage() {
     const state = await readMandate(client, taliTestnetUsdcConfig, mandateId);
 
     return (
-      <TreasuryDashboard apiEnabled={apiEnabled} initialMandate={toMandateView(state)} />
+      <TreasuryDashboard
+        apiEnabled={apiEnabled}
+        reviewsRecordable={reviewsRecordable}
+        initialMandate={toMandateView(state)}
+      />
     );
   } catch (cause) {
     const message = cause instanceof Error ? cause.message : 'Unknown Sui read error';
     return (
-      <TreasuryDashboard apiEnabled={apiEnabled} initialMandate={null} readError={message} />
+      <TreasuryDashboard
+        apiEnabled={apiEnabled}
+        reviewsRecordable={reviewsRecordable}
+        initialMandate={null}
+        readError={message}
+      />
     );
   }
 }

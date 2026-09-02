@@ -54,7 +54,7 @@ export function MandateHeader({ eventName, organisation, mandate, committed, onR
             disabled={status !== 'active'}
             className="btn btn--danger h-9 px-4 text-label"
           >
-            Preview revoke
+            Revoke mandate
           </button>
         </div>
       </div>

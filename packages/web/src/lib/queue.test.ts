@@ -1,7 +1,7 @@
 import type { Claim, PolicyDecision } from '@tali/shared';
 import { describe, expect, it } from 'vitest';
 
-import { settledFrom, toReviewQueue } from './queue';
+import { committedFrom, settledFrom, toReviewQueue } from './queue';
 
 const decision: PolicyDecision = {
   outcome: 'review',
@@ -77,5 +77,35 @@ describe('settledFrom', () => {
     for (const state of ['submitted', 'awaiting_review', 'approved', 'paying'] as const) {
       expect(settledFrom([claim({ state })]), state).toHaveLength(0);
     }
+  });
+});
+
+describe('committedFrom', () => {
+  it('counts what a decision has spoken for but the chain has not moved', () => {
+    const total = committedFrom([
+      claim({ id: 'a', state: 'approved', amount: '4000000' }),
+      claim({ id: 'b', state: 'paying', amount: '2500000' }),
+    ]);
+
+    expect(total).toBe('6500000');
+  });
+
+  it('counts nothing that is still undecided or already settled', () => {
+    // Settled money left the mandate, so the chain figure already reflects it;
+    // counting it again here would subtract the same payment twice.
+    for (const state of [
+      'submitted',
+      'awaiting_review',
+      'needs_correction',
+      'paid',
+      'payment_failed',
+      'rejected',
+    ] as const) {
+      expect(committedFrom([claim({ state })]), state).toBe('0');
+    }
+  });
+
+  it('is zero when there is nothing at all', () => {
+    expect(committedFrom([])).toBe('0');
   });
 });

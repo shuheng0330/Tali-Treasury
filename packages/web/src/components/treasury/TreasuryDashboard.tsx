@@ -4,12 +4,12 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useMemo, useState, useTransition } from 'react';
 import type { MandateView } from '@tali/shared';
-import { CLAIM_CHIP } from '@tali/shared';
+import { CLAIM_CHIP, EXPLORER } from '@tali/shared';
 import { Money } from '@/components/Money';
 import { StatusChip } from '@/components/StatusChip';
 import { event } from '@/lib/mock/data';
 import { reviewQueue, settledClaims } from '@/lib/mock/api';
-import { settledFrom, toReviewQueue } from '@/lib/queue';
+import { committedFrom, settledFrom, toReviewQueue } from '@/lib/queue';
 import type { ReviewAction } from '@tali/shared';
 import { useClaims } from '@/lib/api/useClaims';
 import { tryPayClaim, tryReviewClaim } from '@/lib/api/review';
@@ -23,19 +23,25 @@ type Tab = 'review' | 'paid' | 'all';
 
 const TABS: { id: Tab; label: string }[] = [
   { id: 'review', label: 'Needs review' },
-  { id: 'paid', label: 'Auto-paid' },
+  { id: 'paid', label: 'Settled' },
   { id: 'all', label: 'All' },
 ];
 
 interface Props {
   apiEnabled: boolean;
+  /** False when `claims.review` is missing, which the repository refuses to
+   *  write around. The controls say so rather than failing on the click. */
+  reviewsRecordable: boolean;
   initialMandate: MandateView | null;
   readError?: string;
 }
 
-const NO_COMMITTED_CLAIMS = '0';
-
-export function TreasuryDashboard({ apiEnabled, initialMandate: mandate, readError }: Props) {
+export function TreasuryDashboard({
+  apiEnabled,
+  reviewsRecordable,
+  initialMandate: mandate,
+  readError,
+}: Props) {
   const router = useRouter();
   const [refreshing, startRefresh] = useTransition();
   const [tab, setTab] = useState<Tab>('review');
@@ -67,7 +73,22 @@ export function TreasuryDashboard({ apiEnabled, initialMandate: mandate, readErr
     [live.source, live.claims],
   );
 
+  /* Approved and in-flight claims are spoken for. The mandate's remaining
+     budget still counts them as available, so subtracting them here is what
+     stops the header inviting an approval the money cannot cover. */
+  const committed = useMemo(
+    () => (live.source === 'live' ? committedFrom(live.claims) : '0'),
+    [live.source, live.claims],
+  );
+
   const counts = { review: queue.length, paid: paid.length, all: everything.length };
+
+  /* A write moves money or the mandate itself, and both are read on the server.
+     Reloading only the claims would leave the budget above them stale. */
+  function reloadEverything() {
+    live.reload();
+    startRefresh(() => router.refresh());
+  }
 
   async function process(id: string) {
     setProcessingId(id);
@@ -95,7 +116,7 @@ export function TreasuryDashboard({ apiEnabled, initialMandate: mandate, readErr
     }
     /* Re-read rather than dropping the row locally. If the write lost a race
        the queue should show whose decision actually stands. */
-    live.reload();
+    reloadEverything();
   }
 
   async function pay(id: string) {
@@ -110,7 +131,7 @@ export function TreasuryDashboard({ apiEnabled, initialMandate: mandate, readErr
     if (!result.data.payment.ok) {
       setFailure({ verb: 'pay', detail: result.data.payment.message });
     }
-    live.reload();
+    reloadEverything();
   }
 
   if (mandate === null) {
@@ -136,7 +157,7 @@ export function TreasuryDashboard({ apiEnabled, initialMandate: mandate, readErr
         eventName={event.name}
         organisation={event.organisation}
         mandate={mandate}
-        committed={NO_COMMITTED_CLAIMS}
+        committed={committed}
         onRevoke={() => setConfirming(true)}
       />
 
@@ -165,8 +186,17 @@ export function TreasuryDashboard({ apiEnabled, initialMandate: mandate, readErr
             source={live.source}
             reason={live.reason}
             live="The claim queue"
-            simulated="Evaluating a claim runs the real policy engine and is persisted. Approving, rejecting and paying are not built yet, and their controls say so."
+            simulated="Evaluating a claim runs the real policy engine and is persisted. Reviewing and paying a claim need the live queue, so on sample data their controls do nothing."
           />
+          {live.source === 'live' && !reviewsRecordable ? (
+            <p className="mt-3 rounded-control border border-wait-line bg-wait-soft p-3 text-caption text-wait">
+              A decision cannot be recorded: the database has no{' '}
+              <span className="font-mono">claims.review</span> column, so there would be
+              nothing saying who decided or why. Apply migration{' '}
+              <span className="font-mono">20260902000000_add_claim_review.sql</span>.
+              Evaluating a claim still works.
+            </p>
+          ) : null}
           {failure ? (
             <p className="mt-3 rounded-control border border-no-line bg-no-soft p-3 text-caption text-no" role="alert">
               Could not {failure.verb} the claim: {failure.detail}.
@@ -216,6 +246,7 @@ export function TreasuryDashboard({ apiEnabled, initialMandate: mandate, readErr
                   item={item}
                   processing={processingId === item.claim.id}
                   reviewing={reviewingId === item.claim.id}
+                  reviewsRecordable={reviewsRecordable}
                   onProcess={process}
                   onReview={review}
                   onPay={pay}
@@ -228,15 +259,36 @@ export function TreasuryDashboard({ apiEnabled, initialMandate: mandate, readErr
         {tab !== 'review' ? (
           <ul className="flex flex-col divide-y divide-rule">
             {(tab === 'paid' ? paid : everything).map((claim) => (
-              <li key={claim.id} className="flex items-center gap-3 px-4 py-3">
-                <div className="flex min-w-0 flex-1 flex-col gap-1">
-                  <span className="truncate text-body">{claim.merchant}</span>
-                  <span className="flex items-center gap-2">
-                    <StatusChip status={CLAIM_CHIP[claim.state]} />
-                    <span className="text-caption text-ink-3">{claim.submitterName}</span>
-                  </span>
+              <li key={claim.id} className="flex flex-col gap-1.5 px-4 py-3">
+                <div className="flex items-center gap-3">
+                  <div className="flex min-w-0 flex-1 flex-col gap-1">
+                    <span className="truncate text-body">{claim.merchant}</span>
+                    <span className="flex items-center gap-2">
+                      <StatusChip status={CLAIM_CHIP[claim.state]} />
+                      <span className="text-caption text-ink-3">{claim.submitterName}</span>
+                    </span>
+                  </div>
+                  <Money amount={claim.amount} unit={claim.analysis?.currency ?? 'USDC'} size="row" />
                 </div>
-                <Money amount={claim.amount} unit={claim.analysis?.currency ?? 'USDC'} size="row" />
+                {/* Why a claim ended the way it did is the part worth keeping.
+                    A settled row that shows only its state makes the treasurer
+                    reconstruct their own decision from memory. */}
+                {claim.state === 'rejected' && claim.review?.reason ? (
+                  <p className="text-caption text-ink-3">Rejected: {claim.review.reason}</p>
+                ) : null}
+                {claim.state === 'payment_failed' && claim.payment ? (
+                  <p className="text-caption text-no">{claim.payment.message}</p>
+                ) : null}
+                {claim.state === 'paid' && claim.payment?.digest ? (
+                  <a
+                    className="link self-start text-caption"
+                    href={EXPLORER.tx(claim.payment.digest).suiscan}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    View the transaction
+                  </a>
+                ) : null}
               </li>
             ))}
           </ul>
@@ -249,7 +301,7 @@ export function TreasuryDashboard({ apiEnabled, initialMandate: mandate, readErr
           remaining={mandate.remainingBudget}
           pendingCount={queue.length}
           onCancel={() => setConfirming(false)}
-          onConfirm={() => setConfirming(false)}
+          onRevoked={reloadEverything}
         />
       ) : null}
     </div>

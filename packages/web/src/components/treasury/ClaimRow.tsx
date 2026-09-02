@@ -46,6 +46,7 @@ interface Props {
   item: ReviewQueueItem;
   processing: boolean;
   reviewing: boolean;
+  reviewsRecordable: boolean;
   onProcess: (id: string) => void;
   onReview: (id: string, action: ReviewAction, reason?: string) => void;
   onPay: (id: string) => void;
@@ -55,14 +56,23 @@ export function ClaimRow({
   item,
   processing,
   reviewing,
+  reviewsRecordable,
   onProcess,
   onReview,
   onPay,
 }: Props) {
   const { claim, decision, agentNote, reason } = item;
-  const [rejecting, setRejecting] = useState(false);
+  const [asking, setAsking] = useState<Exclude<ReviewAction, 'approve'> | null>(null);
   const [note, setNote] = useState('');
   const immutableFailure = decision.checks.some((check) => check.onChain && !check.passed);
+
+  /* The note is cleared on every switch: a reason written for a rejection is
+     not the reason a correction request needs, and carrying it over would put
+     the wrong words in front of the member. */
+  function ask(next: Exclude<ReviewAction, 'approve'>) {
+    setAsking((open) => (open === next ? null : next));
+    setNote('');
+  }
   const awaitingPolicy = claim.state === 'submitted' && claim.decision === null;
 
   return (
@@ -121,7 +131,9 @@ export function ClaimRow({
           </p>
         ) : claim.state === 'needs_correction' ? (
           <p className="text-caption text-ink-3">
-            Sent back to {claim.submitterName}. It returns here once they resubmit it.
+            Sent back to {claim.submitterName}
+            {claim.review?.reason ? `: ${claim.review.reason}` : ''}. It returns here once
+            they resubmit it.
           </p>
         ) : claim.state === 'approved' ? (
           <>
@@ -151,21 +163,31 @@ export function ClaimRow({
           <>
             <button
               type="button"
-              disabled={immutableFailure || reviewing}
+              disabled={immutableFailure || reviewing || !reviewsRecordable}
               onClick={() => onReview(claim.id, 'approve')}
               className="btn btn--primary h-9 px-5 text-label"
               title={
                 immutableFailure
                   ? 'This claim violates an immutable on-chain rule'
-                  : undefined
+                  : !reviewsRecordable
+                    ? 'The database cannot store a decision yet'
+                    : undefined
               }
             >
               {immutableFailure ? 'Cannot approve' : reviewing ? 'Recording…' : 'Approve'}
             </button>
             <button
               type="button"
-              disabled={reviewing}
-              onClick={() => setRejecting((open) => !open)}
+              disabled={reviewing || !reviewsRecordable}
+              onClick={() => ask('request_correction')}
+              className="btn btn--ghost h-9 px-5 text-label"
+            >
+              Send back
+            </button>
+            <button
+              type="button"
+              disabled={reviewing || !reviewsRecordable}
+              onClick={() => ask('reject')}
               className="btn btn--ghost h-9 px-5 text-label"
             >
               Reject
@@ -179,18 +201,20 @@ export function ClaimRow({
         )}
       </div>
 
-      {rejecting ? (
+      {asking ? (
         <form
           className="ml-7 flex flex-col gap-2"
           onSubmit={(event) => {
             event.preventDefault();
-            onReview(claim.id, 'reject', note.trim());
-            setRejecting(false);
+            onReview(claim.id, asking, note.trim());
+            setAsking(null);
             setNote('');
           }}
         >
           <label className="text-caption text-ink-2" htmlFor={`reason-${claim.id}`}>
-            Why is this being rejected? The member reads this.
+            {asking === 'reject'
+              ? 'Why is this being rejected? The member reads this.'
+              : `What does ${claim.submitterName} need to fix? They see this on their claim.`}
           </label>
           <textarea
             id={`reason-${claim.id}`}
@@ -207,11 +231,11 @@ export function ClaimRow({
               disabled={note.trim().length === 0 || reviewing}
               className="btn btn--primary h-9 px-5 text-label"
             >
-              Record the rejection
+              {asking === 'reject' ? 'Record the rejection' : 'Send it back'}
             </button>
             <button
               type="button"
-              onClick={() => setRejecting(false)}
+              onClick={() => setAsking(null)}
               className="btn btn--ghost h-9 px-5 text-label"
             >
               Cancel
@@ -219,6 +243,7 @@ export function ClaimRow({
           </div>
         </form>
       ) : null}
+
     </li>
   );
 }
