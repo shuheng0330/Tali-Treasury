@@ -2,26 +2,7 @@ import { Money } from '@/components/Money';
 import { EXPLORER } from '@tali/shared';
 import type { ClaimReviewAction, ReviewQueueItem } from '@tali/shared';
 import { approvalBlockReason } from '@/lib/review-actions';
-
-function Verdict({ passed, pending }: { passed: boolean; pending?: boolean }) {
-  if (pending) {
-    return (
-      <svg viewBox="0 0 12 12" width="11" height="11" className="text-ink-3" aria-hidden>
-        <path d="M2.5 6 H9.5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-      </svg>
-    );
-  }
-
-  return passed ? (
-    <svg viewBox="0 0 12 12" width="11" height="11" className="text-ok" aria-hidden>
-      <path d="M2 6.4 L4.8 9 L10 3" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  ) : (
-    <svg viewBox="0 0 12 12" width="11" height="11" className="text-no" aria-hidden>
-      <path d="M3 3 L9 9 M9 3 L3 9" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-    </svg>
-  );
-}
+import { ChecklistSummary, type AnnotatedCheck } from './ChecklistSummary';
 
 function ReasonMark({ reason }: { reason: ReviewQueueItem['reason'] }) {
   if (reason === 'rule_failed') {
@@ -97,6 +78,18 @@ export function ClaimRow({
   const notEvaluated = (check: (typeof decision.checks)[number]) =>
     check.pending === true ||
     (unquoted && (check.rule === 'per_claim_max' || check.rule === 'total_budget'));
+  const annotatedChecks: AnnotatedCheck[] = decision.checks.map((check) => {
+    const pending = notEvaluated(check);
+    return {
+      rule: check.rule,
+      label: check.label,
+      passed: check.passed,
+      notEvaluated: pending,
+      detail: pending && !check.pending
+        ? 'Checked after an explicit USDC conversion quote is attached'
+        : check.detail,
+    };
+  });
   const awaitingPolicy = claim.state === 'submitted' && claim.decision === null;
   const reviewPending = pendingAction !== null;
   const verdictBlocked = actionsDisabled || reviewsBlocked;
@@ -125,35 +118,11 @@ export function ClaimRow({
         <Money amount={claim.amount} unit={claim.analysis?.currency ?? 'USDC'} size="row" className="shrink-0" />
       </div>
 
-      <div className="ml-7 flex flex-col gap-2 rounded-card border border-rule bg-canvas p-4">
+      <div className="ml-7 rounded-card border border-rule bg-canvas p-4">
         {awaitingPolicy ? (
           <p className="text-caption text-ink-2">Awaiting server policy evaluation.</p>
         ) : (
-          <ul className="grid gap-x-6 gap-y-1 sm:grid-cols-2">
-            {decision.checks.map((check) => (
-              <li key={check.rule} className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
-                <span className="translate-y-0.5">
-                  <Verdict passed={check.passed} pending={notEvaluated(check)} />
-                </span>
-                <span
-                  className={`text-caption ${
-                    notEvaluated(check)
-                      ? 'text-ink-3'
-                      : check.passed
-                        ? 'text-ink-2'
-                        : 'font-medium text-no'
-                  }`}
-                >
-                  {check.label}
-                </span>
-                <span className="tnum ml-auto text-right text-caption text-ink-3">
-                  {notEvaluated(check) && !check.pending
-                    ? 'Checked after an explicit USDC conversion quote is attached'
-                    : check.detail}
-                </span>
-              </li>
-            ))}
-          </ul>
+          <ChecklistSummary checks={annotatedChecks} />
         )}
       </div>
 

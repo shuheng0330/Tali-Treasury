@@ -300,35 +300,39 @@ export function TreasuryDashboard({
       </div>
 
       <section className="flex flex-col overflow-hidden rounded-panel border border-rule bg-surface">
-        <div className="border-b border-rule p-4">
-          <DataNotice
-            source={live.source}
-            reason={live.reason}
-            live="Claim loading, policy decisions, and review actions"
-            plural
-            simulated="Reviewing and paying a claim need the live queue, so on sample data their controls do nothing."
-          />
+        <div className="flex flex-col gap-3 border-b border-rule p-4 empty:hidden">
+          {/* Silent when the queue is live: the "Live from Sui Testnet" card
+              above and a populated, working queue below already say so. This
+              box only needs to speak up when something fell back, which is
+              the one time a treasurer needs to know. */}
+          {live.source !== 'live' ? (
+            <DataNotice
+              source={live.source}
+              reason={live.reason}
+              live="Claim loading, policy decisions, and review actions"
+              plural
+              simulated="Reviewing and paying a claim need the live queue, so on sample data their controls do nothing."
+            />
+          ) : null}
           {live.source === 'live' && !reviewsRecordable ? (
-            <p className="mt-3 rounded-control border border-wait-line bg-wait-soft p-3 text-caption text-wait">
-              A decision cannot be recorded: the database has no review columns, so there
-              would be nothing saying who decided or why. Apply migration{' '}
+            <p className="rounded-control border border-wait-line bg-wait-soft p-3 text-caption text-wait">
+              A decision can&rsquo;t be recorded yet — apply migration{' '}
               <span className="font-mono">20260901020000_claim_review_actions.sql</span>.
-              Evaluating a claim, releasing a payment and recording an outcome write none
-              of those columns, so they still work.
+              Evaluating, paying and reconciling still work.
             </p>
           ) : null}
           {actionError ? (
-            <p className="mt-3 rounded-control border border-no-line bg-no-soft p-3 text-caption text-no" role="alert">
+            <p className="rounded-control border border-no-line bg-no-soft p-3 text-caption text-no" role="alert">
               {actionError}
             </p>
           ) : null}
           {reconciliationNotice ? (
-            <p className="mt-3 rounded-control border border-wait-line bg-wait-soft p-3 text-caption text-ink-2" role="status">
+            <p className="rounded-control border border-wait-line bg-wait-soft p-3 text-caption text-ink-2" role="status">
               {reconciliationNotice}
             </p>
           ) : null}
           {reconciliationError ? (
-            <p className="mt-3 rounded-control border border-no-line bg-no-soft p-3 text-caption text-no" role="alert">
+            <p className="rounded-control border border-no-line bg-no-soft p-3 text-caption text-no" role="alert">
               Reconciliation failed: {reconciliationError}
             </p>
           ) : null}

@@ -37,6 +37,11 @@ export function ClaimHome({
   onCapture,
 }: Props) {
   const used = budget === '0' ? 0 : 100 - ratioBps(available, budget) / 100;
+  const needsCorrection = claims.filter((claim) => claim.state === 'needs_correction');
+  /* A claim sent back is surfaced once, in the callout below, not a second
+     time as an ordinary row here — the same claim in two places on one
+     screen reads as two claims. */
+  const listedClaims = claims.filter((claim) => claim.state !== 'needs_correction');
 
   return (
     <div className="flex flex-col gap-6">
@@ -82,31 +87,33 @@ export function ClaimHome({
       ) : null}
 
       <section className="flex flex-col gap-3">
-        {claims
-          .filter((claim) => claim.state === 'needs_correction')
-          .map((claim) => (
-            <div
-              key={claim.id}
-              className="mb-5 flex flex-col gap-3 rounded-card border border-wait-line bg-wait-soft p-4"
-            >
-              <div className="flex flex-col gap-1">
-                <span className="text-body font-medium text-wait">
-                  {claim.merchant} needs a correction
-                </span>
-                <p className="text-caption text-ink-2">
-                  {claim.review?.reason ??
-                    'The treasurer sent this back. Check the details against the receipt.'}
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => onCorrect(claim)}
-                className="btn btn--primary h-9 w-fit px-5 text-label"
+        {needsCorrection.length > 0 ? (
+          <div className="flex flex-col gap-3">
+            {needsCorrection.map((claim) => (
+              <div
+                key={claim.id}
+                className="flex flex-col gap-3 rounded-card border border-wait-line bg-wait-soft p-4"
               >
-                Fix and resubmit
-              </button>
-            </div>
-          ))}
+                <div className="flex flex-col gap-1">
+                  <span className="text-body font-medium text-wait">
+                    {claim.merchant} needs a correction
+                  </span>
+                  <p className="text-caption text-ink-2">
+                    {claim.review?.reason ??
+                      'The treasurer sent this back. Check the details against the receipt.'}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => onCorrect(claim)}
+                  className="btn btn--primary h-9 w-fit px-5 text-label"
+                >
+                  Fix and resubmit
+                </button>
+              </div>
+            ))}
+          </div>
+        ) : null}
 
         <h2 className="eyebrow">My claims</h2>
 
@@ -114,13 +121,13 @@ export function ClaimHome({
           <p className="rounded-card border border-dashed border-rule px-4 py-8 text-center text-caption text-ink-3">
             Loading submitted claims…
           </p>
-        ) : claims.length === 0 ? (
+        ) : listedClaims.length === 0 ? (
           <p className="rounded-card border border-dashed border-rule px-4 py-8 text-center text-caption text-ink-3">
             Nothing yet. Photograph a receipt and it lands here.
           </p>
         ) : (
           <ul className="flex flex-col divide-y divide-rule overflow-hidden rounded-card border border-rule bg-surface">
-            {claims.map((claim) => (
+            {listedClaims.map((claim) => (
               <li key={claim.id} className="flex flex-col gap-2 px-4 py-3">
                 <div className="flex items-center gap-3">
                   <div className="flex min-w-0 flex-1 flex-col gap-1">
