@@ -4,6 +4,8 @@ export type ServerErrorCode =
   | 'authentication_required'
   | 'authentication_failed'
   | 'origin_forbidden'
+  | 'forbidden'
+  | 'authorization_configuration_failed'
   | 'invalid_request'
   | 'unsupported_receipt'
   | 'event_not_found'
