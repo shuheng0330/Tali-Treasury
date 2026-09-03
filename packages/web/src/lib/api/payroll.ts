@@ -42,20 +42,23 @@ async function post<T>(path: string, body: unknown): Promise<T> {
 }
 
 /**
- * Falls back to the caller's sample rather than to nothing: the payroll screen
- * is readable either way, and the banner says which it is showing. The claim
- * flow deliberately does the opposite, because an invented merchant beside a
- * photograph reads as an extraction. An invented salary beside a name does not.
+ * Falls back to the caller's sample when one is offered: the payroll screen is
+ * readable either way, and the banner says which it is showing.
+ *
+ * The fallback is only sound for the wage it was computed for. Once the figures
+ * on screen can be edited, showing a stored split for a different salary would
+ * put the wrong arithmetic under the number somebody just typed, so callers
+ * pass nothing and get null instead.
  */
 export async function tryPreviewPayroll(
   request: PreviewRequest,
-  fallback: PayrollBreakdown,
-): Promise<Sourced<PayrollBreakdown>> {
+  fallback?: PayrollBreakdown,
+): Promise<Sourced<PayrollBreakdown | null>> {
   try {
     const data = await post<PayrollBreakdown>('/api/payroll/preview', request);
     return { data, source: 'live', reason: null };
   } catch (error) {
-    return { data: fallback, source: 'mock', reason: describe(error) };
+    return { data: fallback ?? null, source: 'mock', reason: describe(error) };
   }
 }
 
