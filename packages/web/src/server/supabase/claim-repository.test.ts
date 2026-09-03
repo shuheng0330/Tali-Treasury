@@ -183,6 +183,21 @@ describe('createSupabaseClaimRepository', () => {
     expect(mapClaimRow(attemptRow).claim.paymentAttempt).not.toHaveProperty('signature');
   });
 
+  it('reads a claim from a database without the reconciliation columns', () => {
+    /* The projection drops the group when the migration has not run, so the
+       keys are absent rather than null. Treating that as a malformed row is
+       what turned an unapplied migration into a 500 on every claim. */
+    const {
+      payment_attempt_digest: _digest,
+      payment_attempt_budget_before: _budget,
+      payment_attempt_prepared_at: _prepared,
+      payment_attempt_last_checked_at: _checked,
+      ...withoutAttemptColumns
+    } = row;
+
+    expect(mapClaimRow(withoutAttemptColumns).claim.paymentAttempt).toBeNull();
+  });
+
   it('rejects incomplete payment-attempt metadata from the database', () => {
     expect(() =>
       mapClaimRow({

@@ -100,10 +100,6 @@ const CLAIM_COLUMNS_BASE = `
   receipt_analysis,
   decision,
   payment,
-  payment_attempt_digest,
-  payment_attempt_budget_before,
-  payment_attempt_prepared_at,
-  payment_attempt_last_checked_at,
   created_at,
   updated_at,
   event_members!claims_active_member_fk(display_name)
@@ -111,7 +107,11 @@ const CLAIM_COLUMNS_BASE = `
 
 const REVIEW_COLUMNS = 'review_action, reviewer_wallet, review_reason, reviewed_at';
 
-export const CLAIM_COLUMNS = `${CLAIM_COLUMNS_BASE}, ${REVIEW_COLUMNS}`;
+const ATTEMPT_COLUMNS =
+  'payment_attempt_digest, payment_attempt_budget_before, ' +
+  'payment_attempt_prepared_at, payment_attempt_last_checked_at';
+
+export const CLAIM_COLUMNS = `${CLAIM_COLUMNS_BASE}, ${REVIEW_COLUMNS}, ${ATTEMPT_COLUMNS}`;
 
 /**
  * The review columns arrive in a migration this app cannot apply itself, and
@@ -123,12 +123,26 @@ export const CLAIM_COLUMNS = `${CLAIM_COLUMNS_BASE}, ${REVIEW_COLUMNS}`;
  * and it is dropped from the projection from then on: claims list and process
  * as before, and only recording a decision is unavailable.
  */
-let reviewColumns: 'unknown' | 'present' | 'absent' = 'unknown';
+type ColumnState = 'unknown' | 'present' | 'absent';
+
+let reviewColumns: ColumnState = 'unknown';
+
+/* The reconciliation columns arrive in their own migration, so a database can
+   have one group and not the other. They are probed apart for that reason:
+   folding them into the base list is what turned an unapplied migration into a
+   500 on every claim read. */
+let attemptColumns: ColumnState = 'unknown';
 
 const UNDEFINED_COLUMN = '42703';
 
 function claimColumns(): string {
-  return reviewColumns === 'absent' ? CLAIM_COLUMNS_BASE : CLAIM_COLUMNS;
+  return [
+    CLAIM_COLUMNS_BASE,
+    reviewColumns === 'absent' ? null : REVIEW_COLUMNS,
+    attemptColumns === 'absent' ? null : ATTEMPT_COLUMNS,
+  ]
+    .filter((group) => group !== null)
+    .join(', ');
 }
 
 const EVENT_POLICY_COLUMNS =
@@ -189,30 +203,26 @@ export function mapClaimRow(input: unknown): StoredClaim {
     };
   }
 
+  /* Undefined rather than null means the projection left these out because the
+     database has no reconciliation columns yet. That is a claim with no
+     attempt, not a malformed row. */
+  const attemptDigest = row.payment_attempt_digest ?? null;
+  const attemptPreparedAt = row.payment_attempt_prepared_at ?? null;
+  const attemptCheckedAt = row.payment_attempt_last_checked_at ?? null;
+
   let paymentAttempt: Claim['paymentAttempt'] = null;
-  if (
-    row.payment_attempt_digest !== null ||
-    row.payment_attempt_prepared_at !== null ||
-    row.payment_attempt_last_checked_at !== null
-  ) {
-    const preparedAtMs = Date.parse(row.payment_attempt_prepared_at ?? '');
-    const lastCheckedAtMs =
-      row.payment_attempt_last_checked_at === null
-        ? null
-        : Date.parse(row.payment_attempt_last_checked_at);
+  if (attemptDigest !== null || attemptPreparedAt !== null || attemptCheckedAt !== null) {
+    const preparedAtMs = Date.parse(attemptPreparedAt ?? '');
+    const lastCheckedAtMs = attemptCheckedAt === null ? null : Date.parse(attemptCheckedAt);
     if (
-      row.payment_attempt_digest === null ||
-      !SUI_TRANSACTION_DIGEST.test(row.payment_attempt_digest) ||
+      attemptDigest === null ||
+      !SUI_TRANSACTION_DIGEST.test(attemptDigest) ||
       !Number.isFinite(preparedAtMs) ||
       (lastCheckedAtMs !== null && !Number.isFinite(lastCheckedAtMs))
     ) {
       throw databaseFailure(null);
     }
-    paymentAttempt = {
-      digest: row.payment_attempt_digest,
-      preparedAtMs,
-      lastCheckedAtMs,
-    };
+    paymentAttempt = { digest: attemptDigest, preparedAtMs, lastCheckedAtMs };
   }
 
   const claim: Claim = {
@@ -246,10 +256,9 @@ function mapProcessRow(input: unknown) {
   const event = Array.isArray(row.events) ? row.events[0] : row.events;
   const startsAtMs = Date.parse(event?.starts_at ?? '');
   const expiresAtMs = Date.parse(event?.expires_at ?? '');
+  const attemptBudget = row.payment_attempt_budget_before ?? null;
   const paymentAttemptBudgetBefore =
-    row.payment_attempt_budget_before === null
-      ? null
-      : String(row.payment_attempt_budget_before);
+    attemptBudget === null ? null : String(attemptBudget);
   if (
     !event?.treasurer_wallet ||
     !CANONICAL_SUI_ID.test(event.treasurer_wallet) ||
@@ -291,11 +300,27 @@ export function createSupabaseClaimRepository(
 
   /* Asked once per process, not per query, so a database without the columns
      costs one extra round trip in total rather than a failed read each time. */
+  /* Paying writes a digest before it signs. Without somewhere to put it, a
+     submission whose outcome is unknown would leave nothing to reconcile
+     against, so the refusal has to come before the transaction, not after. */
+  function assertAttemptColumns(): void {
+    if (attemptColumns !== 'absent') return;
+    throw new ServerError(
+      'database_failed',
+      503,
+      'Paying a claim needs the payment reconciliation columns. Apply migration 20260902010000_claim_payment_reconciliation.sql.',
+    );
+  }
+
   async function ensureReviewColumns(): Promise<void> {
-    if (reviewColumns !== 'unknown') return;
+    if (reviewColumns !== 'unknown' && attemptColumns !== 'unknown') return;
     probe ??= (async () => {
-      const { error } = await query(client, 'claims').select('review_action').limit(1);
-      reviewColumns = error?.code === UNDEFINED_COLUMN ? 'absent' : 'present';
+      const [review, attempt] = await Promise.all([
+        query(client, 'claims').select('review_action').limit(1),
+        query(client, 'claims').select('payment_attempt_digest').limit(1),
+      ]);
+      reviewColumns = review.error?.code === UNDEFINED_COLUMN ? 'absent' : 'present';
+      attemptColumns = attempt.error?.code === UNDEFINED_COLUMN ? 'absent' : 'present';
     })();
     await probe;
   }
@@ -602,6 +627,7 @@ export function createSupabaseClaimRepository(
     },
 
     async recordPaymentAttempt(input) {
+      assertAttemptColumns();
       const { data, error } = await query(client, 'claims')
         .update({
           payment_attempt_digest: input.digest,
@@ -612,7 +638,7 @@ export function createSupabaseClaimRepository(
         .eq('state', 'paying')
         .is('payment', null)
         .is('payment_attempt_digest', null)
-        .select(CLAIM_COLUMNS)
+        .select(claimColumns())
         .maybeSingle();
 
       if (error && error.code !== 'PGRST116') throw databaseFailure(error);
@@ -623,6 +649,7 @@ export function createSupabaseClaimRepository(
     },
 
     async markPaymentAttemptChecked(input) {
+      assertAttemptColumns();
       const { data, error } = await query(client, 'claims')
         .update({
           payment_attempt_last_checked_at: new Date(input.checkedAtMs).toISOString(),
@@ -631,7 +658,7 @@ export function createSupabaseClaimRepository(
         .eq('state', 'paying')
         .eq('payment_attempt_digest', input.digest)
         .is('payment', null)
-        .select(CLAIM_COLUMNS)
+        .select(claimColumns())
         .maybeSingle();
 
       if (error && error.code !== 'PGRST116') throw databaseFailure(error);
