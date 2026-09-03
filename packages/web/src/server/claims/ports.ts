@@ -126,7 +126,17 @@ export interface ClaimRepository {
     claimId: string;
     review: ClaimReview;
   }): Promise<ReviewMutationResult>;
-  reservePayment(claimId: string): Promise<PaymentMutationResult>;
+  /**
+   * Takes the claim for a payment attempt.
+   *
+   * `from` is `payment_failed` on a retry: that state is only ever written
+   * when nothing was paid — a policy refusal caught before submission, or a
+   * contract abort the chain confirmed — so re-attempting it cannot pay twice.
+   */
+  reservePayment(
+    claimId: string,
+    from?: 'approved' | 'payment_failed',
+  ): Promise<PaymentMutationResult>;
   failApprovedPayment(input: {
     claimId: string;
     payment: PaymentResult;

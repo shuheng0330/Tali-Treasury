@@ -62,23 +62,39 @@ describe('toReviewQueue', () => {
   });
 
   it('drops the ones that have finished', () => {
-    for (const state of ['paid', 'payment_failed', 'rejected'] as const) {
+    for (const state of ['paid', 'rejected'] as const) {
       expect(toReviewQueue([claim({ state })]), state).toHaveLength(0);
     }
+  });
+
+  it('keeps a failed payment, which is unresolved rather than finished', () => {
+    // Nothing left the mandate, so it can be released again — and a claim that
+    // dropped out of every actionable tab could never be.
+    expect(toReviewQueue([claim({ state: 'payment_failed' })])).toHaveLength(1);
   });
 });
 
 describe('settledFrom', () => {
   it('keeps everything that finished, however it finished', () => {
-    // A rejected or failed claim used to vanish from every tab, so the record
-    // of what happened to it existed nowhere on screen.
-    for (const state of ['paid', 'payment_failed', 'rejected'] as const) {
+    // A rejected claim used to vanish from every tab, so the record of what
+    // happened to it existed nowhere on screen.
+    for (const state of ['paid', 'rejected'] as const) {
       expect(settledFrom([claim({ state })]), state).toHaveLength(1);
     }
   });
 
+  it('does not call a failed payment settled', () => {
+    expect(settledFrom([claim({ state: 'payment_failed' })])).toHaveLength(0);
+  });
+
   it('leaves anything still in flight to the review queue', () => {
-    for (const state of ['submitted', 'awaiting_review', 'approved', 'paying'] as const) {
+    for (const state of [
+      'submitted',
+      'awaiting_review',
+      'approved',
+      'paying',
+      'payment_failed',
+    ] as const) {
       expect(settledFrom([claim({ state })]), state).toHaveLength(0);
     }
   });

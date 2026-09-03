@@ -4,6 +4,7 @@ import type {
   CreateClaimRequest,
   CreateClaimResponse,
   PayClaimResponse,
+  ReconcileClaimResponse,
   ProcessClaimResponse,
   ReviewClaimRequest,
   ReviewClaimResponse,
@@ -14,6 +15,7 @@ import {
   listClaims,
   payClaim,
   processClaim,
+  reconcileClaim,
   reviewClaim,
   TaliApiError,
 } from '@/lib/api/client';
@@ -106,6 +108,18 @@ export async function tryPayClaim(
 ): Promise<Sourced<PayClaimResponse | null>> {
   try {
     return { data: await payClaim(claimId), source: 'live', reason: null };
+  } catch (error) {
+    return { data: null, source: 'mock', reason: describe(error) };
+  }
+}
+
+export async function tryReconcileClaim(
+  claimId: string,
+  outcome: 'paid' | 'not_paid',
+  digest?: string,
+): Promise<Sourced<ReconcileClaimResponse | null>> {
+  try {
+    return { data: await reconcileClaim(claimId, outcome, digest), source: 'live', reason: null };
   } catch (error) {
     return { data: null, source: 'mock', reason: describe(error) };
   }

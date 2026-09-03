@@ -82,6 +82,7 @@ export type {
   ProcessClaimResponse,
   ReviewClaimRequest,
   PayClaimResponse,
+  ReconcileClaimResponse,
   ReviewClaimResponse,
   ReviewQueueItem,
   SafetyAttackId,

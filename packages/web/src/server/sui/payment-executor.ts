@@ -10,6 +10,8 @@ import {
   type TreasuryConfig,
 } from '@tali/treasury-sui';
 
+import { subtract } from '@tali/shared';
+
 import type { PaymentExecutor } from '../claims/ports';
 import { ServerError } from '../errors';
 import {
@@ -177,6 +179,9 @@ export function createSuiPaymentExecutor(
       try {
         confirmed = await ready.operations.submit(prepared);
       } catch {
+        /* The only genuinely unknown case: the submission may or may not have
+           reached the chain. The claim stays in `paying` until a human checks
+           and reconciles it. */
         throw new PaymentSubmissionUncertainError();
       }
       const finalityMs = Math.max(0, now() - startedAt);
@@ -204,11 +209,18 @@ export function createSuiPaymentExecutor(
         };
       }
 
+      /* The transfer is already confirmed successful at this point. A failure
+         to re-read the mandate afterwards says nothing about the payment, and
+         throwing here left a member who had been paid on a claim stuck in
+         `paying` with no way out. The balance is derived instead: the transfer
+         succeeded for exactly this amount. */
       let budgetAfter: string;
+      let budgetRead = true;
       try {
         budgetAfter = await ready.operations.readBudget(input.mandateId);
       } catch {
-        throw new PaymentSubmissionUncertainError();
+        budgetRead = false;
+        budgetAfter = subtract(input.budgetBefore, input.amount);
       }
 
       return {
@@ -221,7 +233,9 @@ export function createSuiPaymentExecutor(
           finalityMs,
           abortCode: null,
           abortKey: null,
-          message: 'Payment confirmed on Sui testnet.',
+          message: budgetRead
+            ? 'Payment confirmed on Sui testnet.'
+            : 'Payment confirmed on Sui testnet. The mandate balance could not be re-read, so the remaining budget shown is derived from this transfer.',
           rawError: null,
           budgetBefore: input.budgetBefore,
           budgetAfter,

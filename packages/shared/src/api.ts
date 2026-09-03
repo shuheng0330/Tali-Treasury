@@ -107,6 +107,13 @@ export interface ReviewClaimResponse {
   recorded: boolean;
 }
 
+/** POST /api/claims/:id/reconcile */
+export interface ReconcileClaimResponse {
+  claim: Claim;
+  /** False when the claim had already been settled by something else. */
+  recorded: boolean;
+}
+
 /** POST /api/claims/:id/pay */
 export interface PayClaimResponse {
   claim: Claim;

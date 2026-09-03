@@ -303,18 +303,26 @@ export function createSupabaseClaimRepository(
 
   async function mutatePayment(input: {
     claimId: string;
-    expectedState: 'approved' | 'paying';
+    expectedState: 'approved' | 'paying' | 'payment_failed';
     nextState: 'paying' | 'paid' | 'payment_failed';
     payment?: PaymentResult;
+    /**
+     * A retry starts from a claim that already carries the payment result that
+     * failed, so the usual "nothing recorded yet" guard would never match. The
+     * state is doing the work in that case: only one caller can move a claim
+     * out of `payment_failed`.
+     */
+    replacingResult?: boolean;
   }): Promise<PaymentMutationResult> {
     const update = input.payment
       ? { state: input.nextState, payment: input.payment }
       : { state: input.nextState };
-    const { data, error } = await query(client, 'claims')
+    let update_ = query(client, 'claims')
       .update(update)
       .eq('id', input.claimId)
-      .eq('state', input.expectedState)
-      .is('payment', null)
+      .eq('state', input.expectedState);
+    if (!input.replacingResult) update_ = update_.is('payment', null);
+    const { data, error } = await update_
       .select(claimColumns())
       .maybeSingle();
 
@@ -541,11 +549,12 @@ export function createSupabaseClaimRepository(
       return { status: 'lost_race', claim: current.claim };
     },
 
-    async reservePayment(claimId) {
-        return mutatePayment({
+    async reservePayment(claimId, from = 'approved') {
+      return mutatePayment({
         claimId,
-        expectedState: 'approved',
+        expectedState: from,
         nextState: 'paying',
+        replacingResult: from === 'payment_failed',
       });
     },
 

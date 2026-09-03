@@ -61,7 +61,10 @@ function service(options: {
   const view = { ...mandate, ...options.mandate } as MandateView;
 
   const reservePayment = vi.fn(
-    async (_claimId: string): Promise<MutationResult> => ({ status: 'saved', claim: current }),
+    async (
+      _claimId: string,
+      _from?: 'approved' | 'payment_failed',
+    ): Promise<MutationResult> => ({ status: 'saved', claim: current }),
   );
   const finishPayment = vi.fn(
     async (_input: FinishInput): Promise<MutationResult> => ({ status: 'saved', claim: current }),
@@ -143,7 +146,29 @@ describe('createPayApprovedClaimService', () => {
     expect(payments.execute).not.toHaveBeenCalled();
   });
 
-  it('will not pay a claim in any state but approved', async () => {
+  it('releases a claim whose last attempt failed', async () => {
+    // payment_failed is only ever written when nothing left the mandate, so a
+    // claim killed by a transient RPC error is not dead for good.
+    const { impl, reservePayment, finishPayment } = service({
+      claim: { state: 'payment_failed' },
+    });
+
+    const result = await impl(request);
+
+    expect(result.payment.ok).toBe(true);
+    expect(reservePayment).toHaveBeenCalledWith('claim-1', 'payment_failed');
+    expect(finishPayment.mock.calls[0]![0].state).toBe('paid');
+  });
+
+  it('reserves from approved on a first attempt', async () => {
+    const { impl, reservePayment } = service();
+
+    await impl(request);
+
+    expect(reservePayment).toHaveBeenCalledWith('claim-1', 'approved');
+  });
+
+  it('will not pay a claim in any state but approved or a failed attempt', async () => {
     for (const state of ['awaiting_review', 'paid', 'paying', 'rejected'] as const) {
       const { impl, payments } = service({ claim: { state } });
       await expect(impl(request)).rejects.toThrow('nothing to pay');

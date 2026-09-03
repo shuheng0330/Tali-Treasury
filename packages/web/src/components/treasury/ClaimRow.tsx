@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Money } from '@/components/Money';
 import type { ClaimReviewAction, ReviewQueueItem } from '@tali/shared';
 import { approvalBlockReason } from '@/lib/review-actions';
@@ -57,7 +58,9 @@ interface Props {
   onProcess: (id: string) => void;
   onReview: (id: string, action: ClaimReviewAction) => void;
   onPay: (id: string) => void;
+  onReconcile: (id: string, outcome: 'paid' | 'not_paid', digest?: string) => void;
   paying: boolean;
+  reconciling: boolean;
   actionsDisabled?: boolean;
   /** Carried by every greyed review control, not only the first one. */
   disabledReason?: string;
@@ -70,12 +73,16 @@ export function ClaimRow({
   onProcess,
   onReview,
   onPay,
+  onReconcile,
   paying,
+  reconciling,
   actionsDisabled = false,
   disabledReason,
 }: Props) {
   const { claim, decision, agentNote, reason } = item;
   const approvalBlocked = approvalBlockReason(claim, decision);
+  const [digest, setDigest] = useState('');
+  const [resolving, setResolving] = useState(false);
 
   /* The cap and the budget are measured in USDC, so for anything else they
      were never evaluated. Decisions stored before the engine started saying so
@@ -150,10 +157,87 @@ export function ClaimRow({
 
       <div className="ml-7 flex flex-wrap items-center gap-3">
         {claim.state === 'paying' ? (
-          <p className="text-caption text-wait">
-            The payment was submitted and has not confirmed yet. Do not send it again
-            until the chain says what happened to it.
-          </p>
+          <div className="flex w-full flex-col gap-2">
+            <p className="text-caption text-wait">
+              The payment was submitted and the server never learned what happened to
+              it. It may or may not have reached the chain, so nothing retries it
+              automatically — read the mandate on Suiscan and record what you find.
+            </p>
+            {resolving ? (
+              <form
+                className="flex flex-col gap-2"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  onReconcile(claim.id, 'paid', digest.trim());
+                  setResolving(false);
+                  setDigest('');
+                }}
+              >
+                <label className="text-caption text-ink-2" htmlFor={`digest-${claim.id}`}>
+                  The digest of the transaction that paid it
+                </label>
+                <input
+                  id={`digest-${claim.id}`}
+                  value={digest}
+                  onChange={(event) => setDigest(event.target.value)}
+                  className="w-full rounded-control border border-rule bg-surface px-3 py-2 font-mono text-caption"
+                />
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="submit"
+                    disabled={digest.trim().length === 0 || reconciling || actionsDisabled}
+                    className="btn btn--primary h-9 px-5 text-label"
+                  >
+                    {reconciling ? 'Recording…' : 'It was paid'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setResolving(false)}
+                    className="btn btn--ghost h-9 px-5 text-label"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            ) : (
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  disabled={reconciling || actionsDisabled}
+                  onClick={() => setResolving(true)}
+                  className="btn btn--ghost h-9 px-5 text-label"
+                  title={actionsDisabled ? disabledReason : undefined}
+                >
+                  It was paid…
+                </button>
+                <button
+                  type="button"
+                  disabled={reconciling || actionsDisabled}
+                  onClick={() => onReconcile(claim.id, 'not_paid')}
+                  className="btn btn--ghost h-9 px-5 text-label"
+                  title={actionsDisabled ? disabledReason : undefined}
+                >
+                  {reconciling ? 'Recording…' : 'Nothing was paid'}
+                </button>
+              </div>
+            )}
+          </div>
+        ) : claim.state === 'payment_failed' ? (
+          <>
+            <button
+              type="button"
+              disabled={paying || actionsDisabled}
+              onClick={() => onPay(claim.id)}
+              className="btn btn--primary h-9 px-5 text-label"
+              title={actionsDisabled ? disabledReason : undefined}
+            >
+              {paying ? 'Paying…' : 'Try the payment again'}
+            </button>
+            <p className="text-caption text-ink-3">
+              {claim.payment?.message ?? 'The payment did not go through.'} Nothing left
+              the mandate, so this can be released again.
+            </p>
+          </>
         ) : claim.state === 'needs_correction' ? (
           <p className="text-caption text-ink-3">
             Sent back to {claim.submitterName}

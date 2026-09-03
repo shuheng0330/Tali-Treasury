@@ -10,6 +10,7 @@ import type {
   ProcessClaimResponse,
   ReviewClaimRequest,
   PayClaimResponse,
+  ReconcileClaimResponse,
   ReviewClaimResponse,
 } from '@tali/shared';
 import { isApiError } from '@tali/shared';
@@ -148,6 +149,20 @@ export async function payClaim(claimId: string): Promise<PayClaimResponse> {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: '{}',
+    }),
+  );
+}
+
+export async function reconcileClaim(
+  claimId: string,
+  outcome: 'paid' | 'not_paid',
+  digest?: string,
+): Promise<ReconcileClaimResponse> {
+  return responseJson<ReconcileClaimResponse>(
+    await fetch(`/api/claims/${encodeURIComponent(claimId)}/reconcile`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ outcome, ...(digest ? { digest } : {}) }),
     }),
   );
 }

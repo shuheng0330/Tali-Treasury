@@ -48,7 +48,13 @@ export function createPayApprovedClaimService(deps: {
         'Only the event treasurer may release a payment',
       );
     }
-    if (context.claim.state !== 'approved') {
+    /* `payment_failed` is retryable on purpose. It is only ever written when
+       nothing left the mandate — a policy refusal caught before submission, or
+       an abort the chain confirmed — so a transient RPC failure should not
+       kill a claim for good. The genuinely unknown case stays in `paying` and
+       is reconciled by a human instead. */
+    const retrying = context.claim.state === 'payment_failed';
+    if (context.claim.state !== 'approved' && !retrying) {
       throw new ServerError(
         'processing_conflict',
         409,
@@ -121,7 +127,10 @@ export function createPayApprovedClaimService(deps: {
       return { claim: failed.claim, payment };
     }
 
-    const reserved = await deps.claims.reservePayment(request.claimId);
+    const reserved = await deps.claims.reservePayment(
+      request.claimId,
+      retrying ? 'payment_failed' : 'approved',
+    );
     if (reserved.status === 'lost_race') {
       throw new ServerError(
         'processing_conflict',

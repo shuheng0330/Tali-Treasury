@@ -17,6 +17,7 @@ const REVIEW_STATES: ReadonlySet<Claim['state']> = new Set([
   'awaiting_review',
   'approved',
   'paying',
+  'payment_failed',
 ]);
 
 /**
@@ -49,11 +50,9 @@ export function toReviewQueue(claims: readonly Claim[]): ReviewQueueItem[] {
 }
 
 /** Everything that has finished, however it finished. */
-const SETTLED_STATES: ReadonlySet<Claim['state']> = new Set([
-  'paid',
-  'payment_failed',
-  'rejected',
-]);
+/* `payment_failed` is deliberately not here. Nothing was paid and the claim
+   can be released again, so it is unresolved rather than settled. */
+const SETTLED_STATES: ReadonlySet<Claim['state']> = new Set(['paid', 'rejected']);
 
 export function settledFrom(claims: readonly Claim[]): Claim[] {
   return claims.filter((claim) => SETTLED_STATES.has(claim.state));

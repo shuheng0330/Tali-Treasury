@@ -12,7 +12,12 @@ import { DEMO_TREASURER } from '@/lib/demo-config';
 import { reviewQueue, settledClaims } from '@/lib/mock/api';
 import { committedFrom, settledFrom, toReviewQueue } from '@/lib/queue';
 import { useClaims } from '@/lib/api/useClaims';
-import { tryPayClaim, tryProcessClaim, tryReviewClaim } from '@/lib/api/demo';
+import {
+  tryPayClaim,
+  tryProcessClaim,
+  tryReconcileClaim,
+  tryReviewClaim,
+} from '@/lib/api/demo';
 import { DataNotice } from '@/components/DataNotice';
 import { ClaimRow } from './ClaimRow';
 import { MandateHeader } from './MandateHeader';
@@ -58,6 +63,7 @@ export function TreasuryDashboard({
   const [reviewPending, setReviewPending] = useState(false);
   const [reviewError, setReviewError] = useState<string | null>(null);
   const [payingId, setPayingId] = useState<string | null>(null);
+  const [reconcilingId, setReconcilingId] = useState<string | null>(null);
 
   const live = useClaims(apiEnabled, wallet.address ?? DEMO_TREASURER);
 
@@ -123,6 +129,23 @@ export function TreasuryDashboard({
        looking like a successful evaluation. */
     if (result.data.payment && !result.data.payment.ok) {
       setProcessError(result.data.payment.message);
+    }
+    reloadEverything();
+  }
+
+  /* The one transition a human makes on the chain's behalf: the server never
+     learned what happened, so somebody reads the chain and records it. */
+  async function reconcile(id: string, outcome: 'paid' | 'not_paid', digest?: string) {
+    setReconcilingId(id);
+    setProcessError(null);
+    const result = await tryReconcileClaim(id, outcome, digest);
+    setReconcilingId(null);
+    if (result.data === null) {
+      setProcessError(result.reason ?? 'the outcome was not recorded');
+      return;
+    }
+    if (!result.data.recorded) {
+      setProcessError('This claim had already been settled, so nothing was recorded.');
     }
     reloadEverything();
   }
@@ -307,7 +330,9 @@ export function TreasuryDashboard({
                   onProcess={process}
                   onReview={openReview}
                   onPay={pay}
+                  onReconcile={reconcile}
                   paying={payingId === item.claim.id}
+                  reconciling={reconcilingId === item.claim.id}
                   actionsDisabled={!authenticated || !reviewsRecordable}
                   disabledReason={
                     !authenticated
