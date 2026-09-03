@@ -55,6 +55,7 @@ const claim: Claim = {
   },
   decision: storedDecision,
   review: null,
+  paymentAttempt: null,
   payment: null,
   createdAtMs: nowMs - 2000,
   updatedAtMs: nowMs - 1000,
@@ -75,6 +76,7 @@ const mandate: MandateView = {
 
 const context = {
   claim,
+  paymentAttemptBudgetBefore: null,
   event: {
     treasurer,
     mandateId,
@@ -111,6 +113,8 @@ function repository(overrides: Partial<ClaimRepository> = {}): ClaimRepository {
     saveDecision: vi.fn(),
     applyReview: vi.fn(),
     reservePayment: vi.fn(),
+    recordPaymentAttempt: vi.fn(),
+    markPaymentAttemptChecked: vi.fn(),
     failApprovedPayment: vi.fn(),
     finishPayment: vi.fn(),
     ...overrides,
@@ -121,6 +125,7 @@ function executor(overrides: Partial<PaymentExecutor> = {}): PaymentExecutor {
   return {
     assertReady: vi.fn(),
     execute: vi.fn(async () => ({ status: 'paid' as const, payment })),
+    reconcile: vi.fn(),
     ...overrides,
   };
 }

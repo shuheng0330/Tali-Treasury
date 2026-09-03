@@ -5,7 +5,7 @@ import type {
 } from '@tali/shared';
 import { describe, expect, it } from 'vitest';
 
-import { createSupabaseClaimRepository } from './claim-repository';
+import { createSupabaseClaimRepository, mapClaimRow } from './claim-repository';
 import type { LegacyCreateClaimRequest } from '../claims/ports';
 
 const eventId = 'ba7e50e2-7e7b-4a67-a505-9e3a329739ae';
@@ -13,6 +13,7 @@ const submitter = `0x${'a'.repeat(64)}`;
 const treasurer = `0x${'b'.repeat(64)}`;
 const mandateId = `0x${'1'.repeat(64)}`;
 const receiptHash = 'a'.repeat(64);
+const transactionDigest = '4'.repeat(44);
 const storagePath = `${eventId}/${receiptHash}.png`;
 const analysis: ReceiptAnalysis = {
   merchant: 'Campus Print Shop',
@@ -57,6 +58,10 @@ const row = {
   review_reason: null,
   reviewed_at: null,
   payment: null,
+  payment_attempt_digest: null,
+  payment_attempt_budget_before: null,
+  payment_attempt_prepared_at: null,
+  payment_attempt_last_checked_at: null,
   created_at: '2026-08-30T00:00:00.000Z',
   updated_at: '2026-08-30T00:00:01.000Z',
   event_members: { display_name: 'Lim Wey Cheng' },
@@ -157,6 +162,127 @@ function scriptedClient(options: {
 }
 
 describe('createSupabaseClaimRepository', () => {
+  it('maps durable payment-attempt metadata without exposing signed bytes', () => {
+    const attemptRow = {
+      ...row,
+      state: 'paying',
+      payment_attempt_digest: transactionDigest,
+      payment_attempt_budget_before: '20000000',
+      payment_attempt_prepared_at: '2026-09-02T12:00:00.000Z',
+      payment_attempt_last_checked_at: '2026-09-02T12:00:03.000Z',
+    };
+
+    expect(mapClaimRow(attemptRow).claim).toMatchObject({
+      paymentAttempt: {
+        digest: transactionDigest,
+        preparedAtMs: Date.parse('2026-09-02T12:00:00.000Z'),
+        lastCheckedAtMs: Date.parse('2026-09-02T12:00:03.000Z'),
+      },
+    });
+    expect(mapClaimRow(attemptRow).claim.paymentAttempt).not.toHaveProperty('bytes');
+    expect(mapClaimRow(attemptRow).claim.paymentAttempt).not.toHaveProperty('signature');
+  });
+
+  it('rejects incomplete payment-attempt metadata from the database', () => {
+    expect(() =>
+      mapClaimRow({
+        ...row,
+        state: 'paying',
+        payment_attempt_digest: transactionDigest,
+      }),
+    ).toThrow('The database operation failed');
+  });
+
+  it('records a single payment digest before submission', async () => {
+    let updated: unknown;
+    const filters: Array<[string, string, unknown]> = [];
+    const repository = createSupabaseClaimRepository(
+      scriptedClient({
+        maybeSingle: {
+          data: {
+            ...row,
+            state: 'paying',
+            payment_attempt_digest: transactionDigest,
+            payment_attempt_budget_before: '20000000',
+            payment_attempt_prepared_at: '2026-09-02T12:00:00.000Z',
+          },
+          error: null,
+        },
+        captureUpdate: (value) => {
+          updated = value;
+        },
+        captureFilter: (kind, column, value) => {
+          filters.push([kind, column, value]);
+        },
+      }),
+    );
+
+    await expect(
+      repository.recordPaymentAttempt({
+        claimId: row.id,
+        digest: transactionDigest,
+        budgetBefore: '20000000',
+        preparedAtMs: Date.parse('2026-09-02T12:00:00.000Z'),
+      }),
+    ).resolves.toEqual({
+      status: 'saved',
+      claim: expect.objectContaining({
+        state: 'paying',
+        paymentAttempt: expect.objectContaining({ digest: transactionDigest }),
+      }),
+    });
+    expect(updated).toEqual({
+      payment_attempt_digest: transactionDigest,
+      payment_attempt_budget_before: '20000000',
+      payment_attempt_prepared_at: '2026-09-02T12:00:00.000Z',
+    });
+    expect(filters).toContainEqual(['eq', 'state', 'paying']);
+    expect(filters).toContainEqual(['is', 'payment', null]);
+    expect(filters).toContainEqual(['is', 'payment_attempt_digest', null]);
+  });
+
+  it('timestamps a reconciliation check only for the matching paying attempt', async () => {
+    let updated: unknown;
+    const filters: Array<[string, string, unknown]> = [];
+    const repository = createSupabaseClaimRepository(
+      scriptedClient({
+        maybeSingle: {
+          data: {
+            ...row,
+            state: 'paying',
+            payment_attempt_digest: transactionDigest,
+            payment_attempt_budget_before: '20000000',
+            payment_attempt_prepared_at: '2026-09-02T12:00:00.000Z',
+            payment_attempt_last_checked_at: '2026-09-02T12:00:03.000Z',
+          },
+          error: null,
+        },
+        captureUpdate: (value) => {
+          updated = value;
+        },
+        captureFilter: (kind, column, value) => {
+          filters.push([kind, column, value]);
+        },
+      }),
+    );
+
+    await expect(
+      repository.markPaymentAttemptChecked({
+        claimId: row.id,
+        digest: transactionDigest,
+        checkedAtMs: Date.parse('2026-09-02T12:00:03.000Z'),
+      }),
+    ).resolves.toEqual({
+      status: 'saved',
+      claim: expect.objectContaining({ state: 'paying' }),
+    });
+    expect(updated).toEqual({
+      payment_attempt_last_checked_at: '2026-09-02T12:00:03.000Z',
+    });
+    expect(filters).toContainEqual(['eq', 'state', 'paying']);
+    expect(filters).toContainEqual(['eq', 'payment_attempt_digest', transactionDigest]);
+    expect(filters).toContainEqual(['is', 'payment', null]);
+  });
   it.each([
     ['approve', 'approved'],
     ['reject', 'rejected'],
@@ -280,6 +406,7 @@ describe('createSupabaseClaimRepository', () => {
 
     await expect(repository.getProcessContext(row.id)).resolves.toEqual({
       claim: expect.objectContaining({ id: row.id, state: 'submitted' }),
+      paymentAttemptBudgetBefore: null,
       event: {
         treasurer,
         mandateId,
@@ -287,6 +414,31 @@ describe('createSupabaseClaimRepository', () => {
         startsAtMs: Date.parse('2026-08-29T00:00:00.000Z'),
         expiresAtMs: Date.parse('2026-09-05T23:59:59.000Z'),
       },
+    });
+  });
+
+  it('rejects malformed internal payment-attempt budget metadata', async () => {
+    const repository = createSupabaseClaimRepository(
+      scriptedClient({
+        maybeSingles: [
+          {
+            data: {
+              ...row,
+              state: 'paying',
+              payment_attempt_digest: transactionDigest,
+              payment_attempt_budget_before: '-1',
+              payment_attempt_prepared_at: '2026-09-02T12:00:00.000Z',
+            },
+            error: null,
+          },
+          { data: eventRow, error: null },
+        ],
+      }),
+    );
+
+    await expect(repository.getProcessContext(row.id)).rejects.toMatchObject({
+      code: 'database_failed',
+      status: 500,
     });
   });
 

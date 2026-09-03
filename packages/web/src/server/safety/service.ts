@@ -44,13 +44,18 @@ export function createSafetyService(deps: {
       deps.executor.assertReady();
       const mandate = await deps.mandates.read(deps.mandateId);
 
-      const result = await deps.executor.execute({
-        claimId: `safety-${request.attack}`,
-        mandateId: deps.mandateId,
-        recipient: request.recipient,
-        amount: request.amount,
-        budgetBefore: mandate.remainingBudget,
-      });
+      const result = await deps.executor.execute(
+        {
+          claimId: `safety-${request.attack}`,
+          mandateId: deps.mandateId,
+          recipient: request.recipient,
+          amount: request.amount,
+          budgetBefore: mandate.remainingBudget,
+        },
+        /* No claim row exists for a safety test, so there is nowhere to write
+           the digest and nothing to reconcile against later. */
+        async () => {},
+      );
 
       return { payment: result.payment, digest: result.payment.digest };
     },

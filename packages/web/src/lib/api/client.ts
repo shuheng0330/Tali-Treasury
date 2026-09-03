@@ -8,9 +8,10 @@ import type {
   ListClaimsResponse,
   ProcessClaimRequest,
   ProcessClaimResponse,
+  ReconcileClaimRequest,
+  ReconcileClaimResponse,
   ReviewClaimRequest,
   PayClaimResponse,
-  ReconcileClaimResponse,
   ReviewClaimResponse,
 } from '@tali/shared';
 import { isApiError } from '@tali/shared';
@@ -107,6 +108,19 @@ export async function processClaim(
   );
 }
 
+export async function reconcileClaim(
+  claimId: string,
+): Promise<ReconcileClaimResponse> {
+  const request: ReconcileClaimRequest = {};
+  return responseJson<ReconcileClaimResponse>(
+    await fetch(`/api/claims/${encodeURIComponent(claimId)}/reconcile`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(request),
+    }),
+  );
+}
+
 export async function issueWalletChallenge(
   address: string,
 ): Promise<CreateWalletChallengeResponse> {
@@ -149,20 +163,6 @@ export async function payClaim(claimId: string): Promise<PayClaimResponse> {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: '{}',
-    }),
-  );
-}
-
-export async function reconcileClaim(
-  claimId: string,
-  outcome: 'paid' | 'not_paid',
-  digest?: string,
-): Promise<ReconcileClaimResponse> {
-  return responseJson<ReconcileClaimResponse>(
-    await fetch(`/api/claims/${encodeURIComponent(claimId)}/reconcile`, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ outcome, ...(digest ? { digest } : {}) }),
     }),
   );
 }

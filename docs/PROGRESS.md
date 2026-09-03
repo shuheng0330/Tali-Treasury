@@ -14,8 +14,8 @@ whole product flow is live.
 | Sui TypeScript boundary | ✅ Ready | Reads, builders, config, USDC helpers, abort mapping and backend testnet signer adapter | One separately authorized live smoke claim |
 | Shared contracts | ✅ Ready | Claim, event, policy, audit, mandate and endpoint types | Evolve only with team agreement |
 | Web dashboard | ✅ Live read-only | Current mandate state comes from Sui Testnet | Signed actions and backend claim totals |
-| Receipt and claim backend | ✅ Complete locally | Wallet sessions, one-time analysis drafts, private storage, deterministic policy, atomic review/payment states and 91 pgTAP checks | Apply latest migration and configure hosted API/origin/signer |
-| Claim and review UX | ✅ Complete locally | Testnet wallet connect/sign-in/logout plus real analyze/create/list/review actions | Hosted wallet verification, member resubmission and trusted FX quotes |
+| Receipt and claim backend | ✅ Complete locally | Wallet sessions, one-time analysis drafts, private storage, deterministic policy, atomic review/payment states, and safe exact-digest reconciliation | Apply latest migrations and configure hosted API/origin/signer |
+| Claim and review UX | ✅ Complete locally | Testnet wallet connect/sign-in/logout, real analyze/create/list/review, and bounded payment-status polling | Hosted wallet verification and member resubmission; FX is a teammate-owned increment |
 | Safety Test UI | 🟡 Mocked with live evidence links | Local preview plus links to two real rejected transactions | Interactive signed attempts and revocation scenario |
 | Deployment | ✅ Live reads; auth rollout pending | Vercel production and live Sui dashboard verified | Push wallet migration, configure exact HTTPS origin, verify protected writes |
 | Submission | ⬜ Pending | — | Landing content, videos, deck, disclosure and rehearsal |
@@ -46,7 +46,7 @@ interactions as simulations and links separately to genuine Testnet evidence.
 | 3 | Treasurer dashboard and review queue | ✅ Real review actions complete locally | 1 Sep |
 | 4 | Safety Test panel | 🟡 Mock flow; live refusals linked | 29 Aug |
 | 5 | Landing page | ✅ Done, rebuilt 31 Aug | 30 Aug |
-| 6 | Wire to live contract and backend | 🟡 Authenticated local flow complete; FX, hosted rollout and live smoke pending | 1 Sep |
+| 6 | Wire to live contract and backend | 🟡 Authenticated local flow and reconciliation complete; hosted rollout and live smoke pending | 2 Sep |
 | 7 | Submission pack | ⬜ Not started | — |
 
 Legend: ✅ done · 🟡 in progress · ⬜ not started · ⛔ cut
@@ -55,14 +55,15 @@ Legend: ✅ done · 🟡 in progress · ⬜ not started · ⛔ cut
 
 ## Current remaining gaps
 
-Updated 1 September and ordered by the risk of leaving each item unfinished:
+Updated 2 September and ordered by the risk of leaving each item unfinished:
 
 1. Push the wallet/draft migration, configure `TALI_APP_ORIGIN`, and verify member
    and treasurer browser wallets on the hosted app.
-2. A trusted MYR-to-USDC quote with source, timestamp, expiry, rounding and payout amount.
+2. Teammate-owned trusted MYR-to-USDC quote with source, timestamp, expiry,
+   rounding and payout amount.
 3. Member correction and resubmission after a treasurer request.
-4. One authorized funded testnet smoke payment, plus digest recovery and
-   reconciliation for uncertain submissions.
+4. One authorized funded testnet smoke payment and manual verification of the
+   completed exact-digest reconciliation path.
 5. Interactive on-chain safety attempts and live revocation.
 6. Submission video, deck, AI disclosure and rehearsal.
 
@@ -162,6 +163,11 @@ Verified: build passes, all routes serve 200, claim page renders end to end.
   USDC payment; rejection and correction require an audited reason. Non-USDC and
   failed on-chain checks cannot be approved, successful writes reload the queue,
   and correction requests remain visible only in claim history.
+- **2 September reconciliation milestone:** signed transaction bytes are hashed to
+  their Sui digest and persisted before broadcast. A treasurer can inspect only
+  that digest, poll for up to 20 seconds, and settle confirmed success or rejection
+  without another signature or submission. Chain refresh performs one such lookup
+  for visible in-flight claims.
 
 ## Phase 4 — Safety Test panel ✅
 

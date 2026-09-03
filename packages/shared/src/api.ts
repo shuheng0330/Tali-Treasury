@@ -107,17 +107,25 @@ export interface ReviewClaimResponse {
   recorded: boolean;
 }
 
-/** POST /api/claims/:id/reconcile */
-export interface ReconcileClaimResponse {
-  claim: Claim;
-  /** False when the claim had already been settled by something else. */
-  recorded: boolean;
-}
-
 /** POST /api/claims/:id/pay */
 export interface PayClaimResponse {
   claim: Claim;
   payment: PaymentResult;
+}
+
+/** POST /api/claims/:id/reconcile */
+export interface ReconcileClaimRequest {
+  /** Local-only compatibility identity; authenticated clients omit this. */
+  reconciler?: Address;
+}
+
+export type ReconciliationStatus = 'pending' | 'paid' | 'payment_failed';
+
+export interface ReconcileClaimResponse {
+  claim: Claim;
+  status: ReconciliationStatus;
+  digest: string;
+  payment: PaymentResult | null;
 }
 
 /** GET /api/events/:id */

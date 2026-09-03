@@ -93,6 +93,7 @@ function service(options: {
   const payments: PaymentExecutor = {
     assertReady: vi.fn(),
     execute: options.execute ?? vi.fn(async () => ({ status: 'paid' as const, payment: payment() })),
+    reconcile: vi.fn(),
   };
 
   return {

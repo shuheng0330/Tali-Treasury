@@ -55,7 +55,9 @@ allowing the configured payment asset to persist end to end.
 - `event_members` uses `(event_id, wallet_address)` as its primary key and records
   whether membership is active.
 - `claims` stores positive integer base units, normalized receipt fields, analysis
-  JSON, internal object path, decision/payment JSON, and nullable review metadata.
+  JSON, internal object path, decision/payment JSON, nullable review metadata, and
+  one nullable payment-attempt digest with prepared/last-checked timestamps. The
+  pre-payment budget is internal persistence used to reconstruct a terminal result.
 - `claim_review_events` is append-only. A security-definer `AFTER UPDATE` trigger
   inserts its single audit row when review metadata changes from null to populated,
   so the state transition and audit record commit together.
@@ -129,6 +131,11 @@ transition to `paid` or `payment_failed`. Terminal results are returned
 idempotently. A transport or finality uncertainty leaves the row in `paying`; later
 requests return a reconciliation conflict and never sign a replacement payment.
 
+Before `PaymentExecutor` broadcasts, it derives the canonical Sui digest from the
+signed transaction bytes and invokes the repository's guarded attempt callback.
+Only a successfully persisted first attempt may proceed to submission. This makes
+the digest durable even when submission or finality becomes uncertain.
+
 ## Treasurer-review design
 
 `POST /api/claims/:id/review` uses the same authenticated treasurer identity as
@@ -152,6 +159,26 @@ The treasury client uses one review dialog. Approval explicitly names the testne
 USDC payment consequence; rejection and correction validate their reason before
 sending. Successful writes reload persisted claims, and terminal payment responses
 also refresh the server-rendered mandate snapshot.
+
+## Payment-reconciliation design
+
+`POST /api/claims/:id/reconcile` derives the caller from the wallet session,
+enforces exact origin, and permits only the event treasurer. A `paying` claim must
+have a durable payment-attempt digest and internal budget snapshot. The service
+looks up that exact digest on Sui Testnet without invoking transaction preparation,
+signing, or submission.
+
+A missing transaction remains `paying`; an RPC failure returns a sanitized 502;
+confirmed success reads the current mandate balance and compare-and-sets the claim
+to `paid`; and a confirmed Move rejection uses the shared abort mapping before the
+same guarded transition to `payment_failed`. Concurrent terminal updates reload the
+winner, and terminal calls replay the stored result. Legacy digest-less `paying`
+rows return a safe conflict.
+
+The treasury client polls only after an explicit **Check payment status** action,
+at two-second intervals for at most 20 seconds. The general chain refresh performs
+one reconciliation lookup for each visible `paying` claim before reloading claims
+and mandate state. There is no cron job or automatic rebroadcast path.
 
 `createSuiPaymentExecutor` is lazy: factory creation and route import do not read
 `AGENT_PRIVATE_KEY`. `assertReady` accepts only testnet, parses the server-only
@@ -195,6 +222,10 @@ messages are never serialized.
   transitions, audit mapping, exact replay/conflict behavior, fresh mandate
   failures, single-winner signing, terminal payment classification, uncertainty,
   client payloads, dialog copy, reason validation and queue rules.
+- Reconciliation tests cover attempt-before-submit ordering, lost races, pending
+  lookups, terminal success/rejection, RPC uncertainty, idempotency, authorization,
+  bounded polling, explorer links, and the guarantee that observation never signs
+  or submits.
 - Payment-adapter tests use generated credentials and injected operations to cover
   lazy configuration, success, Move rejection and failure classification without
   a network request or transaction broadcast.
@@ -235,6 +266,10 @@ private auth/draft tables plus service-role-only atomic challenge and draft
 functions. After merge it must be pushed to hosted Supabase, `TALI_APP_ORIGIN`
 must equal the deployed HTTPS origin, and the member/treasurer browser flows must
 be verified manually. No automated verification broadcasts a Sui transaction.
+
+Migration `20260902010000_claim_payment_reconciliation.sql` adds the guarded
+payment-attempt metadata and consistency constraints. It is additive and must be
+applied after the wallet/draft migration during hosted rollout.
 
 Local Logflare analytics and its Vector collector are intentionally disabled. On
 Windows the collector otherwise requires Docker Desktop's unauthenticated TCP API

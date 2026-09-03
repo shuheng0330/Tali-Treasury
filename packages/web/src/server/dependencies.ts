@@ -3,11 +3,11 @@ import {
   createClaimService,
   createListClaimsService,
   createProcessClaimService,
+  createReconcileClaimService,
   createReviewClaimService,
 } from './claims/services';
 import { createResubmitClaimService } from './claims/resubmit';
 import { createPayApprovedClaimService } from './claims/pay';
-import { createReconcileClaimService } from './claims/reconcile';
 import {
   createCompleteWalletSessionService,
   createIssueWalletChallengeService,
@@ -27,10 +27,10 @@ export interface BackendServices {
   createClaim: ReturnType<typeof createClaimService>;
   listClaims: ReturnType<typeof createListClaimsService>;
   processClaim: ReturnType<typeof createProcessClaimService>;
+  reconcileClaim: ReturnType<typeof createReconcileClaimService>;
   reviewClaim: ReturnType<typeof createReviewClaimService>;
   resubmitClaim: ReturnType<typeof createResubmitClaimService>;
   payApprovedClaim: ReturnType<typeof createPayApprovedClaimService>;
-  reconcileClaim: ReturnType<typeof createReconcileClaimService>;
   auth: ReturnType<typeof createSupabaseWalletAuthRepository>;
   issueWalletChallenge: ReturnType<typeof createIssueWalletChallengeService>;
   completeWalletSession: ReturnType<typeof createCompleteWalletSessionService>;
@@ -65,10 +65,10 @@ export function getBackendServices(): BackendServices {
     createClaim: createClaimService({ drafts }),
     listClaims: createListClaimsService({ claims, receipts }),
     processClaim: createProcessClaimService({ claims, mandates, payments }),
+    reconcileClaim: createReconcileClaimService({ claims, payments }),
     reviewClaim: createReviewClaimService({ claims, mandates, payments }),
     resubmitClaim: createResubmitClaimService({ claims }),
     payApprovedClaim: createPayApprovedClaimService({ claims, mandates, payments }),
-    reconcileClaim: createReconcileClaimService({ claims }),
     auth,
     issueWalletChallenge: createIssueWalletChallengeService({ auth, appOrigin }),
     completeWalletSession: createCompleteWalletSessionService({ auth }),

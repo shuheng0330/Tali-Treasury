@@ -20,6 +20,7 @@ const claim = {
   analysis: null,
   decision: null,
   review: null,
+  paymentAttempt: null,
   payment: null,
   createdAtMs: 1,
   updatedAtMs: 1,

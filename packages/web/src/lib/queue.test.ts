@@ -27,6 +27,7 @@ function claim(overrides: Partial<Claim> = {}): Claim {
     analysis: null,
     decision,
     review: null,
+    paymentAttempt: null,
     payment: null,
     createdAtMs: 1,
     updatedAtMs: 1,

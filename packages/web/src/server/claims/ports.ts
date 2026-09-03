@@ -40,6 +40,7 @@ export interface LegacyCreateClaimRequest {
 
 export interface ClaimProcessContext {
   claim: Claim;
+  paymentAttemptBudgetBefore: string | null;
   event: PolicyEventSnapshot & {
     treasurer: Address;
     mandateId: ObjectId;
@@ -87,6 +88,10 @@ export type PaymentExecutionResult =
   | { status: 'paid'; payment: PaymentResult }
   | { status: 'rejected'; payment: PaymentResult };
 
+export type PaymentReconciliationResult =
+  | { status: 'pending'; digest: string }
+  | PaymentExecutionResult;
+
 export interface MandateReader {
   read(mandateId: ObjectId): Promise<MandateView>;
 }
@@ -99,7 +104,19 @@ export interface PaymentExecutor {
     recipient: string;
     amount: string;
     budgetBefore: string;
-  }): Promise<PaymentExecutionResult>;
+  }, recordAttempt: (attempt: {
+    digest: string;
+    preparedAtMs: number;
+  }) => Promise<void>): Promise<PaymentExecutionResult>;
+  reconcile(input: {
+    claimId: string;
+    mandateId: string;
+    recipient: string;
+    amount: string;
+    budgetBefore: string;
+    digest: string;
+    preparedAtMs: number;
+  }): Promise<PaymentReconciliationResult>;
 }
 
 export interface ClaimRepository {
@@ -137,6 +154,17 @@ export interface ClaimRepository {
     claimId: string,
     from?: 'approved' | 'payment_failed',
   ): Promise<PaymentMutationResult>;
+  recordPaymentAttempt(input: {
+    claimId: string;
+    digest: string;
+    budgetBefore: string;
+    preparedAtMs: number;
+  }): Promise<PaymentMutationResult>;
+  markPaymentAttemptChecked(input: {
+    claimId: string;
+    digest: string;
+    checkedAtMs: number;
+  }): Promise<PaymentMutationResult>;
   failApprovedPayment(input: {
     claimId: string;
     payment: PaymentResult;

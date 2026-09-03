@@ -141,13 +141,32 @@ export function createPayApprovedClaimService(deps: {
 
     let execution;
     try {
-      execution = await deps.payments.execute({
-        claimId: request.claimId,
-        mandateId: context.event.mandateId,
-        recipient: context.claim.submitter,
-        amount: context.claim.amount,
-        budgetBefore: mandate.remainingBudget,
-      });
+      execution = await deps.payments.execute(
+        {
+          claimId: request.claimId,
+          mandateId: context.event.mandateId,
+          recipient: context.claim.submitter,
+          amount: context.claim.amount,
+          budgetBefore: mandate.remainingBudget,
+        },
+        /* Written down before the transaction is submitted. Without the digest
+           on the row, a submission whose outcome is unknown leaves nothing for
+           the reconciler to look up on chain. */
+        async (attempt) => {
+          const recorded = await deps.claims.recordPaymentAttempt({
+            claimId: request.claimId,
+            budgetBefore: mandate.remainingBudget,
+            ...attempt,
+          });
+          if (recorded.status !== 'saved') {
+            throw new ServerError(
+              'processing_conflict',
+              409,
+              'A different payment attempt is already recorded for this claim',
+            );
+          }
+        },
+      );
     } catch (error) {
       if (error instanceof PaymentSubmissionUncertainError) {
         /* The claim stays in `paying`. It may have gone through, and a retry

@@ -33,6 +33,7 @@ function service(overrides: { executor?: Partial<PaymentExecutor> } = {}) {
   const executor: PaymentExecutor = {
     assertReady: vi.fn(),
     execute: vi.fn(async () => ({ status: 'rejected' as const, payment: payment() })),
+    reconcile: vi.fn(),
     ...overrides.executor,
   };
   const mandates: MandateReader = {

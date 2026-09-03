@@ -17,6 +17,8 @@ export type ServerErrorCode =
   | 'mandate_read_failed'
   | 'payment_configuration_failed'
   | 'payment_submission_uncertain'
+  | 'payment_reconciliation_failed'
+  | 'payment_reconciliation_unavailable'
   | 'duplicate_receipt'
   | 'analysis_draft_consumed'
   | 'analysis_draft_expired'
