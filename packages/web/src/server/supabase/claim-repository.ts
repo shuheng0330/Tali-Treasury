@@ -1,4 +1,4 @@
-import { EXPENSE_CATEGORIES } from '@tali/shared';
+import { EXPENSE_CATEGORIES, isFxQuote, type FxQuote } from '@tali/shared';
 import type {
   Claim,
   ClaimReview,
@@ -46,6 +46,7 @@ interface SupabaseDataClient {
 }
 
 interface ClaimRow {
+  fx_quote?: FxQuote | null;
   id: string;
   event_id: string;
   submitter_wallet: string;
@@ -86,6 +87,7 @@ interface ClaimProcessRow extends ClaimRow {
 }
 
 export const CLAIM_COLUMNS = `
+  fx_quote,
   id,
   event_id,
   submitter_wallet,
@@ -135,6 +137,7 @@ export function mapClaimRow(input: unknown): StoredClaim {
     throw databaseFailure(null);
   }
   const row = input as ClaimRow;
+  if (row.fx_quote != null && !isFxQuote(row.fx_quote)) throw databaseFailure(null);
   const membership = Array.isArray(row.event_members)
     ? row.event_members[0]
     : row.event_members;
@@ -198,6 +201,7 @@ export function mapClaimRow(input: unknown): StoredClaim {
   }
 
   const claim: Claim = {
+    fxQuote: row.fx_quote ?? null,
     id: row.id,
     eventId: row.event_id,
     submitter: row.submitter_wallet,
@@ -507,13 +511,24 @@ export function createSupabaseClaimRepository(
 
     getProcessContext,
 
+    async saveFxQuote({ claim, quote }) {
+      let builder = query(client, 'claims').update({ fx_quote: quote, decision: null, state: 'submitted' })
+        .eq('id', claim.id).eq('state', claim.state).eq('amount', claim.amount)
+        .is('review_action', null).is('payment', null).is('payment_attempt_digest', null);
+      builder = claim.fxQuote ? builder.eq('fx_quote->>id', claim.fxQuote.id) : builder.is('fx_quote', null);
+      const { data, error } = await builder.select(CLAIM_COLUMNS).maybeSingle();
+      if (error && error.code !== 'PGRST116') throw databaseFailure(error);
+      if (data) return { status: 'saved', claim: mapClaimRow(data).claim };
+      return { status: 'lost_race', claim: (await getProcessContext(claim.id)).claim };
+    },
+
     async applyReview(input) {
       const nextStateByAction = {
         approve: 'paying',
         reject: 'rejected',
         request_correction: 'needs_correction',
       } as const;
-      const { data, error } = await query(client, 'claims')
+      let reviewQuery = query(client, 'claims')
         .update({
           state: nextStateByAction[input.review.action],
           review_action: input.review.action,
@@ -524,9 +539,9 @@ export function createSupabaseClaimRepository(
         .eq('id', input.claimId)
         .eq('state', 'awaiting_review')
         .is('review_action', null)
-        .is('payment', null)
-        .select(CLAIM_COLUMNS)
-        .maybeSingle();
+        .is('payment', null);
+      if (input.quoteId) reviewQuery = reviewQuery.eq('fx_quote->>id', input.quoteId);
+      const { data, error } = await reviewQuery.select(CLAIM_COLUMNS).maybeSingle();
 
       if (error && error.code !== 'PGRST116') {
         throw databaseFailure(error);
@@ -606,13 +621,13 @@ export function createSupabaseClaimRepository(
     },
 
     async saveDecision(input) {
-      const { data, error } = await query(client, 'claims')
+      let decisionQuery = query(client, 'claims')
         .update({ decision: input.decision, state: input.state })
         .eq('id', input.claimId)
         .eq('state', 'submitted')
-        .is('decision', null)
-        .select(CLAIM_COLUMNS)
-        .maybeSingle();
+        .is('decision', null);
+      if (input.quoteId) decisionQuery = decisionQuery.eq('fx_quote->>id', input.quoteId);
+      const { data, error } = await decisionQuery.select(CLAIM_COLUMNS).maybeSingle();
 
       if (error && error.code !== 'PGRST116') {
         throw databaseFailure(error);

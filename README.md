@@ -23,7 +23,7 @@ Status words are intentionally precise:
 | Move treasury and 17 contract tests | **Complete locally** | `sui move test` |
 | Published package | **Live** | Package `0x7be8…c523` on Testnet |
 | Official Testnet USDC mandate | **Live** | 20 USDC funded; 5 USDC maximum per claim |
-| Valid reimbursement | **Live** | 3 USDC paid; 17 USDC remains |
+| Valid reimbursement | **Live** | 4 USDC total paid; 16 USDC remained after the 3 September smoke test |
 | Overspend and recipient protections | **Live** | Both invalid transactions rejected on-chain |
 | TypeScript Sui integration | **Complete locally** | Reads, PTB builders, amount helpers, error mapping |
 | Treasurer mandate dashboard | **Live** (read-only) | Server reads the current mandate from Sui Testnet |
@@ -31,6 +31,7 @@ Status words are intentionally precise:
 | Claim policy processing | **Complete locally** | Treasurer action invokes the server evaluator and persists the decision |
 | Treasurer review actions | **Complete locally** | Real approve/reject/correction API and UI; eligible USDC approval enters the guarded testnet signer |
 | Safe payment reconciliation | **Complete locally** | Digest stored before broadcast; explicit status checks never sign or resubmit |
+| MYR → USDC reimbursement quotes | **Complete locally** | Live Open Exchange Rates free-plan check passed; bound quotes and explicit approval; hosted rollout and quoted payment pending |
 | Revoke and Safety Test interactions | **Mocked** | Clearly labelled previews; no browser signing or state changes |
 | Gemini receipt analysis and Supabase claims | **Complete locally; rollout pending** | Private drafts, authenticated access and 91 pgTAP assertions |
 | Deterministic policy and backend agent signing | **Complete locally** | Testnet-only, treasurer-triggered, race-safe and fake-operation verified; no transaction broadcast in this increment |
@@ -51,7 +52,9 @@ The detailed team checklist lives in [`docs/PROGRESS.md`](docs/PROGRESS.md).
 | Rejected unknown recipient | [`2htVB5…GDnk5e`](https://suiscan.xyz/testnet/tx/2htVB5NJCxhz1QXQtLGDjJ6kLVAwit6MLqzghzGDnk5e) |
 
 The current mandate began with `20 USDC`, allows at most `5 USDC` per claim,
-has paid `3 USDC`, and has `17 USDC` remaining.
+had paid `4 USDC`, and had `16 USDC` remaining after the 3 September payment
+recovery test. Refresh on-chain state for the current balance. See the
+[reconciliation evidence](docs/LOCAL_PAYMENT_RECONCILIATION_SMOKE.md).
 
 ## How the pieces fit
 
@@ -73,7 +76,8 @@ Server-only testnet signer (complete locally)
              v
 Sui Testnet Mandate<USDC> (live enforcement and audit events)
 
-Non-USDC receipts stay in review pending a trusted conversion quote. Eligible
+MYR receipts receive a saved live-reference quote and require explicit human
+approval of the USDC amount. Other non-USDC currencies remain unsupported. Eligible
 USDC review claims can be approved by the treasurer and enter the atomic payment
 flow; rejection and correction are durably audited.
 ```
@@ -244,8 +248,8 @@ Immediate next vertical slice:
 1. Apply migration `20260901030000`, configure the hosted origin and verify both
    wallet roles manually.
 2. Configure server-only Gemini and Supabase credentials in the deployment.
-3. Add member correction/resubmission; trusted MYR-to-USDC quotation remains the
-   teammate-owned parallel increment.
+3. Roll out and verify [MYR quotes](docs/MYR_USDC_QUOTES.md) with the backend/UI
+   teammates. Member correction/resubmission remains pending.
 4. Configure the testnet agent key and owned `AgentCap` server-side.
 5. With separate authorization, run one small funded smoke claim and record its
    real digest; automated tests intentionally never broadcast.
@@ -253,6 +257,7 @@ Immediate next vertical slice:
 ## Documentation index
 
 - [`docs/API.md`](docs/API.md) — authenticated session, receipt draft and claim endpoint contracts.
+- [`docs/MYR_USDC_QUOTES.md`](docs/MYR_USDC_QUOTES.md) — live-reference valuation, free-plan setup, safeguards and rollout.
 - [`docs/PROGRESS.md`](docs/PROGRESS.md) — authoritative team status and next work.
 - [`docs/NEXT_STEPS.md`](docs/NEXT_STEPS.md) — production implementation order and acceptance criteria.
 - [`docs/HOSTED_SUPABASE_VERIFICATION.md`](docs/HOSTED_SUPABASE_VERIFICATION.md) — hosted schema verification scope and reproducible checks.

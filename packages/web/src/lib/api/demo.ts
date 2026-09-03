@@ -102,7 +102,7 @@ export async function tryProcessClaim(
 export async function tryReviewClaim(
   claimId: string,
   request:
-    | { action: 'approve'; reason?: string }
+    | { action: 'approve'; reason?: string; quoteId?: string }
     | { action: 'reject'; reason: string }
     | { action: 'request_correction'; reason: string },
 ): Promise<Sourced<ReviewClaimResponse | null>> {

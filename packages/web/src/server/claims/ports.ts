@@ -8,6 +8,7 @@ import type {
   PaymentResult,
   PolicyDecision,
   ReceiptAnalysis,
+  FxQuote,
 } from '@tali/shared';
 
 import type { ReceiptMimeType } from '../receipts/hash';
@@ -109,15 +110,21 @@ export interface ClaimRepository {
   listByEvent(eventId: string): Promise<StoredClaim[]>;
   getProcessContext(claimId: string): Promise<ClaimProcessContext>;
   saveDecision(input: {
+    quoteId?: string;
     claimId: string;
     decision: PolicyDecision;
     state: ProcessedClaimState;
   }): Promise<SaveDecisionResult>;
   applyReview(input: {
+    quoteId?: string;
     claimId: string;
     review: ClaimReview;
   }): Promise<ReviewMutationResult>;
   reservePayment(claimId: string): Promise<PaymentMutationResult>;
+  saveFxQuote?(input: {
+    claim: Claim;
+    quote: FxQuote;
+  }): Promise<PaymentMutationResult>;
   recordPaymentAttempt(input: {
     claimId: string;
     digest: string;

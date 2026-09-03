@@ -11,6 +11,7 @@ import {
   isAllowedRecipient,
   ON_CHAIN_RULES,
   toDisplay,
+  claimPaymentAmount,
 } from '@tali/shared';
 
 export interface PolicyEventSnapshot {
@@ -22,7 +23,7 @@ export interface PolicyEventSnapshot {
 export interface PolicyEvaluationInput {
   claim: Pick<
     Claim,
-    'submitter' | 'amount' | 'receiptDate' | 'category' | 'analysis'
+    'submitter' | 'amount' | 'receiptDate' | 'category' | 'analysis' | 'fxQuote'
   >;
   event: PolicyEventSnapshot;
   mandate: MandateView;
@@ -114,12 +115,13 @@ function decisionOutcome(checks: readonly RuleCheck[]): PolicyOutcome {
 
 export function evaluatePolicy(input: PolicyEvaluationInput): PolicyDecision {
   const nowMs = input.nowMs ?? Date.now();
-  const amount = parseUnsignedInteger(input.claim.amount);
+  const paymentAmount = claimPaymentAmount(input.claim, nowMs);
+  const amount = paymentAmount === null ? null : parseUnsignedInteger(paymentAmount);
   const maxPerClaim = parseUnsignedInteger(input.mandate.maxPerClaim);
   const remainingBudget = parseUnsignedInteger(input.mandate.remainingBudget);
   const positiveAmount = amount !== null && amount > 0n ? amount : null;
   const receiptCurrency = input.claim.analysis?.currency;
-  const currencyReady = receiptCurrency === 'USDC';
+  const currencyReady = receiptCurrency === 'USDC' || paymentAmount !== null;
   const amountWithinCap =
     !currencyReady || (
       positiveAmount !== null &&
@@ -177,7 +179,7 @@ export function evaluatePolicy(input: PolicyEvaluationInput): PolicyDecision {
       amountWithinCap,
       'Per-claim cap',
       currencyReady
-        ? `${displayAmount(input.claim.amount)} against a ${displayAmount(input.mandate.maxPerClaim)} cap`
+        ? `${displayAmount(paymentAmount!)} against a ${displayAmount(input.mandate.maxPerClaim)} cap`
         : 'Checked after an explicit USDC conversion quote is attached',
     ),
     check(
@@ -238,7 +240,7 @@ export function evaluatePolicy(input: PolicyEvaluationInput): PolicyDecision {
       'confidence_sufficient',
       confidenceSufficient,
       'Receipt ready for payment',
-      analysis?.currency && analysis.currency !== 'USDC'
+      !currencyReady && analysis?.currency && analysis.currency !== 'USDC'
         ? `${analysis.currency} receipt requires an explicit USDC conversion quote`
         : confidenceSufficient
           ? 'Receipt extraction is complete and meets the routing threshold'
@@ -246,6 +248,11 @@ export function evaluatePolicy(input: PolicyEvaluationInput): PolicyDecision {
     ),
   ];
 
+  if (receiptCurrency === 'MYR') {
+    checks.push(check('fx_quote_valid', currencyReady, 'Current FX quote',
+      currencyReady ? 'Server-issued MYR/USD quote is valid; USDC valued at USD parity' : 'Fetch or refresh the MYR quote before approval'));
+    checks.push(check('fx_quote_approval', false, 'Approve quoted payment', 'Treasurer must approve the displayed USDC amount; MYR claims are never auto-paid'));
+  }
   const outcome = decisionOutcome(checks);
   const failedLabels = checks
     .filter(({ passed }) => !passed)

@@ -2,6 +2,7 @@ import type { Claim } from '@tali/shared';
 import { CLAIM_CHIP, ratioBps, toDisplay } from '@tali/shared';
 import { Money } from '@/components/Money';
 import { StatusChip } from '@/components/StatusChip';
+import { FxQuoteSummary } from './FxQuoteSummary';
 
 interface Props {
   eventName: string;
@@ -88,6 +89,7 @@ export function ClaimHome({
               <li key={claim.id} className="flex items-center gap-3 px-4 py-3">
                 <div className="flex min-w-0 flex-1 flex-col gap-1">
                   <span className="truncate text-body">{claim.merchant}</span>
+                  <FxQuoteSummary claim={claim} />
                   <span className="flex items-center gap-2">
                     <StatusChip status={CLAIM_CHIP[claim.state]} />
                     <span className="text-caption text-ink-3" suppressHydrationWarning>

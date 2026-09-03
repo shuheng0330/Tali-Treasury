@@ -11,6 +11,8 @@ import type {
   RuleId,
 } from '@tali/shared';
 import { ZodError } from 'zod';
+import { claimPaymentAmount } from '@tali/shared';
+import type { createClaimQuoter } from '../fx/quotes';
 
 import { ServerError, isServerError } from '../errors';
 import { evaluatePolicy } from '../policy/evaluate';
@@ -239,6 +241,7 @@ export function createListClaimsService(deps: {
 }
 
 export function createProcessClaimService(deps: {
+  quotes?: ReturnType<typeof createClaimQuoter>;
   claims: ClaimRepository;
   mandates: MandateReader;
   payments: PaymentExecutor;
@@ -322,6 +325,17 @@ export function createProcessClaimService(deps: {
       }
     }
 
+    // Quotes are server-issued only after the existing treasurer authorization.
+    // Terminal/paying claims never refresh quotes or initiate a second payment.
+    if (deps.quotes && context.claim.analysis?.currency === 'MYR' && !context.claim.review &&
+        ['submitted', 'awaiting_review'].includes(context.claim.state) &&
+        claimPaymentAmount(context.claim, deps.now?.() ?? Date.now()) === null) {
+      if (!deps.claims.saveFxQuote) throw new ServerError('fx_unavailable', 503, 'Quote storage is unavailable.');
+      const quote = await deps.quotes(context);
+      const saved = await deps.claims.saveFxQuote({ claim: context.claim, quote });
+      if (saved.status !== 'saved') throw conflict('Claim changed while quoting; refresh and evaluate again.');
+      context.claim = saved.claim;
+    }
     let approvedClaim = context.claim;
     if (context.claim.decision) {
       const response = inspectAutoPayState(context.claim);
@@ -349,6 +363,7 @@ export function createProcessClaimService(deps: {
           claimId: request.claimId,
           decision,
           state: stateByOutcome[decision.outcome],
+          ...(context.claim.fxQuote ? { quoteId: context.claim.fxQuote.id } : {}),
         });
       } catch (error) {
         throw databaseError(error);
@@ -484,6 +499,7 @@ export function createProcessClaimService(deps: {
 }
 
 const HUMAN_REVIEW_OVERRIDES = new Set<RuleId>([
+  'fx_quote_approval',
   'category_allowed',
   'receipt_date_valid',
   'confidence_sufficient',
@@ -533,6 +549,10 @@ export function createReviewClaimService(deps: {
       );
 
     function replay(storedClaim: Claim): ReviewClaimResponse {
+      if (request.action === 'approve' && storedClaim.analysis?.currency === 'MYR' &&
+          request.quoteId !== storedClaim.fxQuote?.id) {
+        throw conflict('Approval does not match the saved payment quote.');
+      }
       const stored = storedClaim.review;
       const requestedReason = request.reason ?? null;
       if (
@@ -587,8 +607,11 @@ export function createReviewClaimService(deps: {
         : replay(applied.claim);
     }
 
-    if (context.claim.analysis?.currency !== 'USDC') {
-      throw conflict('Only USDC claims can be approved for payment');
+    const paymentAmount = claimPaymentAmount(context.claim, deps.now?.() ?? Date.now());
+    if (paymentAmount === null) throw conflict('A valid USDC amount or unexpired MYR quote is required. Refresh the quote and review again.');
+    if (context.claim.analysis?.currency === 'MYR' &&
+        (request.quoteId !== context.claim.fxQuote?.id || context.claim.fxQuote?.mandateId !== context.event.mandateId)) {
+      throw conflict('The displayed quote changed. Refresh and approve the new quote explicitly.');
     }
 
     try {
@@ -636,6 +659,7 @@ export function createReviewClaimService(deps: {
       applied = await deps.claims.applyReview({
         claimId: request.claimId,
         review: claimReview,
+        ...(context.claim.fxQuote ? { quoteId: context.claim.fxQuote.id } : {}),
       });
     } catch (error) {
       throw databaseError(error);
@@ -649,7 +673,7 @@ export function createReviewClaimService(deps: {
           claimId: context.claim.id,
           mandateId: context.event.mandateId,
           recipient: context.claim.submitter,
-          amount: context.claim.amount,
+          amount: paymentAmount,
           budgetBefore: mandate.remainingBudget,
         },
         async (attempt) => {
@@ -764,13 +788,18 @@ export function createReconcileClaimService(deps: {
       );
     }
 
+    const reconciliationAmount = claimPaymentAmount(context.claim);
+    if (context.claim.analysis?.currency === 'MYR' && reconciliationAmount === null) {
+      throw new ServerError('payment_reconciliation_unavailable', 409, 'The original MYR payment quote is unavailable; manual investigation is required.');
+    }
     let result;
     try {
       result = await deps.payments.reconcile({
         claimId: context.claim.id,
         mandateId: context.event.mandateId,
         recipient: context.claim.submitter,
-        amount: context.claim.amount,
+        // An already signed attempt retains its original valuation, even if expired.
+        amount: reconciliationAmount ?? context.claim.amount,
         budgetBefore: context.paymentAttemptBudgetBefore,
         digest: attempt.digest,
         preparedAtMs: attempt.preparedAtMs,

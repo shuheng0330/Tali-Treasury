@@ -1,6 +1,7 @@
 import { Money } from '@/components/Money';
 import type { ClaimReviewAction, ReviewQueueItem } from '@tali/shared';
 import { approvalBlockReason } from '@/lib/review-actions';
+import { FxQuoteSummary } from '../claim/FxQuoteSummary';
 
 function Verdict({ passed }: { passed: boolean }) {
   return passed ? (
@@ -96,6 +97,7 @@ export function ClaimRow({ item, processing, pendingAction, onProcess, onReview,
         )}
       </div>
 
+      <FxQuoteSummary claim={claim} />
       {agentNote ? (
         <p className="ml-7 flex gap-2 text-caption italic text-ink-3">
           <span className="not-italic" aria-hidden>
@@ -113,10 +115,16 @@ export function ClaimRow({ item, processing, pendingAction, onProcess, onReview,
             onClick={() => onProcess(claim.id)}
             className="btn btn--primary h-9 px-5 text-label"
           >
-            {processing ? 'Evaluating…' : 'Evaluate claim'}
+            {processing ? 'Evaluating…' : claim.analysis?.currency === 'MYR' ? 'Get live quote & evaluate' : 'Evaluate claim'}
           </button>
         ) : (
           <>
+            {claim.analysis?.currency === 'MYR' ? (
+              <button type="button" className="btn btn--ghost h-9 px-5 text-label"
+                disabled={processing || reviewPending || actionsDisabled} onClick={() => onProcess(claim.id)}>
+                {processing ? 'Refreshing…' : 'Refresh expired quote & evaluate'}
+              </button>
+            ) : null}
             <button
               type="button"
               disabled={approvalBlocked !== null || reviewPending || actionsDisabled}

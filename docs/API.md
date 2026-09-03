@@ -64,6 +64,21 @@ from the session and permits an active member or the configured treasurer.
 accepts `approve`, `reject`, or `request_correction`; rejection and correction
 require a trimmed 1–500 character reason. Both derive the treasurer from session.
 
+For MYR receipts, processing attaches/reuses a server-issued `claim.fxQuote`,
+preserves the original `claim.amount` and `analysis.currency`, and requires human
+review before payment. An expired quote can be refreshed by processing again
+while the claim is still submitted/awaiting review. Terminal claims are unchanged.
+
+MYR approval must name the exact quote shown to the reviewer:
+
+```json
+{ "action": "approve", "quoteId": "server-issued-quote-uuid" }
+```
+
+Missing, expired, changed or mismatched quotes cannot start payment. USDC claims
+retain the existing approval contract without `quoteId`. The rate and payout are
+never accepted from browser inputs. See [MYR quote semantics](MYR_USDC_QUOTES.md).
+
 `POST /api/claims/:id/reconcile` accepts `{}` and derives the treasurer from the
 session. It observes only the durable payment digest and returns:
 
@@ -83,6 +98,11 @@ or broadcasts. Terminal claims replay their stored payment result.
 
 - `401 authentication_required` / `authentication_failed`: sign in again; no
   challenge, signature, token or cookie detail is disclosed.
+- `503 fx_unavailable`: source/cache unavailable, refresh already in progress,
+  stale/invalid rate, or missing provider credentials. No payment starts.
+- `409 fx_quote_invalid`: source amount cannot be safely valued.
+- `409 processing_conflict`: includes expired/changed quote approvals; reload
+  and explicitly review the refreshed quote instead of retrying stale approval.
 - `403 origin_forbidden`: request did not come from the configured exact origin.
 - `409 analysis_draft_consumed`: draft is consumed, unavailable, or belongs to a
   different wallet; analyze again when appropriate.

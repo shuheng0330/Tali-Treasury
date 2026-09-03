@@ -3,16 +3,20 @@ import type {
   ClaimReviewAction,
   PolicyDecision,
 } from '@tali/shared';
+import { claimPaymentAmount } from '@tali/shared';
 
 export function approvalBlockReason(
-  claim: Pick<Claim, 'analysis'>,
+  claim: Pick<Claim, 'analysis'> & Partial<Pick<Claim, 'amount' | 'fxQuote'>>,
   decision: PolicyDecision,
 ): string | null {
-  if (claim.analysis?.currency !== 'USDC') {
-    return 'Only USDC claims can start payment in this milestone.';
+  if (claim.analysis?.currency !== 'USDC' && claimPaymentAmount({ ...claim, amount: claim.amount ?? '' }, Date.now()) === null) {
+    return 'A current MYR → USDC quote is required. Refresh the quote and review again.';
   }
   if (decision.checks.some((check) => check.onChain && !check.passed)) {
     return 'This claim fails an immutable on-chain mandate check.';
+  }
+  if (decision.checks.some(check => !check.passed && ['fx_quote_valid', 'not_duplicate'].includes(check.rule))) {
+    return 'The quote or duplicate-receipt check blocks payment.';
   }
   return null;
 }

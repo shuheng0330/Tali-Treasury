@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useMemo, useState, useTransition } from 'react';
-import type { ClaimReviewAction, MandateView } from '@tali/shared';
+import type { Claim, ClaimReviewAction, MandateView } from '@tali/shared';
 import { CLAIM_CHIP } from '@tali/shared';
 import { Money } from '@/components/Money';
 import { StatusChip } from '@/components/StatusChip';
@@ -21,6 +21,7 @@ import { RevokeDialog } from './RevokeDialog';
 import { ReviewActionDialog } from './ReviewActionDialog';
 import { PaymentReconciliationStatus } from './PaymentReconciliationStatus';
 import { useWalletSession } from '@/components/wallet/WalletSessionProvider';
+import { FxQuoteSummary } from '../claim/FxQuoteSummary';
 
 type Tab = 'review' | 'paid' | 'all';
 
@@ -50,6 +51,7 @@ export function TreasuryDashboard({ apiEnabled, initialMandate: mandate, readErr
   const [reviewing, setReviewing] = useState<{
     claimId: string;
     action: ClaimReviewAction;
+    snapshot: Claim;
   } | null>(null);
   const [reviewPending, setReviewPending] = useState(false);
   const [reviewError, setReviewError] = useState<string | null>(null);
@@ -82,9 +84,7 @@ export function TreasuryDashboard({ apiEnabled, initialMandate: mandate, readErr
   );
 
   const counts = { review: queue.length, paid: paid.length, all: everything.length };
-  const reviewingClaim = reviewing
-    ? everything.find((claim) => claim.id === reviewing.claimId) ?? null
-    : null;
+  const reviewingClaim = reviewing?.snapshot ?? null;
 
   async function process(id: string) {
     if (!authenticated) {
@@ -108,7 +108,8 @@ export function TreasuryDashboard({ apiEnabled, initialMandate: mandate, readErr
       return;
     }
     setReviewError(null);
-    setReviewing({ claimId, action });
+    const snapshot = everything.find(claim => claim.id === claimId);
+    if (snapshot) setReviewing({ claimId, action, snapshot });
   }
 
   async function submitReview(reason?: string) {
@@ -117,7 +118,7 @@ export function TreasuryDashboard({ apiEnabled, initialMandate: mandate, readErr
     setReviewError(null);
     const request =
       reviewing.action === 'approve'
-        ? { action: 'approve' as const }
+        ? { action: 'approve' as const, ...(reviewingClaim?.fxQuote ? { quoteId: reviewingClaim.fxQuote.id } : {}) }
         : { action: reviewing.action, reason: reason ?? '' };
     const result = await tryReviewClaim(reviewing.claimId, request);
     setReviewPending(false);
@@ -316,6 +317,7 @@ export function TreasuryDashboard({ apiEnabled, initialMandate: mandate, readErr
               <li key={claim.id} className="flex items-center gap-3 px-4 py-3">
                 <div className="flex min-w-0 flex-1 flex-col gap-1">
                   <span className="truncate text-body">{claim.merchant}</span>
+                  <FxQuoteSummary claim={claim} />
                   <span className="flex items-center gap-2">
                     <StatusChip status={CLAIM_CHIP[claim.state]} />
                     <span className="text-caption text-ink-3">{claim.submitterName}</span>

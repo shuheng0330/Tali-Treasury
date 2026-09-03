@@ -8,14 +8,27 @@ whole product flow is live.
 
 ## Current status by subsystem
 
+### 3 September local verification update (`test_main`)
+
+- Slush zkLogin sign-in fixed and covered by regression tests.
+- One authorized native 1 USDC payment and two reconciliation checks passed;
+  the synthetic database-write interruption was recovered without another payment.
+  Budget was 16 USDC afterward. [Evidence](LOCAL_PAYMENT_RECONCILIATION_SMOKE.md).
+- [MYR live-reference quotes](MYR_USDC_QUOTES.md) are implemented locally with
+  quote-bound approval, integer rounding, expiry checks and shared provider cache.
+  App ID/provider verification passed; no MYR-quoted payment was sent.
+- Hosted migration/deployment, browser payment verification and the gas-fee
+  reporting correction remain pending. Historical phase notes below retain the
+  earlier milestones, not a claim of current hosted completeness.
+
 | Subsystem | Status | Completed | Pending |
 |---|---|---|---|
 | Sui Move | ✅ Live | Package, 17 tests, USDC mandate, valid payment, two rejected safety attempts | Live revoke/withdraw evidence only if needed for the demo |
-| Sui TypeScript boundary | ✅ Ready | Reads, builders, config, USDC helpers, abort mapping and backend testnet signer adapter | One separately authorized live smoke claim |
+| Sui TypeScript boundary | ✅ Ready | Reads, builders, config, USDC helpers, abort mapping, backend signer and native-USDC payment/recovery smoke | Hosted end-to-end verification |
 | Shared contracts | ✅ Ready | Claim, event, policy, audit, mandate and endpoint types | Evolve only with team agreement |
 | Web dashboard | ✅ Live read-only | Current mandate state comes from Sui Testnet | Signed actions and backend claim totals |
 | Receipt and claim backend | ✅ Complete locally | Wallet sessions, one-time analysis drafts, private storage, deterministic policy, atomic review/payment states, and safe exact-digest reconciliation | Apply latest migrations and configure hosted API/origin/signer |
-| Claim and review UX | ✅ Complete locally | Testnet wallet connect/sign-in/logout, real analyze/create/list/review, and bounded payment-status polling | Hosted wallet verification and member resubmission; FX is a teammate-owned increment |
+| Claim and review UX | ✅ Complete locally | Wallet sessions, real analyze/create/list/review, payment-status polling and explicit MYR quote approval | Hosted quote/payment verification and member resubmission |
 | Safety Test UI | 🟡 Mocked with live evidence links | Local preview plus links to two real rejected transactions | Interactive signed attempts and revocation scenario |
 | Deployment | ✅ Live reads; auth rollout pending | Vercel production and live Sui dashboard verified | Push wallet migration, configure exact HTTPS origin, verify protected writes |
 | Submission | ⬜ Pending | — | Landing content, videos, deck, disclosure and rehearsal |
@@ -59,11 +72,11 @@ Updated 2 September and ordered by the risk of leaving each item unfinished:
 
 1. Push the wallet/draft migration, configure `TALI_APP_ORIGIN`, and verify member
    and treasurer browser wallets on the hosted app.
-2. Teammate-owned trusted MYR-to-USDC quote with source, timestamp, expiry,
-   rounding and payout amount.
+2. Coordinate and roll out the locally implemented MYR-to-USDC quote, then
+   verify the hosted browser flow with a separately authorized payment.
 3. Member correction and resubmission after a treasurer request.
-4. One authorized funded testnet smoke payment and manual verification of the
-   completed exact-digest reconciliation path.
+4. Native-USDC smoke payment and reconciliation passed locally on 3 September;
+   verify the hosted path separately and fix the recorded gas metric discrepancy.
 5. Interactive on-chain safety attempts and live revocation.
 6. Submission video, deck, AI disclosure and rehearsal.
 
