@@ -109,6 +109,7 @@ function repository(overrides: Partial<ClaimRepository> = {}): ClaimRepository {
     create: vi.fn(),
     listByEvent: vi.fn(),
     getProcessContext: vi.fn(async () => context),
+    resubmit: vi.fn(),
     saveDecision: vi.fn(),
     applyReview: vi.fn(),
     reservePayment: vi.fn(),
@@ -154,7 +155,7 @@ describe('createReviewClaimService', () => {
   it.each([
     ['reject', 'rejected'],
     ['request_correction', 'needs_correction'],
-  ] as const)('persists %s without payment', async (action, state) => {
+  ] as const)('persists %s without paying anything', async (action, state) => {
     const expectedReview = review(action, 'Treasurer reason');
     const reviewedClaim = { ...claim, state, review: expectedReview } as Claim;
     const claims = repository({
@@ -170,34 +171,21 @@ describe('createReviewClaimService', () => {
 
     await expect(
       service({ claimId, action, reviewer: treasurer, reason: 'Treasurer reason' }),
-    ).resolves.toEqual({ claim: reviewedClaim, payment: null });
+    ).resolves.toEqual({ claim: reviewedClaim, recorded: true });
     expect(claims.applyReview).toHaveBeenCalledWith({ claimId, review: expectedReview });
     expect(payments.execute).not.toHaveBeenCalled();
   });
 
-  it('pays an eligible USDC approval only after winning the review transition', async () => {
+  it('records an approval and signs nothing', async () => {
+    // Approving leaves the claim in `approved`; releasing the payment is a
+    // separate request. A signature that fails then reads as a failed payment
+    // on an approved claim rather than as a change of mind.
     const expectedReview = review('approve', null);
-    const paying = { ...claim, state: 'paying' as const, review: expectedReview };
-    const paymentAttempt = {
-      digest: '4'.repeat(44),
-      preparedAtMs: nowMs,
-      lastCheckedAtMs: null,
-    };
-    const paid = { ...paying, state: 'paid' as const, paymentAttempt, payment };
+    const approved = { ...claim, state: 'approved' as const, review: expectedReview };
     const claims = repository({
-      applyReview: vi.fn(async () => ({ status: 'saved' as const, claim: paying })),
-      recordPaymentAttempt: vi.fn(async () => ({
-        status: 'saved' as const,
-        claim: { ...paying, paymentAttempt },
-      })),
-      finishPayment: vi.fn(async () => ({ status: 'saved' as const, claim: paid })),
+      applyReview: vi.fn(async () => ({ status: 'saved' as const, claim: approved })),
     });
-    const payments = executor({
-      execute: vi.fn(async (_input, recordAttempt) => {
-        await recordAttempt({ digest: paymentAttempt.digest, preparedAtMs: nowMs });
-        return { status: 'paid' as const, payment };
-      }),
-    });
+    const payments = executor();
     const service = createReviewClaimService({
       claims,
       mandates: { read: vi.fn(async () => mandate) },
@@ -207,15 +195,10 @@ describe('createReviewClaimService', () => {
 
     await expect(
       service({ claimId, action: 'approve', reviewer: treasurer }),
-    ).resolves.toEqual({ claim: paid, payment });
+    ).resolves.toEqual({ claim: approved, recorded: true });
     expect(claims.applyReview).toHaveBeenCalledWith({ claimId, review: expectedReview });
-    expect(claims.recordPaymentAttempt).toHaveBeenCalledWith({
-      claimId,
-      digest: paymentAttempt.digest,
-      budgetBefore: mandate.remainingBudget,
-      preparedAtMs: nowMs,
-    });
-    expect(payments.execute).toHaveBeenCalledTimes(1);
+    expect(payments.execute).not.toHaveBeenCalled();
+    expect(claims.finishPayment).not.toHaveBeenCalled();
   });
 
   it('blocks approval for non-USDC claims without changing state', async () => {
@@ -253,8 +236,14 @@ describe('createReviewClaimService', () => {
     expect(claims.applyReview).not.toHaveBeenCalled();
   });
 
-  it('leaves awaiting_review untouched when the signer is unavailable', async () => {
-    const claims = repository();
+  it('records an approval even with no signer configured', async () => {
+    // The decision is not the transfer. Refusing to record it because the
+    // backend cannot sign would lose a treasurer's answer to a problem that
+    // only the release step has.
+    const approved = { ...claim, state: 'approved' as const, review: review('approve', null) };
+    const claims = repository({
+      applyReview: vi.fn(async () => ({ status: 'saved' as const, claim: approved })),
+    });
     const payments = executor({
       assertReady: vi.fn(() => {
         throw new PaymentConfigurationError();
@@ -262,24 +251,23 @@ describe('createReviewClaimService', () => {
     });
     const service = createReviewClaimService({
       claims,
-      mandates: { read: vi.fn() },
+      mandates: { read: vi.fn(async () => mandate) },
       payments,
       now: () => nowMs,
     });
 
     await expect(
       service({ claimId, action: 'approve', reviewer: treasurer }),
-    ).rejects.toMatchObject({ code: 'payment_configuration_failed', status: 503 });
-    expect(claims.applyReview).not.toHaveBeenCalled();
+    ).resolves.toEqual({ claim: approved, recorded: true });
   });
 
-  it('does not sign when another approval wins the compare-and-set', async () => {
+  it('reports a lost compare-and-set as not recorded', async () => {
+    // The winner's decision stands. Saying `recorded: true` here would let the
+    // caller believe this request is the one that took effect.
     const winnerReview = review('approve', null);
+    const winner = { ...claim, state: 'approved' as const, review: winnerReview };
     const claims = repository({
-      applyReview: vi.fn(async () => ({
-        status: 'lost_race' as const,
-        claim: { ...claim, state: 'paying' as const, review: winnerReview },
-      })),
+      applyReview: vi.fn(async () => ({ status: 'lost_race' as const, claim: winner })),
     });
     const payments = executor();
     const service = createReviewClaimService({
@@ -291,54 +279,8 @@ describe('createReviewClaimService', () => {
 
     await expect(
       service({ claimId, action: 'approve', reviewer: treasurer }),
-    ).rejects.toMatchObject({ code: 'payment_submission_uncertain', status: 502 });
+    ).resolves.toEqual({ claim: winner, recorded: false });
     expect(payments.execute).not.toHaveBeenCalled();
-  });
-
-  it('stores a confirmed payment rejection as payment_failed', async () => {
-    const expectedReview = review('approve', null);
-    const paying = { ...claim, state: 'paying' as const, review: expectedReview };
-    const rejectedPayment = { ...payment, ok: false, digest: null, abortKey: 'FAILED' };
-    const failed = { ...paying, state: 'payment_failed' as const, payment: rejectedPayment };
-    const claims = repository({
-      applyReview: vi.fn(async () => ({ status: 'saved' as const, claim: paying })),
-      finishPayment: vi.fn(async () => ({ status: 'saved' as const, claim: failed })),
-    });
-    const service = createReviewClaimService({
-      claims,
-      mandates: { read: vi.fn(async () => mandate) },
-      payments: executor({
-        execute: vi.fn(async () => ({ status: 'rejected' as const, payment: rejectedPayment })),
-      }),
-      now: () => nowMs,
-    });
-
-    await expect(
-      service({ claimId, action: 'approve', reviewer: treasurer }),
-    ).resolves.toEqual({ claim: failed, payment: rejectedPayment });
-  });
-
-  it('leaves an uncertain submission in paying', async () => {
-    const expectedReview = review('approve', null);
-    const paying = { ...claim, state: 'paying' as const, review: expectedReview };
-    const claims = repository({
-      applyReview: vi.fn(async () => ({ status: 'saved' as const, claim: paying })),
-    });
-    const service = createReviewClaimService({
-      claims,
-      mandates: { read: vi.fn(async () => mandate) },
-      payments: executor({
-        execute: vi.fn(async () => {
-          throw new PaymentSubmissionUncertainError();
-        }),
-      }),
-      now: () => nowMs,
-    });
-
-    await expect(
-      service({ claimId, action: 'approve', reviewer: treasurer }),
-    ).rejects.toMatchObject({ code: 'payment_submission_uncertain', status: 502 });
-    expect(claims.finishPayment).not.toHaveBeenCalled();
   });
 
   it('returns exact rejection replays and conflicts on a different action', async () => {
@@ -361,7 +303,7 @@ describe('createReviewClaimService', () => {
         reviewer: treasurer,
         reason: 'Duplicate expense',
       }),
-    ).resolves.toEqual({ claim: reviewedClaim, payment: null });
+    ).resolves.toEqual({ claim: reviewedClaim, recorded: false });
     await expect(
       service({ claimId, action: 'approve', reviewer: treasurer }),
     ).rejects.toMatchObject({ code: 'processing_conflict', status: 409 });

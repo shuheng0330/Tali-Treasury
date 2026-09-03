@@ -80,6 +80,32 @@ function evaluate(
   });
 }
 
+describe('evaluatePolicy pending checks', () => {
+  it('marks the cap and the budget as pending, not passed, without USDC', () => {
+    // A tick beside "Per-claim cap" tells a treasurer the guard held. For a
+    // non-USDC amount there is nothing to compare against the mandate, so the
+    // rule never ran and must not read as one that did.
+    const decision = evaluate({
+      claim: { ...claim, analysis: { ...claim.analysis!, currency: 'MYR' } },
+    });
+
+    for (const rule of ['per_claim_max', 'total_budget'] as const) {
+      expect(decision.checks.find((entry) => entry.rule === rule)?.pending, rule).toBe(true);
+    }
+  });
+
+  it('leaves the checks unmarked once the amount is USDC', () => {
+    const decision = evaluate();
+
+    for (const rule of ['per_claim_max', 'total_budget'] as const) {
+      expect(
+        decision.checks.find((entry) => entry.rule === rule)?.pending,
+        rule,
+      ).toBeUndefined();
+    }
+  });
+});
+
 describe('evaluatePolicy', () => {
   it('returns an explainable auto-pay decision when every rule passes', () => {
     const decision = evaluate();

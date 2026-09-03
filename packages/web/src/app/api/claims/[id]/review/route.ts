@@ -55,8 +55,16 @@ export function createReviewClaimHandler(
       }
 
       const { id } = await context.params;
-      const { reviewer: _legacy, ...action } = payload;
-      return Response.json(await service({ claimId: id, ...action, reviewer }));
+      if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
+        /* Named here rather than left to the service, whose single message
+           cannot tell a bad id from a bad action or a bad reviewer. */
+        throw new ServerError('invalid_request', 400, 'A claim id must be a uuid');
+      }
+      /* The path is the authority on which claim this is. Spreading the body
+         after `claimId` let a caller name a different claim in the body and
+         act on that one, past every check keyed on the URL. */
+      const { reviewer: _legacy, claimId: _path, ...action } = payload;
+      return Response.json(await service({ ...action, claimId: id, reviewer }));
     } catch (error) {
       const { body, status } = toApiError(error);
       return Response.json(body, { status });

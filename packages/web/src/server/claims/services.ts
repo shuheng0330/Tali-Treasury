@@ -219,22 +219,19 @@ export function createListClaimsService(deps: {
       throw databaseError(error);
     }
 
-    try {
-      const claims = await Promise.all(
-        storedClaims.map(async ({ claim, storagePath }) => ({
-          ...claim,
-          receiptUrl: await deps.receipts.createSignedUrl(storagePath, 300),
-        })),
-      );
-      return { claims, cursor: null };
-    } catch (error) {
-      throw new ServerError(
-        'storage_failed',
-        500,
-        'Receipt URL creation failed',
-        { cause: error },
-      );
-    }
+    /* One receipt whose object is missing must not cost the caller every other
+       claim. The screens already render a claim without an image and say so,
+       whereas a thrown error leaves the queue empty and the treasurer with
+       nothing to act on. */
+    const claims = await Promise.all(
+      storedClaims.map(async ({ claim, storagePath }) => ({
+        ...claim,
+        receiptUrl: await deps.receipts
+          .createSignedUrl(storagePath, 300)
+          .catch(() => null),
+      })),
+    );
+    return { claims, cursor: null };
   };
 }
 
@@ -544,17 +541,10 @@ export function createReviewClaimService(deps: {
         throw conflict('A different review action has already been recorded');
       }
 
-      if (stored.action !== 'approve') {
-        return { claim: storedClaim, payment: null };
-      }
-      if (storedClaim.state === 'paying') throw uncertain();
-      if (
-        (storedClaim.state === 'paid' || storedClaim.state === 'payment_failed') &&
-        storedClaim.payment
-      ) {
-        return { claim: storedClaim, payment: storedClaim.payment };
-      }
-      throw conflict('Claim payment state is inconsistent');
+      /* The same decision, already stored. Reporting it as not recorded is
+         what stops the caller believing this request is the one that took
+         effect. */
+      return { claim: storedClaim, recorded: false };
     }
 
     if (context.claim.review) return replay(context.claim);
@@ -583,23 +573,12 @@ export function createReviewClaimService(deps: {
         throw databaseError(error);
       }
       return applied.status === 'saved'
-        ? { claim: applied.claim, payment: null }
+        ? { claim: applied.claim, recorded: true }
         : replay(applied.claim);
     }
 
     if (context.claim.analysis?.currency !== 'USDC') {
       throw conflict('Only USDC claims can be approved for payment');
-    }
-
-    try {
-      deps.payments.assertReady();
-    } catch (error) {
-      throw new ServerError(
-        'payment_configuration_failed',
-        503,
-        'Backend payment configuration is unavailable',
-        { cause: error },
-      );
     }
 
     let mandate;
@@ -642,59 +621,10 @@ export function createReviewClaimService(deps: {
     }
     if (applied.status === 'lost_race') return replay(applied.claim);
 
-    let execution;
-    try {
-      execution = await deps.payments.execute(
-        {
-          claimId: context.claim.id,
-          mandateId: context.event.mandateId,
-          recipient: context.claim.submitter,
-          amount: context.claim.amount,
-          budgetBefore: mandate.remainingBudget,
-        },
-        async (attempt) => {
-          let recorded;
-          try {
-            recorded = await deps.claims.recordPaymentAttempt({
-              claimId: context.claim.id,
-              budgetBefore: mandate.remainingBudget,
-              ...attempt,
-            });
-          } catch (error) {
-            throw databaseError(error);
-          }
-          if (recorded.status !== 'saved') {
-            throw conflict('A different payment attempt is already recorded');
-          }
-        },
-      );
-    } catch (error) {
-      if (isServerError(error)) throw error;
-      throw new ServerError(
-        'payment_submission_uncertain',
-        502,
-        'Payment submission requires reconciliation before retrying',
-        { cause: error },
-      );
-    }
-
-    let finished;
-    try {
-      finished = await deps.claims.finishPayment({
-        claimId: context.claim.id,
-        state: execution.status === 'paid' ? 'paid' : 'payment_failed',
-        payment: execution.payment,
-      });
-    } catch (error) {
-      throw databaseError(error);
-    }
-    if (
-      (finished.claim.state === 'paid' || finished.claim.state === 'payment_failed') &&
-      finished.claim.payment
-    ) {
-      return { claim: finished.claim, payment: finished.claim.payment };
-    }
-    throw uncertain();
+    /* Approving leaves the claim in `approved`, and the transfer is a separate
+       request. A signature that fails then reads as a failed payment on an
+       approved claim, rather than as a treasurer who changed their mind. */
+    return { claim: applied.claim, recorded: true };
   };
 }
 

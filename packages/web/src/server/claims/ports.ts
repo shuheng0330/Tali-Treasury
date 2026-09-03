@@ -2,6 +2,7 @@ import type {
   Address,
   Claim,
   ClaimReview,
+  CreateClaimRequest,
   ExpenseCategory,
   MandateView,
   ObjectId,
@@ -47,6 +48,27 @@ export interface ClaimProcessContext {
 }
 
 export type ProcessedClaimState = 'approved' | 'awaiting_review' | 'rejected';
+
+/** Where a treasurer's decision can leave a claim. */
+export type ReviewedClaimState = 'approved' | 'rejected' | 'needs_correction';
+
+export interface ClaimCorrections {
+  merchant: string;
+  amount: string;
+  receiptDate: string;
+  category: ExpenseCategory;
+  description: string;
+}
+
+export type ResubmitResult =
+  | { status: 'saved'; claim: Claim }
+  /** Somebody moved it on first. The correction does not apply any more. */
+  | { status: 'lost_race'; claim: Claim };
+
+export type SaveReviewResult =
+  | { status: 'saved'; claim: Claim }
+  /** Somebody else reviewed it first. Their decision stands. */
+  | { status: 'lost_race'; claim: Claim };
 
 export type SaveDecisionResult =
   | { status: 'saved'; claim: Claim }
@@ -113,11 +135,25 @@ export interface ClaimRepository {
     decision: PolicyDecision;
     state: ProcessedClaimState;
   }): Promise<SaveDecisionResult>;
+  resubmit(input: {
+    claimId: string;
+    corrections: ClaimCorrections;
+  }): Promise<ResubmitResult>;
   applyReview(input: {
     claimId: string;
     review: ClaimReview;
   }): Promise<ReviewMutationResult>;
-  reservePayment(claimId: string): Promise<PaymentMutationResult>;
+  /**
+   * Takes the claim for a payment attempt.
+   *
+   * `from` is `payment_failed` on a retry: that state is only ever written
+   * when nothing was paid — a policy refusal caught before submission, or a
+   * contract abort the chain confirmed — so re-attempting it cannot pay twice.
+   */
+  reservePayment(
+    claimId: string,
+    from?: 'approved' | 'payment_failed',
+  ): Promise<PaymentMutationResult>;
   recordPaymentAttempt(input: {
     claimId: string;
     digest: string;

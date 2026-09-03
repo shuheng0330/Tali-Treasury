@@ -8,8 +8,11 @@ export function approvalBlockReason(
   claim: Pick<Claim, 'analysis'>,
   decision: PolicyDecision,
 ): string | null {
-  if (claim.analysis?.currency !== 'USDC') {
-    return 'Only USDC claims can start payment in this milestone.';
+  /* Only when the currency is actually known and wrong. `analysis` being
+     absent is a different problem, and naming this one puts a tooltip about
+     currency beside a row that renders "USDC". */
+  if (claim.analysis && claim.analysis.currency !== 'USDC') {
+    return 'Only a USDC claim can be paid. This one needs a conversion quote first.';
   }
   if (decision.checks.some((check) => check.onChain && !check.passed)) {
     return 'This claim fails an immutable on-chain mandate check.';
@@ -34,10 +37,14 @@ export function reviewDialogCopy(action: ClaimReviewAction): {
   confirmLabel: string;
 } {
   if (action === 'approve') {
+    /* Approving records the decision and nothing else. The transfer is a
+       separate button, so promising a payment here would describe a step this
+       one does not take. */
     return {
-      title: 'Approve and start payment?',
-      consequence: 'This immediately starts a Sui Testnet USDC payment to the claimant.',
-      confirmLabel: 'Approve and pay',
+      title: 'Approve this claim?',
+      consequence:
+        'Nothing is paid yet. The claim moves to approved, and releasing the payment is a separate step.',
+      confirmLabel: 'Record the approval',
     };
   }
   if (action === 'reject') {

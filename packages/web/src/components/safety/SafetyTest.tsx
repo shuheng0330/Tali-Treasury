@@ -6,9 +6,13 @@ import { EXPLORER, SAFETY_ATTACKS, subtract, toBaseUnits, toDisplay } from '@tal
 import { taliUsdcDemo } from '@tali/treasury-sui';
 import { COMMITTED, MEMBER, STRANGER, mandate } from '@/lib/mock/data';
 import { fireAttack, simulateAttack } from '@/lib/mock/api';
+import { canBroadcast, tryAttack } from '@/lib/api/safety';
 import { AttackResult } from './AttackResult';
 
 type Phase = 'armed' | 'firing' | 'result';
+
+/** Whether the last shot reached Sui, and why not when it did not. */
+type Delivery = { broadcast: true } | { broadcast: false; reason: string };
 
 type Prediction = SafetySimulateResponse;
 
@@ -23,6 +27,7 @@ function defaultsFor(attack: SafetyAttackId): { amount: string; recipient: strin
 
 export function SafetyTest() {
   const [attack, setAttack] = useState<SafetyAttackId>('overspend');
+  const [delivery, setDelivery] = useState<Delivery>({ broadcast: false, reason: '' });
   const [amount, setAmount] = useState('15.00');
   const [recipient, setRecipient] = useState<string>(MEMBER);
   const [revokedFirst, setRevokedFirst] = useState(false);
@@ -78,7 +83,20 @@ export function SafetyTest() {
       setStage(2);
     }, 320);
 
-    const { payment: result, checks: ruleChecks } = await fireAttack(shot);
+    /* The contract's own answer where one can be had. A prediction is only
+       ever a fallback, and the result panel is told which it got. */
+    const outcome = await tryAttack({
+      attack: shot.attack,
+      amount: shot.amount,
+      recipient: shot.recipient,
+    });
+
+    const { payment: predicted, checks: ruleChecks } = await fireAttack(shot);
+    const result = outcome.kind === 'broadcast' ? outcome.response.payment : predicted;
+
+    setDelivery(
+      outcome.kind === 'broadcast' ? { broadcast: true } : { broadcast: false, reason: outcome.reason },
+    );
     setPayment(result);
     setChecks(ruleChecks);
     setTally((current) => ({
@@ -97,6 +115,7 @@ export function SafetyTest() {
         <AttackResult
           attempted={input.amount}
           payment={payment}
+          delivery={delivery}
           checks={checks}
           onAgain={() => setPhase('armed')}
           onCounterfactual={() =>
@@ -104,7 +123,7 @@ export function SafetyTest() {
           }
         />
         <p className="tnum text-center text-caption text-ink-3">
-          This simulation: {tally.fired} run · {tally.blocked} predicted blocked ·{' '}
+          This session: {tally.fired} run · {tally.blocked} refused ·{' '}
           {toDisplay(tally.attempted)} attempted · 0.00 leaked
         </p>
       </div>
@@ -166,8 +185,10 @@ export function SafetyTest() {
       <header className="flex flex-col gap-2">
         <h1 className="text-title">Safety test</h1>
         <p className="text-body text-ink-2">
-          Preview how the contract rules respond to invalid payments. This page is a simulation:
-          it does not sign, broadcast, spend gas, or change the mandate.
+          Send a payment the app would never send, and let the contract answer. Three of the
+          five attacks go to Sui when this deployment has a signing key; the other two need the
+          mandate revoked or already spent down, which cannot be arranged for one transaction,
+          so those stay predictions and say so.
         </p>
         <div className="flex flex-wrap gap-3 text-body">
           <a href={EXPLORER.tx(taliUsdcDemo.safetyTest.oversizedClaimTransaction).suiscan} target="_blank" rel="noreferrer" className="link">
@@ -305,11 +326,11 @@ export function SafetyTest() {
         onClick={() => fire()}
         className="btn btn--accent btn--block h-14"
       >
-        Run simulation — {amount || '0.00'}
+        {canBroadcast(attack) ? 'Send it' : 'Predict it'} — {amount || '0.00'}
       </button>
 
       <p className="tnum text-center text-caption text-ink-3">
-        This simulation: {tally.fired} run · {tally.blocked} predicted blocked ·{' '}
+        This session: {tally.fired} run · {tally.blocked} refused ·{' '}
         {toDisplay(tally.attempted)} attempted · 0.00 leaked
         {bypass ? ' · app checks bypassed' : ''}
       </p>

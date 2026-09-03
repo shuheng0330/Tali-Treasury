@@ -66,7 +66,13 @@ describe('treasurer review UI rules', () => {
     },
   );
 
-  it('states the payment consequence for approval', () => {
-    expect(reviewDialogCopy('approve').consequence).toContain('Sui Testnet USDC payment');
+  it('says approving pays nothing, because it does not', () => {
+    // The transfer is a separate button. Promising a payment in this dialog
+    // would describe a step the confirm does not take.
+    const copy = reviewDialogCopy('approve');
+
+    expect(copy.consequence).toContain('Nothing is paid yet');
+    expect(copy.consequence).toContain('separate step');
+    expect(copy.confirmLabel).not.toMatch(/pay/i);
   });
 });

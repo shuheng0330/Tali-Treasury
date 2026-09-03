@@ -64,6 +64,12 @@ from the session and permits an active member or the configured treasurer.
 accepts `approve`, `reject`, or `request_correction`; rejection and correction
 require a trimmed 1–500 character reason. Both derive the treasurer from session.
 
+`POST /api/claims/:id/pay` accepts `{}` and derives the treasurer from the
+session. Approving records a decision and moves the claim to `approved`; this is
+the separate request that signs the transfer, so a signing failure reads as a
+failed payment rather than as a treasurer who changed their mind. It also
+retries a claim in `payment_failed`, a state only written when nothing moved.
+
 `POST /api/claims/:id/reconcile` accepts `{}` and derives the treasurer from the
 session. It observes only the durable payment digest and returns:
 

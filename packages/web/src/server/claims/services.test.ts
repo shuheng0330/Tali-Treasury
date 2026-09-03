@@ -107,6 +107,7 @@ const approvedClaim: Claim = {
   ...processContext.claim,
   state: 'approved',
   decision: approvedDecision,
+  review: null,
 };
 const payment: PaymentResult = {
   ok: true,
@@ -142,6 +143,7 @@ function createRepository(overrides: Partial<ClaimRepository> = {}): ClaimReposi
     findDuplicateReceipt: vi.fn(async () => null),
     create: vi.fn(async () => claim),
     listByEvent: vi.fn(async () => []),
+    resubmit: vi.fn(async () => ({ status: 'saved' as const, claim })),
     getProcessContext: vi.fn(),
     saveDecision: vi.fn(),
     applyReview: vi.fn(),
@@ -405,6 +407,11 @@ describe('createClaimService', () => {
 });
 
 describe('createListClaimsService', () => {
+  const listClaimsFor = (
+    claims: ReturnType<typeof createRepository>,
+    receipts: ReturnType<typeof createReceiptStore>,
+  ) => createListClaimsService({ claims, receipts })({ eventId, viewer: submitter });
+
   it('signs only the private paths selected by the event query for 300 seconds', async () => {
     const claims = createRepository({
       listByEvent: vi.fn(async () => [{ claim, storagePath }]),
@@ -419,6 +426,29 @@ describe('createListClaimsService', () => {
     expect(claims.assertEventExists).toHaveBeenCalledWith(eventId);
     expect(claims.assertEventViewer).toHaveBeenCalledWith(eventId, submitter);
     expect(receipts.createSignedUrl).toHaveBeenCalledWith(storagePath, 300);
+  });
+
+  it('still returns the claims whose receipts can be signed', async () => {
+    const other = { ...claim, id: 'claim-missing-receipt' };
+    const claims = createRepository({
+      listByEvent: vi.fn(async () => [
+        { claim, storagePath },
+        { claim: other, storagePath: 'gone/from/storage.jpg' },
+      ]),
+    });
+    const receipts = createReceiptStore();
+    receipts.createSignedUrl = vi.fn(async (path: string) => {
+      if (path === storagePath) return 'https://signed.example/receipt';
+      throw new Error('Object not found');
+    });
+
+    await expect(listClaimsFor(claims, receipts)).resolves.toEqual({
+      claims: [
+        { ...claim, receiptUrl: 'https://signed.example/receipt' },
+        { ...other, receiptUrl: null },
+      ],
+      cursor: null,
+    });
   });
 });
 
@@ -469,6 +499,7 @@ describe('createProcessClaimService', () => {
       ...claim,
       state: 'awaiting_review',
       decision: storedDecision,
+      review: null,
     };
     const claims = createRepository({
       getProcessContext: vi.fn(async () => ({
@@ -876,6 +907,7 @@ describe('createProcessClaimService', () => {
           ...claim,
           state: input.state,
           decision: input.decision,
+          review: null,
         },
       }));
       const claims = createRepository({
@@ -917,6 +949,7 @@ describe('createProcessClaimService', () => {
       ...claim,
       state: 'awaiting_review',
       decision: winningDecision,
+      review: null,
     };
     const claims = createRepository({
       getProcessContext: vi.fn(async () => processContext),

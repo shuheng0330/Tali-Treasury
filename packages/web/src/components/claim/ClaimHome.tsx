@@ -1,5 +1,5 @@
 import type { Claim } from '@tali/shared';
-import { CLAIM_CHIP, ratioBps, toDisplay } from '@tali/shared';
+import { CLAIM_CHIP, EXPLORER, ratioBps, toDisplay } from '@tali/shared';
 import { Money } from '@/components/Money';
 import { StatusChip } from '@/components/StatusChip';
 
@@ -9,9 +9,13 @@ interface Props {
   budget: string;
   claims: Claim[];
   claimsLoading?: boolean;
+  onCorrect: (claim: Claim) => void;
   captureDisabled?: boolean;
   onCapture: (file: File) => void;
 }
+
+const CAPTURE_UNAVAILABLE =
+  'Submitting a receipt needs the claims backend, which is not answering right now.';
 
 function relative(atMs: number) {
   const minutes = Math.round((Date.now() - atMs) / 60_000);
@@ -28,6 +32,7 @@ export function ClaimHome({
   budget,
   claims,
   claimsLoading = false,
+  onCorrect,
   captureDisabled = false,
   onCapture,
 }: Props) {
@@ -62,6 +67,7 @@ export function ClaimHome({
           accept="image/jpeg,image/png,image/webp"
           capture="environment"
           disabled={captureDisabled}
+          title={captureDisabled ? CAPTURE_UNAVAILABLE : undefined}
           className="sr-only"
           onChange={(e) => {
             const file = e.target.files?.[0];
@@ -71,7 +77,37 @@ export function ClaimHome({
         />
       </label>
 
+      {captureDisabled ? (
+        <p className="-mt-4 text-caption text-ink-3">{CAPTURE_UNAVAILABLE}</p>
+      ) : null}
+
       <section className="flex flex-col gap-3">
+        {claims
+          .filter((claim) => claim.state === 'needs_correction')
+          .map((claim) => (
+            <div
+              key={claim.id}
+              className="mb-5 flex flex-col gap-3 rounded-card border border-wait-line bg-wait-soft p-4"
+            >
+              <div className="flex flex-col gap-1">
+                <span className="text-body font-medium text-wait">
+                  {claim.merchant} needs a correction
+                </span>
+                <p className="text-caption text-ink-2">
+                  {claim.review?.reason ??
+                    'The treasurer sent this back. Check the details against the receipt.'}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => onCorrect(claim)}
+                className="btn btn--primary h-9 w-fit px-5 text-label"
+              >
+                Fix and resubmit
+              </button>
+            </div>
+          ))}
+
         <h2 className="eyebrow">My claims</h2>
 
         {claimsLoading ? (
@@ -85,17 +121,52 @@ export function ClaimHome({
         ) : (
           <ul className="flex flex-col divide-y divide-rule overflow-hidden rounded-card border border-rule bg-surface">
             {claims.map((claim) => (
-              <li key={claim.id} className="flex items-center gap-3 px-4 py-3">
-                <div className="flex min-w-0 flex-1 flex-col gap-1">
-                  <span className="truncate text-body">{claim.merchant}</span>
-                  <span className="flex items-center gap-2">
-                    <StatusChip status={CLAIM_CHIP[claim.state]} />
-                    <span className="text-caption text-ink-3" suppressHydrationWarning>
-                      {relative(claim.updatedAtMs)}
+              <li key={claim.id} className="flex flex-col gap-2 px-4 py-3">
+                <div className="flex items-center gap-3">
+                  <div className="flex min-w-0 flex-1 flex-col gap-1">
+                    <span className="truncate text-body">{claim.merchant}</span>
+                    <span className="flex items-center gap-2">
+                      <StatusChip status={CLAIM_CHIP[claim.state]} />
+                      <span className="text-caption text-ink-3" suppressHydrationWarning>
+                        {relative(claim.updatedAtMs)}
+                      </span>
                     </span>
-                  </span>
+                  </div>
+                  <Money
+                    amount={claim.amount}
+                    unit={claim.analysis?.currency ?? 'USDC'}
+                    size="row"
+                  />
                 </div>
-                <Money amount={claim.amount} unit={claim.analysis?.currency ?? 'USDC'} size="row" />
+
+                {claim.state === 'paid' && claim.payment?.digest ? (
+                  <a
+                    className="link self-start text-caption"
+                    href={EXPLORER.tx(claim.payment.digest).suiscan}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    View the transaction that paid you
+                  </a>
+                ) : null}
+
+                {claim.state === 'payment_failed' && claim.payment ? (
+                  <p className="text-caption text-no">
+                    Nothing was paid. {claim.payment.message}
+                  </p>
+                ) : null}
+
+                {claim.state === 'rejected' && claim.review?.reason ? (
+                  <p className="text-caption text-ink-2">
+                    Rejected: {claim.review.reason}
+                  </p>
+                ) : null}
+
+                {claim.state === 'paying' ? (
+                  <p className="text-caption text-wait">
+                    The payment has been sent and is waiting to confirm.
+                  </p>
+                ) : null}
               </li>
             ))}
           </ul>

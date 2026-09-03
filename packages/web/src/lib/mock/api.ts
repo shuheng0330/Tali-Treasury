@@ -48,7 +48,11 @@ export function evaluate(
   draft: DraftClaim,
   against: MandateView = mandate,
   committed: Amount = COMMITTED,
+  /** What the receipt is denominated in. The mandate holds USDC, so anything
+   *  else has nothing to compare against until a conversion quote exists. */
+  currency: string | null = 'USDC',
 ): PolicyDecision {
+  const currencyReady = currency === 'USDC';
   const available = subtract(against.remainingBudget, committed);
   const recipient = draft.recipient ?? MEMBER;
   const exactDuplicate = seededClaims.some(
@@ -94,16 +98,22 @@ export function evaluate(
     {
       rule: 'per_claim_max',
       label: 'Per-claim cap',
-      passed: compare(draft.amount, against.maxPerClaim) <= 0,
-      detail: `${toDisplay(draft.amount)} vs ${toDisplay(against.maxPerClaim)} cap`,
+      passed: !currencyReady || compare(draft.amount, against.maxPerClaim) <= 0,
+      detail: currencyReady
+        ? `${toDisplay(draft.amount)} vs ${toDisplay(against.maxPerClaim)} cap`
+        : 'Checked after an explicit USDC conversion quote is attached',
       onChain: true,
+      ...(currencyReady ? {} : { pending: true }),
     },
     {
       rule: 'total_budget',
       label: 'Budget remaining',
-      passed: compare(draft.amount, against.remainingBudget) <= 0,
-      detail: `${toDisplay(against.remainingBudget)} in the mandate, ${toDisplay(available)} uncommitted`,
+      passed: !currencyReady || compare(draft.amount, against.remainingBudget) <= 0,
+      detail: currencyReady
+        ? `${toDisplay(against.remainingBudget)} in the mandate, ${toDisplay(available)} uncommitted`
+        : 'Checked after an explicit USDC conversion quote is attached',
       onChain: true,
+      ...(currencyReady ? {} : { pending: true }),
     },
     {
       rule: 'recipient_allowlist',
@@ -181,7 +191,7 @@ export function reviewQueue(): ReviewQueueItem[] {
       description: claim.description,
       confidence: claim.id === 'q-0146' ? 0.72 : 0.99,
       receiptHash: claim.receiptHash,
-    });
+    }, mandate, COMMITTED, claim.analysis?.currency ?? 'USDC');
 
     return {
       claim,

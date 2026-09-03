@@ -36,11 +36,14 @@ export function createProcessClaimHandler(
         body && typeof body === 'object' && 'processor' in body
           ? body.processor
           : undefined;
-      if (processor !== undefined && typeof processor !== 'string') {
+      if (
+        processor !== undefined &&
+        (typeof processor !== 'string' || !/^0x[0-9a-f]{64}$/.test(processor))
+      ) {
         throw new ServerError(
           'invalid_request',
           400,
-          'processor is required',
+          'processor must be a canonical Sui address',
         );
       }
 

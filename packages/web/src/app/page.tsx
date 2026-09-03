@@ -130,14 +130,14 @@ export default function Page() {
           <div className="flex max-w-xl flex-1 flex-col gap-5">
             <p className="text-body-lg text-canvas/70">
               That&rsquo;s the right instinct. A check we wrote is a check we could quietly
-              remove.
+              remove, so the only claim worth making is about the contract.
             </p>
             <p className="text-body-lg text-canvas/70">
-              So the safety test hands you the amount and the recipient, and gives you a switch
-              that skips every check this app performs and sends the transaction raw. Once that
-              switch is on, the only thing standing between you and the treasury is the contract
-              itself, which refuses the transaction, burns gas refusing it, and leaves the
-              balance where it was.
+              The safety test hands you the amount and the recipient, and a switch that skips
+              every check this app performs. With it on, the only thing between you and the
+              treasury is the contract — which refuses, spends gas refusing, and leaves the
+              balance where it was. Two of those refusals are already on chain and linked from
+              the page, with digests that open in an explorer that has nothing to do with us.
             </p>
             <Link href="/safety" className="btn btn--accent mt-2 w-fit">
               Open the safety test

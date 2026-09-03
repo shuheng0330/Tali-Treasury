@@ -131,7 +131,7 @@ describe('claim API client', () => {
   it('submits a typed treasurer review action', async () => {
     const response = {
       claim: { id: 'claim-id', state: 'needs_correction' },
-      payment: null,
+      recorded: true,
     } as ReviewClaimResponse;
     const fetchMock = vi.fn(async () => Response.json(response));
     vi.stubGlobal('fetch', fetchMock);
