@@ -21,11 +21,10 @@ function describe(error: unknown): string {
       : 'the payroll API is unreachable';
   }
 
-  /* A route that does not exist yet answers with Next's HTML 404, which parses
-     as an unreadable response. Saying so would blame the server for a route
-     nobody has written. */
   if (error.status === 404) {
-    return 'the payroll API is not built yet';
+    /* The routes exist. A 404 from them means the mandate or the stream the
+       request named was not found, which is what the server already says. */
+    return error.message.charAt(0).toLowerCase() + error.message.slice(1);
   }
   if (error.code === 'authentication_required') {
     return 'the demo identity API is switched off';

@@ -11,7 +11,6 @@ function describe(error: unknown): string {
       ? 'the backend did not answer in time'
       : 'the backend is unreachable';
   }
-  if (error.status === 404) return 'the revoke endpoint is not built yet';
   if (error.code === 'authentication_required') {
     return 'the demo identity API is switched off';
   }
