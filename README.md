@@ -31,6 +31,7 @@ Status words are intentionally precise:
 | Claim policy processing | **Complete locally** | Treasurer action invokes the server evaluator and persists the decision |
 | Treasurer review actions | **Complete locally** | Real approve/reject/correction API and UI; eligible USDC approval enters the guarded testnet signer |
 | Safe payment reconciliation | **Complete locally** | Digest stored before broadcast; explicit status checks never sign or resubmit |
+| Payroll write-route authorization | **Complete locally** | Employer session guards payroll, revocation and safety broadcasts; stream employee guards withdrawal |
 | Revoke and Safety Test interactions | **Mocked** | Clearly labelled previews; no browser signing or state changes |
 | Gemini receipt analysis and Supabase claims | **Complete locally; rollout pending** | Private drafts, authenticated access and 91 pgTAP assertions |
 | Deterministic policy and backend agent signing | **Complete locally** | Testnet-only, treasurer-triggered, race-safe and fake-operation verified; no transaction broadcast in this increment |
@@ -131,7 +132,8 @@ wallet, then use the separate **Sign in** action before protected APIs activate.
 The treasury process API
 persists real policy decisions and can run the server-only testnet signer for USDC
 `auto_pay` claims. Treasurer review actions are real API writes. Revoke and Safety
-Test writes remain clearly marked simulations or previews.
+Test controls remain clearly marked simulations or previews, while their server
+write routes now reject any session other than the configured employer.
 
 Run Move tests separately:
 
@@ -173,6 +175,7 @@ AGENT_CAP_ID=
 SUI_NETWORK=testnet
 TALI_ALLOW_INSECURE_DEMO_IDENTITY=false
 TALI_APP_ORIGIN=http://localhost:3000
+TALI_EMPLOYER_WALLET=
 ```
 
 `SUPABASE_SERVICE_ROLE_KEY` remains a temporary fallback for an existing project,
@@ -183,6 +186,12 @@ but `SUPABASE_SECRET_KEY` is preferred. Never add either value to a
 use their HTTPS origin and keep `TALI_ALLOW_INSECURE_DEMO_IDENTITY=false`. The
 compatibility identity is local-only, works only when no session cookie exists,
 and never overrides an invalid or expired cookie.
+
+`TALI_EMPLOYER_WALLET` is a server-only canonical lowercase Sui address. Its
+authenticated session is required to run payroll, revoke the payroll mandate, or
+submit a safety-test transaction. Salary-stream withdrawal instead requires the
+authenticated wallet to match that stream's immutable employee address. Exact
+origin and session checks run before request parsing or any signing dependency.
 
 Run the local database checks:
 
@@ -218,6 +227,9 @@ accepts only JPEG, PNG, and WebP. The server exposes:
   correction request; eligible USDC approval immediately starts testnet payment.
 - `POST /api/claims/:id/reconcile` — treasurer-only observation of the stored Sui
   digest; returns pending or atomically persists a confirmed terminal result.
+- `POST /api/payroll/runs`, `POST /api/mandate/revoke`, and
+  `POST /api/safety/attack` — configured-employer-only writes.
+- `POST /api/streams/:id/withdraw` — stream-employee-only withdrawal request.
 
 See [`docs/API.md`](docs/API.md) for request/response and error details. Protected
 writes require the exact configured Origin header. Wallet connection alone does
@@ -246,8 +258,9 @@ Immediate next vertical slice:
 2. Configure server-only Gemini and Supabase credentials in the deployment.
 3. Add member correction/resubmission; trusted MYR-to-USDC quotation remains the
    teammate-owned parallel increment.
-4. Configure the testnet agent key and owned `AgentCap` server-side.
-5. With separate authorization, run one small funded smoke claim and record its
+4. Add employer-managed payroll/member rosters as a separate increment.
+5. Configure the testnet agent key and owned `AgentCap` server-side.
+6. With separate authorization, run one small funded smoke claim and record its
    real digest; automated tests intentionally never broadcast.
 
 ## Documentation index

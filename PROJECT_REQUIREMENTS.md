@@ -129,6 +129,17 @@ The reconciliation endpoint and treasury UI must:
 
 ## Security and business rules
 
+- Payroll execution, mandate revocation, and safety-test broadcasts require an
+  authenticated wallet matching the canonical server-only
+  `TALI_EMPLOYER_WALLET` value.
+- Salary-stream withdrawal requires an authenticated wallet matching the
+  selected stream's immutable employee address; the employer is not a substitute.
+- Exact-origin validation must precede session resolution, payload parsing,
+  service mutation, transaction construction, and signing for these writes.
+- Missing or malformed employer configuration fails closed with a sanitized 503;
+  a valid but unauthorized session returns a sanitized 403.
+- Rejected authorization requests must never invoke payroll, revocation, safety,
+  or withdrawal mutation dependencies.
 - Gemini and Supabase credentials are server-only and must never use a
   `NEXT_PUBLIC_` prefix.
 - The backend-agent private key is server-only, testnet-only, loaded only when an
@@ -166,6 +177,7 @@ The reconciliation endpoint and treasury UI must:
 - a live funded smoke transaction for this increment (automated verification uses
   injected fake operations and never broadcasts);
 - member correction and resubmission after `request_correction`;
+- employer-managed payroll and claim-member roster APIs;
 - live browser presentation for payments initiated outside the review flow;
 - production rollout of this new migration and hosted wallet-flow verification.
 

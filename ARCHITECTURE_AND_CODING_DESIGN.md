@@ -33,7 +33,8 @@ adapter draft/claim store    (Sui Testnet)
 - `src/server/supabase` owns privileged client construction, database row mapping,
   private uploads and signed URLs.
 - `src/server/auth` issues/verifies signed challenges, hashes opaque tokens,
-  enforces exact origins, and resolves session identity with invalid-cookie precedence.
+  enforces exact origins, resolves session identity with invalid-cookie precedence,
+  and applies server-only employer-wallet authorization for privileged writes.
 - `src/server/dependencies.ts` composes production adapters lazily so importing a
   route never reads secrets.
 - `src/app/api` contains thin Node.js route handlers and testable handler factories.
@@ -47,6 +48,22 @@ member corrects the confirmed claim fields.
 The claim boundary and database accept three-letter ISO currency codes plus the
 explicit four-letter `USDC` asset symbol. This keeps validation narrow while
 allowing the configured payment asset to persist end to end.
+
+## Payroll and treasury write authorization
+
+`POST /api/payroll/runs`, `POST /api/mandate/revoke`, and
+`POST /api/safety/attack` use a shared route authorization primitive. The route
+checks the exact `TALI_APP_ORIGIN`, resolves the fixed-expiry wallet session, and
+compares its canonical address with the server-only `TALI_EMPLOYER_WALLET` before
+parsing the body or invoking a service that can sign or mutate. Missing or malformed
+configuration fails closed; the browser never receives the configured address from
+an API response.
+
+`POST /api/streams/:id/withdraw` uses the same origin/session ordering, then reads
+the selected stream and compares the session wallet with `stream.employee`. Only
+after ownership passes may it call the withdrawal dependency. Handler factories
+inject identity and business operations so route tests prove unauthorized requests
+cannot reach chain-signing code. Payroll-history GET behavior remains unchanged.
 
 ## Database design
 
@@ -226,6 +243,10 @@ messages are never serialized.
   lookups, terminal success/rejection, RPC uncertainty, idempotency, authorization,
   bounded polling, explorer links, and the guarantee that observation never signs
   or submits.
+- Payroll/revoke/safety route tests cover exact-origin, missing-session,
+  missing-configuration and wrong-wallet failures with mutation spies kept at
+  zero calls. Stream tests additionally prove read-before-withdraw ordering and
+  employee-only ownership.
 - Payment-adapter tests use generated credentials and injected operations to cover
   lazy configuration, success, Move rejection and failure classification without
   a network request or transaction broadcast.

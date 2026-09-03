@@ -16,7 +16,8 @@ whole product flow is live.
 | Web dashboard | ✅ Live read-only | Current mandate state comes from Sui Testnet | Signed actions and backend claim totals |
 | Receipt and claim backend | ✅ Complete locally | Wallet sessions, one-time analysis drafts, private storage, deterministic policy, atomic review/payment states, and safe exact-digest reconciliation | Apply latest migrations and configure hosted API/origin/signer |
 | Claim and review UX | ✅ Complete locally | Testnet wallet connect/sign-in/logout, real analyze/create/list/review, and bounded payment-status polling | Hosted wallet verification and member resubmission; FX is a teammate-owned increment |
-| Safety Test UI | 🟡 Mocked with live evidence links | Local preview plus links to two real rejected transactions | Interactive signed attempts and revocation scenario |
+| Payroll and treasury write RBAC | ✅ Complete locally | Employer-only payroll/revoke/safety APIs and employee-only stream withdrawal | Configure hosted employer wallet and verify both roles |
+| Safety Test UI | 🟡 Mocked with live evidence links | Local preview plus links to two real rejected transactions; API is employer-only | Interactive signed attempts and revocation scenario |
 | Deployment | ✅ Live reads; auth rollout pending | Vercel production and live Sui dashboard verified | Push wallet migration, configure exact HTTPS origin, verify protected writes |
 | Submission | ⬜ Pending | — | Landing content, videos, deck, disclosure and rehearsal |
 
@@ -58,14 +59,16 @@ Legend: ✅ done · 🟡 in progress · ⬜ not started · ⛔ cut
 Updated 2 September and ordered by the risk of leaving each item unfinished:
 
 1. Push the wallet/draft migration, configure `TALI_APP_ORIGIN`, and verify member
-   and treasurer browser wallets on the hosted app.
+   and treasurer browser wallets on the hosted app; configure the canonical
+   server-only `TALI_EMPLOYER_WALLET` and verify employer/employee denial cases.
 2. Teammate-owned trusted MYR-to-USDC quote with source, timestamp, expiry,
    rounding and payout amount.
 3. Member correction and resubmission after a treasurer request.
 4. One authorized funded testnet smoke payment and manual verification of the
    completed exact-digest reconciliation path.
-5. Interactive on-chain safety attempts and live revocation.
-6. Submission video, deck, AI disclosure and rehearsal.
+5. Employer-managed payroll/member rosters as a separate API increment.
+6. Interactive on-chain safety attempts and live revocation.
+7. Submission video, deck, AI disclosure and rehearsal.
 
 ---
 

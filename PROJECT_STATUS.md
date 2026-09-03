@@ -1,6 +1,6 @@
 # Project status
 
-Last updated: 2 September 2026 (MYT)
+Last updated: 3 September 2026 (MYT)
 
 ## Complete locally
 
@@ -52,6 +52,10 @@ Last updated: 2 September 2026 (MYT)
   explorer links, explicit bounded polling, and reconcile-on-refresh behavior;
 - 349 web tests passing at the reconciliation checkpoint. The new migration and
   pgTAP assertions are authored; their local replay remains pending Docker startup.
+- employer-session authorization for payroll execution, mandate revocation, and
+  safety-test broadcasts, with exact-origin checks before parsing or mutation;
+- employee-session ownership enforcement for salary-stream withdrawals, including
+  read-before-withdraw ordering and safe denial without signing.
 
 ## Hosted schema verified
 
@@ -85,6 +89,7 @@ must be rerun after Docker Desktop is repaired or upgraded.
   browser Testnet wallets;
 - add trusted MYR-to-USDC quote capture, expiry and converted payout storage;
 - add member correction and resubmission after a correction request;
+- add employer-managed payroll/member roster APIs as a separate increment;
 - run the hosted receipt flow end to end after authenticated identity is available.
 
 ## Known limitations
