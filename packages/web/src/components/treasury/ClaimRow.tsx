@@ -76,6 +76,15 @@ export function ClaimRow({
 }: Props) {
   const { claim, decision, agentNote, reason } = item;
   const approvalBlocked = approvalBlockReason(claim, decision);
+
+  /* The cap and the budget are measured in USDC, so for anything else they
+     were never evaluated. Decisions stored before the engine started saying so
+     still carry a tick that was never earned, and the row is the last place
+     that can tell. */
+  const unquoted = Boolean(claim.analysis && claim.analysis.currency !== 'USDC');
+  const notEvaluated = (check: (typeof decision.checks)[number]) =>
+    check.pending === true ||
+    (unquoted && (check.rule === 'per_claim_max' || check.rule === 'total_budget'));
   const awaitingPolicy = claim.state === 'submitted' && claim.decision === null;
   const reviewPending = pendingAction !== null;
 
@@ -106,11 +115,11 @@ export function ClaimRow({
             {decision.checks.map((check) => (
               <li key={check.rule} className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
                 <span className="translate-y-0.5">
-                  <Verdict passed={check.passed} pending={check.pending} />
+                  <Verdict passed={check.passed} pending={notEvaluated(check)} />
                 </span>
                 <span
                   className={`text-caption ${
-                    check.pending
+                    notEvaluated(check)
                       ? 'text-ink-3'
                       : check.passed
                         ? 'text-ink-2'
@@ -120,7 +129,9 @@ export function ClaimRow({
                   {check.label}
                 </span>
                 <span className="tnum ml-auto text-right text-caption text-ink-3">
-                  {check.detail}
+                  {notEvaluated(check) && !check.pending
+                    ? 'Checked after an explicit USDC conversion quote is attached'
+                    : check.detail}
                 </span>
               </li>
             ))}

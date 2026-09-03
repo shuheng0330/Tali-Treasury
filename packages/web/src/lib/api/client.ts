@@ -80,9 +80,14 @@ export async function createClaim(
 
 export async function listClaims(
   eventId: string,
+  /* Named only so the demo identity can still read the queue while wallet
+     sign-in is unavailable. A session cookie always wins over it, and the
+     server ignores it entirely unless the demo flag is on. */
+  viewer?: string,
 ): Promise<ListClaimsResponse> {
+  const query = viewer ? `?viewer=${encodeURIComponent(viewer)}` : '';
   return responseJson<ListClaimsResponse>(
-    await fetch(`/api/events/${encodeURIComponent(eventId)}/claims`, {
+    await fetch(`/api/events/${encodeURIComponent(eventId)}/claims${query}`, {
       cache: 'no-store',
     }),
   );

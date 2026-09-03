@@ -66,7 +66,7 @@ export function ClaimFlow({ apiEnabled, mandate, mandateReadError }: Props) {
    *  blaming the analyser for a database refusal. */
   const [saveError, setSaveError] = useState<string | null>(null);
 
-  const claims = useClaims(apiEnabled);
+  const claims = useClaims(apiEnabled, wallet.address ?? DEMO_SUBMITTER);
   const reloadClaims = claims.reload;
 
   /** The chain is the authority on the budget. Falling back to the sample

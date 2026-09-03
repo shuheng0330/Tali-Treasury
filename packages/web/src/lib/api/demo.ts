@@ -81,9 +81,9 @@ export async function tryCreateClaim(
   }
 }
 
-export async function tryListClaims(): Promise<Sourced<Claim[]>> {
+export async function tryListClaims(viewer?: string): Promise<Sourced<Claim[]>> {
   try {
-    const body = await listClaims(DEMO_EVENT_ID);
+    const body = await listClaims(DEMO_EVENT_ID, viewer);
     return { data: body.claims, source: 'live', reason: null };
   } catch (error) {
     return { data: recentClaims, source: 'mock', reason: describe(error) };

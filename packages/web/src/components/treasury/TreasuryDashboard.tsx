@@ -8,6 +8,7 @@ import { CLAIM_CHIP, EXPLORER } from '@tali/shared';
 import { Money } from '@/components/Money';
 import { StatusChip } from '@/components/StatusChip';
 import { COMMITTED, event } from '@/lib/mock/data';
+import { DEMO_TREASURER } from '@/lib/demo-config';
 import { reviewQueue, settledClaims } from '@/lib/mock/api';
 import { committedFrom, settledFrom, toReviewQueue } from '@/lib/queue';
 import { useClaims } from '@/lib/api/useClaims';
@@ -58,7 +59,7 @@ export function TreasuryDashboard({
   const [reviewError, setReviewError] = useState<string | null>(null);
   const [payingId, setPayingId] = useState<string | null>(null);
 
-  const live = useClaims(apiEnabled);
+  const live = useClaims(apiEnabled, wallet.address ?? DEMO_TREASURER);
 
   const queue = useMemo(
     () =>

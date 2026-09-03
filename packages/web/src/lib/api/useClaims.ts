@@ -18,7 +18,11 @@ export interface ClaimsState {
  * identical on the server and the client, and means a backend that is down
  * costs the demo nothing but a label.
  */
-export function useClaims(enabled: boolean): ClaimsState & { reload: () => void } {
+export function useClaims(
+  enabled: boolean,
+  /** Read as this address when no wallet session exists. */
+  viewer?: string,
+): ClaimsState & { reload: () => void } {
   const [state, setState] = useState<ClaimsState>({
     claims: recentClaims,
     source: 'mock',
@@ -42,7 +46,7 @@ export function useClaims(enabled: boolean): ClaimsState & { reload: () => void 
 
     let live = true;
 
-    tryListClaims()
+    tryListClaims(viewer)
       .then((result) => {
         if (!live) return;
         setState({
@@ -60,7 +64,7 @@ export function useClaims(enabled: boolean): ClaimsState & { reload: () => void 
     return () => {
       live = false;
     };
-  }, [nonce, enabled]);
+  }, [nonce, enabled, viewer]);
 
   return { ...state, reload };
 }
