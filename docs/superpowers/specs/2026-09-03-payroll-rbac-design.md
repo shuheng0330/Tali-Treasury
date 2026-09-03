@@ -1,8 +1,8 @@
 # Payroll and Treasury Write-Route RBAC Design
 
-**Date:** 3 September 2026  
-**Owner:** Lim Wey Cheng  
-**Target branch:** `codex/payroll-rbac`  
+**Date:** 3 September 2026
+**Owner:** Lim Wey Cheng
+**Target branch:** `codex/payroll-rbac`
 **Base:** merged `origin/main` after PR #21
 
 ## Objective
