@@ -233,6 +233,15 @@ export function ClaimFlow({ apiEnabled, mandate, mandateReadError }: Props) {
         </div>
       )}
 
+      {saveError ? (
+        <p
+          role="alert"
+          className="mb-6 rounded-card border border-no-line bg-no-soft p-4 text-caption text-no"
+        >
+          {saveError}
+        </p>
+      ) : null}
+
       {home ? (
         <ClaimHome
           eventName={DEMO_EVENT_NAME}

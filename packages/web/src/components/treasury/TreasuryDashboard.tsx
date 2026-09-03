@@ -55,7 +55,10 @@ export function TreasuryDashboard({
   const [tab, setTab] = useState<Tab>('review');
   const [confirming, setConfirming] = useState(false);
   const [processingId, setProcessingId] = useState<string | null>(null);
-  const [processError, setProcessError] = useState<string | null>(null);
+  /* Holds a whole sentence rather than a fragment. Three different operations
+     write here, and a fixed lead-in around it named the wrong one for two of
+     them — a refused transfer read as a failed evaluation. */
+  const [actionError, setActionError] = useState<string | null>(null);
   const [reviewing, setReviewing] = useState<{
     claimId: string;
     action: ClaimReviewAction;
@@ -113,22 +116,24 @@ export function TreasuryDashboard({
 
   async function process(id: string) {
     if (!authenticated) {
-      setProcessError('sign in with the event treasurer wallet first');
+      setActionError('Sign in with the event treasurer wallet first.');
       return;
     }
     setProcessingId(id);
-    setProcessError(null);
+    setActionError(null);
     const result = await tryProcessClaim(id);
     setProcessingId(null);
     if (result.data === null) {
-      setProcessError(result.reason ?? 'claim processing failed');
+      setActionError(
+        `Could not evaluate the claim: ${result.reason ?? 'claim processing failed'}.`,
+      );
       return;
     }
     /* Evaluating is not read-only: an auto_pay verdict signs and submits in
        the same request, so a refusal has to be said out loud rather than left
        looking like a successful evaluation. */
     if (result.data.payment && !result.data.payment.ok) {
-      setProcessError(result.data.payment.message);
+      setActionError(`The claim was evaluated, but nothing was paid: ${result.data.payment.message}`);
     }
     reloadEverything();
   }
@@ -137,30 +142,34 @@ export function TreasuryDashboard({
      learned what happened, so somebody reads the chain and records it. */
   async function reconcile(id: string, outcome: 'paid' | 'not_paid', digest?: string) {
     setReconcilingId(id);
-    setProcessError(null);
+    setActionError(null);
     const result = await tryReconcileClaim(id, outcome, digest);
     setReconcilingId(null);
     if (result.data === null) {
-      setProcessError(result.reason ?? 'the outcome was not recorded');
+      setActionError(
+        `The outcome was not recorded: ${result.reason ?? 'the write was refused'}.`,
+      );
       return;
     }
     if (!result.data.recorded) {
-      setProcessError('This claim had already been settled, so nothing was recorded.');
+      setActionError('This claim had already been settled, so nothing was recorded.');
     }
     reloadEverything();
   }
 
   async function pay(id: string) {
     setPayingId(id);
-    setProcessError(null);
+    setActionError(null);
     const result = await tryPayClaim(id);
     setPayingId(null);
     if (result.data === null) {
-      setProcessError(result.reason ?? 'the payment did not complete');
+      setActionError(
+        `The payment did not complete: ${result.reason ?? 'the transfer was refused'}.`,
+      );
       return;
     }
     if (!result.data.payment.ok) {
-      setProcessError(result.data.payment.message);
+      setActionError(`Nothing was paid: ${result.data.payment.message}`);
     }
     reloadEverything();
   }
@@ -271,12 +280,13 @@ export function TreasuryDashboard({
               A decision cannot be recorded: the database has no review columns, so there
               would be nothing saying who decided or why. Apply migration{' '}
               <span className="font-mono">20260901020000_claim_review_actions.sql</span>.
-              Evaluating a claim still works.
+              Evaluating a claim, releasing a payment and recording an outcome write none
+              of those columns, so they still work.
             </p>
           ) : null}
-          {processError ? (
+          {actionError ? (
             <p className="mt-3 rounded-control border border-no-line bg-no-soft p-3 text-caption text-no" role="alert">
-              Could not evaluate the claim: {processError}.
+              {actionError}
             </p>
           ) : null}
         </div>
@@ -333,12 +343,10 @@ export function TreasuryDashboard({
                   onReconcile={reconcile}
                   paying={payingId === item.claim.id}
                   reconciling={reconcilingId === item.claim.id}
-                  actionsDisabled={!authenticated || !reviewsRecordable}
-                  disabledReason={
-                    !authenticated
-                      ? 'Sign in with the event treasurer wallet first'
-                      : 'The database cannot store a decision yet'
-                  }
+                  actionsDisabled={!authenticated}
+                  disabledReason="Sign in with the event treasurer wallet first"
+                  reviewsBlocked={!reviewsRecordable}
+                  reviewsBlockedReason="The database cannot store a decision yet"
                 />
               ))}
             </ul>

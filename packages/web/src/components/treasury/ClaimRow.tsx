@@ -61,9 +61,14 @@ interface Props {
   onReconcile: (id: string, outcome: 'paid' | 'not_paid', digest?: string) => void;
   paying: boolean;
   reconciling: boolean;
+  /** No write is possible at all — nobody is signed in to make one. */
   actionsDisabled?: boolean;
   /** Carried by every greyed review control, not only the first one. */
   disabledReason?: string;
+  /** Only a recorded verdict is impossible. Evaluating, paying and recording an
+   *  outcome write no review columns, so they stay available. */
+  reviewsBlocked?: boolean;
+  reviewsBlockedReason?: string;
 }
 
 export function ClaimRow({
@@ -78,6 +83,8 @@ export function ClaimRow({
   reconciling,
   actionsDisabled = false,
   disabledReason,
+  reviewsBlocked = false,
+  reviewsBlockedReason,
 }: Props) {
   const { claim, decision, agentNote, reason } = item;
   const approvalBlocked = approvalBlockReason(claim, decision);
@@ -94,6 +101,12 @@ export function ClaimRow({
     (unquoted && (check.rule === 'per_claim_max' || check.rule === 'total_budget'));
   const awaitingPolicy = claim.state === 'submitted' && claim.decision === null;
   const reviewPending = pendingAction !== null;
+  const verdictBlocked = actionsDisabled || reviewsBlocked;
+  const verdictReason = actionsDisabled
+    ? disabledReason
+    : reviewsBlocked
+      ? reviewsBlockedReason
+      : undefined;
 
   return (
     <li className="flex flex-col gap-3 px-4 py-4">
@@ -274,10 +287,10 @@ export function ClaimRow({
           <>
             <button
               type="button"
-              disabled={approvalBlocked !== null || reviewPending || actionsDisabled}
+              disabled={approvalBlocked !== null || reviewPending || verdictBlocked}
               onClick={() => onReview(claim.id, 'approve')}
               className="btn btn--primary h-9 px-5 text-label"
-              title={approvalBlocked ?? (actionsDisabled ? disabledReason : undefined)}
+              title={approvalBlocked ?? verdictReason}
             >
               {approvalBlocked
                 ? 'Cannot approve'
@@ -287,19 +300,19 @@ export function ClaimRow({
             </button>
             <button
               type="button"
-              disabled={reviewPending || actionsDisabled}
+              disabled={reviewPending || verdictBlocked}
               onClick={() => onReview(claim.id, 'reject')}
               className="btn btn--danger h-9 px-5 text-label"
-              title={actionsDisabled ? disabledReason : undefined}
+              title={verdictReason}
             >
               {pendingAction === 'reject' ? 'Rejecting…' : 'Reject'}
             </button>
             <button
               type="button"
-              disabled={reviewPending || actionsDisabled}
+              disabled={reviewPending || verdictBlocked}
               onClick={() => onReview(claim.id, 'request_correction')}
               className="btn btn--ghost h-9 px-5 text-label"
-              title={actionsDisabled ? disabledReason : undefined}
+              title={verdictReason}
             >
               {pendingAction === 'request_correction'
                 ? 'Requesting…'

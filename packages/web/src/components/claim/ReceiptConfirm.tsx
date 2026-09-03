@@ -90,12 +90,22 @@ export function ReceiptConfirm({
   const amountIsValid =
     /^\d+(?:\.\d{1,6})?$/.test(normalizedAmount) &&
     BigInt(toBaseUnits(normalizedAmount)) > 0n;
-  const ready =
-    duplicateOf === null &&
-    merchant.trim() !== '' &&
-    amountIsValid &&
-    receiptDate.trim() !== '' &&
-    description.trim() !== '';
+  /* Every other disabled control on this screen says what is stopping it. A
+     dead submit button with nothing beside it leaves the member re-reading a
+     filled-in form looking for the field they missed. */
+  const blocking =
+    duplicateOf !== null
+      ? null
+      : merchant.trim() === ''
+        ? 'the merchant'
+        : !amountIsValid
+          ? 'an amount above zero'
+          : receiptDate.trim() === ''
+            ? 'the date'
+            : description.trim() === ''
+              ? 'a short description'
+              : null;
+  const ready = duplicateOf === null && blocking === null;
 
   return (
     <div className="flex flex-col gap-4">
@@ -244,6 +254,12 @@ export function ReceiptConfirm({
       >
         {duplicateOf ? 'Already claimed' : submitLabel}
       </button>
+
+      {blocking ? (
+        <p className="text-center text-caption text-ink-3">
+          Still needs {blocking}.
+        </p>
+      ) : null}
     </div>
   );
 }
