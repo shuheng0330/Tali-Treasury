@@ -218,22 +218,19 @@ export function createListClaimsService(deps: {
       throw databaseError(error);
     }
 
-    try {
-      const claims = await Promise.all(
-        storedClaims.map(async ({ claim, storagePath }) => ({
-          ...claim,
-          receiptUrl: await deps.receipts.createSignedUrl(storagePath, 300),
-        })),
-      );
-      return { claims, cursor: null };
-    } catch (error) {
-      throw new ServerError(
-        'storage_failed',
-        500,
-        'Receipt URL creation failed',
-        { cause: error },
-      );
-    }
+    /* One receipt whose object is missing must not cost the caller every other
+       claim. The screens already render a claim without an image and say so,
+       whereas a thrown error leaves the queue empty and the treasurer with
+       nothing to act on. */
+    const claims = await Promise.all(
+      storedClaims.map(async ({ claim, storagePath }) => ({
+        ...claim,
+        receiptUrl: await deps.receipts
+          .createSignedUrl(storagePath, 300)
+          .catch(() => null),
+      })),
+    );
+    return { claims, cursor: null };
   };
 }
 

@@ -41,6 +41,7 @@ export type ClaimChip =
   | 'submitted'
   | 'needs_review'
   | 'approved'
+  | 'paying'
   | 'paid'
   | 'rejected'
   | 'payment_failed';
@@ -52,7 +53,7 @@ export const CLAIM_CHIP: Record<ClaimState, ClaimChip> = {
   submitted: 'submitted',
   awaiting_review: 'needs_review',
   approved: 'approved',
-  paying: 'approved',
+  paying: 'paying',
   paid: 'paid',
   rejected: 'rejected',
   payment_failed: 'payment_failed',
@@ -65,6 +66,7 @@ export const CLAIM_CHIP_LABEL: Record<ClaimChip, string> = {
   submitted: 'Submitted',
   needs_review: 'Needs review',
   approved: 'Approved',
+  paying: 'Paying',
   paid: 'Paid',
   rejected: 'Rejected',
   payment_failed: 'Payment failed',

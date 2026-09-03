@@ -31,6 +31,7 @@ const STYLES: Record<ChipStatus, Style> = {
   needs_correction: { label: CLAIM_CHIP_LABEL.needs_correction, glyph: 'wedge', className: 'bg-wait-soft text-wait border-wait-line', dashed: false },
   needs_review: { label: CLAIM_CHIP_LABEL.needs_review, glyph: 'wedge', className: 'bg-wait-soft text-wait border-wait-line', dashed: false },
   approved: { label: CLAIM_CHIP_LABEL.approved, glyph: 'ring', className: 'bg-ok-soft text-ok border-ok-line', dashed: false },
+  paying: { label: CLAIM_CHIP_LABEL.paying, glyph: 'pulse', className: 'bg-accent-soft text-accent-ink border-accent-line', dashed: false },
   paid: { label: CLAIM_CHIP_LABEL.paid, glyph: 'disc', className: 'bg-ok-soft text-ok border-ok-line', dashed: false },
   rejected: { label: CLAIM_CHIP_LABEL.rejected, glyph: 'cross', className: 'bg-no-soft text-no border-no-line', dashed: false },
   payment_failed: { label: CLAIM_CHIP_LABEL.payment_failed, glyph: 'cross', className: 'bg-no-soft text-no border-no-line', dashed: false },
