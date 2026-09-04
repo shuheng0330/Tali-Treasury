@@ -25,12 +25,14 @@ export {
   buildRunPayrollTransaction,
   buildWithdrawEarnedTransaction,
   buildWithdrawPayrollRemainingTransaction,
+  readPayrollCap,
   readPayrollMandate,
   readSalaryStream,
 } from './payroll.js';
 export type {
   CreatePayrollMandateInput,
   OpenStreamInput,
+  PayrollCapState,
   PayrollMandateState,
   RevokePayrollInput,
   RunPayrollInput,
