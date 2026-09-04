@@ -49,8 +49,12 @@ the submission time against the organiser channel; older notes used 23:59.
   underpayment is requested, allowing Sui to record the failed transaction.
   Failed digests and abort codes persist and link to the explorer; normal
   payrolls retain checked preparation.
-- Fresh verification: 42 Move tests, 45 Sui integration tests, 614 web tests
-  (613 passing and one intentional skip), 132 pgTAP assertions, root typecheck,
+- Verified deficient-EPF transaction
+  `Hqw44T6qTsQKW5ooPGM8BQmN6uNgaXk6TYNvw9tgFT8V`: Sui refused it on abort
+  `24`, charged only signer gas, moved no USDC, and left the mandate at
+  `3.317095 USDC`, `run_count = 1` and `total_paid = 9.046290 USDC`.
+- Fresh verification: 42 Move tests, 45 Sui integration tests, 615 web tests
+  (614 passing and one intentional skip), 132 pgTAP assertions, root typecheck,
   and the production build all passed.
 - Fast-forwarded to `main` at `9f6a07f`; wallet sign-in now surfaces sanitized
   backend failures before applying wallet/network heuristics.
@@ -101,8 +105,8 @@ the submission time against the organiser channel; older notes used 23:59.
 | Claim and review UX | ✅ Complete locally | Browser MYR reimbursement verified, readable outcomes and reasons, exact quote approval, payment-status polling | Hosted verification and member correction/resubmission |
 | Payroll and treasury write RBAC | ✅ Complete locally | Employer-only payroll/revoke/safety APIs and employee-only stream withdrawal | Configure hosted employer wallet and verify both roles |
 | Event-member roster backend | ✅ Complete locally | Treasurer-only active roster GET and add-only POST, safe duplicate handling, shared contracts, and dashboard transport adapter | Deploy; verify treasurer success/non-treasurer 403; render authoritative roster in Treasury UI |
-| Payroll contract and chain boundary | ✅ Live on Testnet | Package v2, funded mandate and atomic RM30 payroll are verified; readers/builders and tests pass | Record deficient-contribution refusal and salary-stream evidence |
-| Payroll application | 🟡 Live local payroll; remaining demo gates pending | Authenticated setup and RM30 run use the registered employee, live FX and real Testnet mandate | Remove remaining sample/global assumptions, verify refusal and employee withdrawal, then host |
+| Payroll contract and chain boundary | ✅ Live on Testnet | Package v2, funded mandate, atomic RM30 payroll and abort-24 deficient-EPF refusal are verified; readers/builders and tests pass | Record salary-stream evidence |
+| Payroll application | 🟡 Live local payroll; stream demo gate pending | Authenticated setup, RM30 run and deficient-EPF safety refusal use the registered employee, live FX and real Testnet mandate | Remove remaining sample/global assumptions, verify employee withdrawal, then host |
 | Authenticated Set Up Payroll | ✅ Live via local app; hosted rollout pending | Slush funded `0xa04894…f1100`; strict verification and idempotent Supabase registration passed | Apply hosted migrations/configuration and repeat from a fresh browser |
 | Create Expense Treasury | 🟡 Screen built and able to sign | `/treasury/setup`: treasurer form, USDC funding preview, wallet-signed creation against the published package, AdminCap retained and AgentCap issued, registration retry that never refunds | Add `POST /api/events`, then event selection/routing and event-aware capability mapping |
 | Safety Test UI | 🟡 Mocked with live evidence links | Local preview plus links to two real rejected transactions; API is employer-only | Interactive signed attempts and revocation scenario |
@@ -161,8 +165,8 @@ Updated 4 September. See [payroll launch plan](PAYROLL_LAUNCH_PLAN.md) and
    idempotent registration are complete.
 4. Replace `sampleStaff` and global demo assumptions with the registered payroll;
    enforce employer authorization and employee-only stream withdrawal.
-5. ✅ Verify one successful payroll. One deficient-contribution refusal and one
-   accrued-salary withdrawal from a fresh browser remain.
+5. ✅ Verify one successful payroll and one deficient-contribution refusal.
+   One accrued-salary withdrawal from a fresh browser remains.
 6. Preserve the working expense-claim demo. Build **Create Expense Treasury** as a
    separate follow-up rather than coupling it to payroll setup.
 7. Deploy and verify the event-member roster API, including one new member who can

@@ -54,9 +54,28 @@ was broadcast. The quote now raises only the employer contribution by the exact
 rounding difference, and the corrected transaction above is the resulting live
 proof.
 
+## Atomic deficient-EPF refusal
+
+Transaction [`Hqw44T…gFT8V`](https://suiscan.xyz/testnet/tx/Hqw44T6qTsQKW5ooPGM8BQmN6uNgaXk6TYNvw9tgFT8V)
+was deliberately submitted with EPF below the mandate floor. Sui executed
+`payroll::run_payroll` and refused it with Move abort code `24` at checkpoint
+`379815374`.
+
+The failed transaction changed no USDC balance and emitted no payroll payment.
+Only `0.001062852 SUI` was charged to the backend signer for gas. After the
+refusal, the mandate still reported:
+
+- `budget = 3.317095 USDC`;
+- `total_paid = 9.046290 USDC`;
+- `run_count = 1`;
+- `committed = 0`;
+- `revoked = false`.
+
+The local Supabase run record stores the same digest and `abort_code = 24`, so
+the product can link its refusal explanation to independently verifiable chain
+evidence.
+
 ## Evidence still required
 
-- One deliberate deficient-contribution transaction refused atomically on
-  Testnet.
 - One salary stream opened from the remaining budget and an accrued withdrawal
   paid to the registered employee.

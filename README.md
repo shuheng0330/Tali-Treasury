@@ -53,7 +53,7 @@ Status words are intentionally precise:
 | Gemini receipt analysis and Supabase claims | **Complete locally; rollout pending** | Private drafts, authenticated access and 132 pgTAP assertions |
 | Deterministic policy and backend agent signing | **Live via local app** | Native USDC payment/recovery and manually approved MYR reimbursement verified on Testnet |
 | Wallet connection and live UI writes | **Complete locally** | Testnet connect, explicit sign-in, one-hour HTTP-only session and sign-out |
-| Statutory payroll enforcement | **Live successful execution; refusal pending** | Employee, EPF, SOCSO and EIS legs settled atomically; deliberate deficient-contribution proof remains |
+| Statutory payroll enforcement | **Live** | Employee, EPF, SOCSO and EIS legs settled atomically; an underfunded EPF leg was refused on abort 24 without moving USDC |
 | Per-second salary accrual | **Published; live proof pending** | `SalaryStream` open/accrue/withdraw is published in package v2 and tested locally. A funded stream has not yet been opened |
 | Web hosting | **Live** | [`tali-treasury.vercel.app`](https://tali-treasury.vercel.app) |
 | Submission pack | **Complete locally; recording pending** | Written submission and six-slide deck are present; video and rehearsal remain |
@@ -75,6 +75,7 @@ The payroll-first release order and acceptance gate live in
 | Payroll setup | [`85PdAX…8ne73`](https://suiscan.xyz/testnet/tx/85PdAXLeVT82SetGWUK9a98vX3UAEcrarRRtUv8ne73) |
 | Payroll mandate | [`0xa04894…f1100`](https://suiscan.xyz/testnet/object/0xa04894a0d3852092d08df2476bb36e47992ec13ad78ba2a6e38cb891f77f1100) |
 | Successful RM30 payroll | [`HpUwPs…Xr27y`](https://suiscan.xyz/testnet/tx/HpUwPspN9QgoXBmLARh8iJDFSxEACSwZNxhzz3zXr27y) |
+| Refused deficient-EPF payroll | [`Hqw44T…gFT8V`](https://suiscan.xyz/testnet/tx/Hqw44T6qTsQKW5ooPGM8BQmN6uNgaXk6TYNvw9tgFT8V) |
 | USDC mandate | [`0x16b9fd…3c7f6f`](https://suiscan.xyz/testnet/object/0x16b9fdc16764d6fa514fb6da55df5ca840d30e5bb057eba6a5ab67cf743c7f6f) |
 | Successful 3 USDC payment | [`Aksj8w…5yQXA`](https://suiscan.xyz/testnet/tx/Aksj8wgVoVRnbkVDyCMQ4qMKa1HfkWqDWF8Xptz5yQXA) |
 | Rejected 15 USDC overspend | [`5fMDNz…2PNpU`](https://suiscan.xyz/testnet/tx/5fMDNz9dAxJFiamg5Bi5iXnPjnHv2HTUB3hv2wJ2PNpU) |
@@ -94,7 +95,9 @@ separation of duties or completion of the hosted flow.
 The payroll mandate began with `12.363385 USDC`. Its first authenticated RM30
 run paid `6.129767 USDC` to the employee and `2.916523 USDC` across the EPF,
 SOCSO and EIS stand-ins in one transaction, leaving `3.317095 USDC`. See the
-[payroll Testnet evidence](docs/PAYROLL_TESTNET_EVIDENCE.md).
+[payroll Testnet evidence](docs/PAYROLL_TESTNET_EVIDENCE.md). A subsequent
+underfunded-EPF attempt was refused on abort `24`; no USDC moved and the mandate
+totals remained unchanged.
 
 ## How the pieces fit
 
