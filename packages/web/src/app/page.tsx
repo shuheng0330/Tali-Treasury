@@ -4,6 +4,7 @@ import { mandate } from '@/lib/mock/data';
 import { sampleStaff } from '@/lib/mock/payroll';
 import { TALI_TESTNET_PACKAGE_ID } from '@tali/treasury-sui';
 import { SPEND_CHECKS } from '@/lib/checks';
+import { RUN_TALLY } from '@/lib/evidence';
 import { PAYROLL_CONFIGURED } from '@/lib/demo-config';
 import { CheckMarquee } from '@/components/landing/CheckMarquee';
 import { Evidence } from '@/components/landing/Evidence';
@@ -79,10 +80,11 @@ export default function Page() {
 
         {PAYROLL_CONFIGURED ? null : (
           <p className="max-w-3xl rounded-card border border-wait-line bg-wait-soft p-4 text-body text-wait">
-            <span className="font-medium">Not yet on chain.</span> The payroll module is
-            written and tested, but not published to Testnet — so these figures are what the
-            contract will enforce, not a transaction you can look up. The claims contract
-            further down is live, and its refusals are real.
+            <span className="font-medium">Published, not yet funded.</span> The payroll
+            module is on chain in package v2 — that upgrade is the last transaction in the
+            list below. Nothing has funded a mandate against it yet, so these figures are what
+            the contract will enforce, not a run you can look up. The claims contract further
+            down is funded, and its refusals are real.
           </p>
         )}
 
@@ -110,7 +112,7 @@ export default function Page() {
           <p className="max-w-2xl text-body-lg text-ink-2">
             Staff claim expenses against the same treasury, and an agent reads the receipt and
             pays it. Either claim below, whenever you like. This one is a drawing of the rules —
-            the three transactions under it are not.
+            the <span className="tnum">{RUN_TALLY.total}</span> transactions under it are not.
           </p>
         </div>
         <Wire />
@@ -120,12 +122,16 @@ export default function Page() {
         <div className="flex flex-col gap-4">
           <p className="eyebrow">On chain</p>
           <h2 className="max-w-3xl text-title">
-            The drawing above is a drawing. These three are not.
+            The drawing above is a drawing. These <span className="tnum">{RUN_TALLY.total}</span>{' '}
+            are not.
           </h2>
           <p className="max-w-2xl text-body-lg text-ink-2">
-            Three transactions submitted to Sui testnet against the deployed package. One was
-            allowed and two were refused, and every digest below opens in an explorer that has
-            nothing to do with us.
+            <span className="tnum">{RUN_TALLY.total}</span> transactions submitted to Sui
+            testnet against the deployed package:{' '}
+            <span className="tnum">{RUN_TALLY.allowed}</span> payments the mandate allowed,{' '}
+            <span className="tnum">{RUN_TALLY.refused}</span> it refused, and the upgrade that
+            published payroll. Every digest below opens in an explorer that has nothing to do
+            with us.
           </p>
         </div>
         <Evidence />
