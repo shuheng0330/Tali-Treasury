@@ -47,6 +47,8 @@ interface Props {
   reviewsRecordable: boolean;
   initialMandate: MandateView | null;
   readError?: string;
+  /** Read from the event row, which is the authority the server checks. */
+  eventTreasurer?: string | null;
 }
 
 export function TreasuryDashboard({
@@ -54,6 +56,7 @@ export function TreasuryDashboard({
   reviewsRecordable,
   initialMandate: mandate,
   readError,
+  eventTreasurer,
 }: Props) {
   const wallet = useWalletSession();
   const authenticated = apiEnabled && wallet.status === 'authenticated';
@@ -307,7 +310,7 @@ export function TreasuryDashboard({
         onRevoke={() => setConfirming(true)}
       />
 
-      {viewerRole(wallet.address) === 'treasurer' ? (
+      {viewerRole(wallet.address, eventTreasurer) === 'treasurer' ? (
         <AddMemberForm eventId={DEMO_EVENT_ID} onAdded={() => live.reload()} />
       ) : null}
 

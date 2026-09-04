@@ -13,7 +13,7 @@ import { grossProblem, grossToBaseUnits, type WageClassValue } from '@/lib/payro
 import { WageClass } from './WageClass';
 import { RoleNotice } from '@/components/RoleNotice';
 import { useWalletSession } from '@/components/wallet/WalletSessionProvider';
-import { DEMO_EMPLOYER } from '@/lib/demo-config';
+import { EMPLOYER_WALLET } from '@/lib/demo-config';
 import { EMPLOYER_COPY, walletAccess } from '@/lib/wallet-access';
 
 interface RunState {
@@ -30,7 +30,7 @@ export function PayrollDesk({
   runsAreLive: boolean;
 }) {
   const { address } = useWalletSession();
-  const access = walletAccess(address, DEMO_EMPLOYER, EMPLOYER_COPY);
+  const access = walletAccess(address, EMPLOYER_WALLET, EMPLOYER_COPY);
 
   const [selected, setSelected] = useState(staff[0]);
   const [wage, setWage] = useState<WageClassValue>({
