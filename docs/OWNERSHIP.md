@@ -13,7 +13,7 @@ Three people, mostly working alone at night. Stay inside your paths and we don't
 
 | Deliverable | Lead | Required support |
 |---|---|---|
-| Publish/upgrade payroll, create mandate and stream, record evidence | Shu Heng | Team agrees wage, employee and funding first |
+| Configure package v2, create mandate and stream, record evidence | Shu Heng | Payroll upgrade is complete; team supplies the agreed employee and stand-in recipients |
 | Sui payroll builders/readers and setup transaction boundary | Shu Heng | Backend and frontend consume the boundary; they do not duplicate it |
 | Verified payroll registration and employer/employee authorization | Lim Wey Cheng | Shu Heng supplies object invariants; Kian Xiang supplies request/UI states |
 | Set Up Payroll, payroll run, proof and earnings UX | Ku Kian Xiang | Backend endpoint contracts and Sui transaction builder |

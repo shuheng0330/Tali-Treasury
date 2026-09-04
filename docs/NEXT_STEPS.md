@@ -26,11 +26,12 @@ budget can cover the complete demonstrated flow more than once.
 
 ## 2. Publish and configure payroll on Testnet
 
-- Publish/upgrade the payroll Move module.
+- ✅ Upgrade the payroll Move module to package v2 (`0xeb973d…b97688`).
 - Create and fund `PayrollMandate<USDC>` and deliver `PayrollCap` to the intended
   signer.
 - Open the employee stream and record all public identifiers and explorer evidence.
-- Include `PAYROLL_PACKAGE_ID`; configuration is incomplete without it.
+- ✅ Record `PAYROLL_PACKAGE_ID` in the public configuration example. Configure
+  the same value in local and hosted runtime environments.
 
 Acceptance: direct chain reads show the expected employer, employee, policy,
 budget, capability ownership and stream state.

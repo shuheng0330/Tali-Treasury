@@ -6,27 +6,41 @@ evidence. Operational faucet and recreation steps belong in `USDC_SETUP.md`.
 ## Current deployment
 
 - Network: Sui testnet
-- Package ID: `0x7be8aa82872facbd01372cdeb20375a82f74011dca1512e41737664a759dc523`
-- Module: `treasury`
-- Move call prefix: `0x7be8aa82872facbd01372cdeb20375a82f74011dca1512e41737664a759dc523::treasury`
+- Current package ID: `0xeb973dbac9e4e5c2ea0c31ffb6b51b4df1f34e05443f970e89a35301e6b97688`
+- Original package ID: `0x7be8aa82872facbd01372cdeb20375a82f74011dca1512e41737664a759dc523`
+- Modules: `payroll`, `treasury`
+- Payroll call prefix: `0xeb973dbac9e4e5c2ea0c31ffb6b51b4df1f34e05443f970e89a35301e6b97688::payroll`
+- Current treasury call prefix: `0xeb973dbac9e4e5c2ea0c31ffb6b51b4df1f34e05443f970e89a35301e6b97688::treasury`
 - UpgradeCap ID: `0x2af41057a6688b9cc151579ff46b10aecc90f8eb2718d9ad1446e98636f8dbec`
 - Publisher: `0x010bcab9ea8de3948d294c1cd90348615634417b65e135a6f9d72b52a10cd2a9`
 - Publish transaction: `Byjr61PJAtFyRej98GKacjSKJryzfWFvVceW1Z1Krepe`
-- Package version: `1`
-- Sui toolchain: `1.78.1`
+- Upgrade transaction: `86914sL2wFj9s7sfcMqdYx9ekST8FRU8Y1tLT5SAaSfN`
+- Package version: `2`
+- Sui toolchain: `1.79.0`
 - Net publish cost: `0.02117496 SUI` in testnet tokens
+- Net version-2 upgrade cost: `0.05248582 SUI` in testnet tokens
 
 ## Verify from the CLI
 
 ```powershell
+sui client object 0xeb973dbac9e4e5c2ea0c31ffb6b51b4df1f34e05443f970e89a35301e6b97688
 sui client object 0x7be8aa82872facbd01372cdeb20375a82f74011dca1512e41737664a759dc523
 sui client object 0x2af41057a6688b9cc151579ff46b10aecc90f8eb2718d9ad1446e98636f8dbec
 sui client tx-block Byjr61PJAtFyRej98GKacjSKJryzfWFvVceW1Z1Krepe
+sui client tx-block 86914sL2wFj9s7sfcMqdYx9ekST8FRU8Y1tLT5SAaSfN
 ```
 
 ## Integration notes
 
-Publishing creates the immutable package and an owned `UpgradeCap`. It does not create a Tali mandate. A treasurer creates each mandate later by calling `create_mandate<T>` with a funding coin, an agent address, a per-claim limit, an expiry, and an allowlist.
+Publishing creates the immutable package and an owned `UpgradeCap`. Version 2 adds
+the payroll module without changing the original package lineage. An upgrade creates
+a new package object ID; use the current v2 ID for payroll calls. It does not create
+a payroll or expense mandate.
+
+A treasurer creates each expense mandate later by calling `create_mandate<T>` with
+a funding coin, an agent address, a per-claim limit, an expiry, and an allowlist.
+An authenticated employer creates and funds a separate `PayrollMandate<T>` through
+the Set Up Payroll flow.
 
 The `UpgradeCap` authorizes future package upgrades. Keep it controlled by the deployment wallet and never share the wallet's private key or recovery phrase.
 
