@@ -41,6 +41,7 @@ Status words are intentionally precise:
 | Treasurer review actions | **Complete locally** | Real approve/reject/correction API and UI; eligible USDC approval enters the guarded testnet signer |
 | Safe payment reconciliation | **Complete locally** | Digest stored before broadcast; explicit status checks never sign or resubmit |
 | Payroll write-route authorization | **Complete locally** | Employer session guards payroll, revocation and safety broadcasts; stream employee guards withdrawal |
+| Event-member roster API | **Complete locally** | Treasurer-only active roster GET and add-only POST; existing dashboard form uses the shared contract |
 | MYR → USDC reimbursement quotes | **Live via local app** | RM6 → 1.484561 USDC browser payment verified; hosted rollout pending |
 | Claim outcomes | **Complete locally** | Paid with Auto-paid / Paid after review chips; Rejected tab; correction/rejection reasons on both screens |
 | Payroll Move module and integration | **Complete locally; publication pending** | Contract, tests, builders, readers, payroll service and screens exist; live configuration and proof remain |
@@ -262,6 +263,10 @@ accepts only JPEG, PNG, and WebP. The server exposes:
   hash, path, currency and original extraction come from the stored draft;
 - `GET /api/events/:id/claims` — persisted claims with 300-second receipt URLs
   for an active member or configured treasurer;
+- `GET /api/events/:id/members` — active event roster in stable creation/address
+  order, restricted to the configured treasurer;
+- `POST /api/events/:id/members` — exact-origin, treasurer-only insertion of a
+  canonical wallet and trimmed display name;
 - `POST /api/claims/:id/process` — treasurer-triggered deterministic policy and,
   for `auto_pay` only, an atomic server-agent payment attempt.
 - `POST /api/claims/:id/review` — one atomic treasurer approval, rejection, or
@@ -299,7 +304,8 @@ Immediate hosted rollout (the local payment flow is already verified):
 2. Configure server-only Gemini and Supabase credentials in the deployment.
 3. Roll out and verify [MYR quotes](docs/MYR_USDC_QUOTES.md) with the backend/UI
    teammates. Member correction/resubmission remains pending.
-4. Add and verify the employer-managed event-member roster backend and dashboard.
+4. Deploy and verify the event-member roster backend; finish authoritative roster
+   reload/rendering in the dashboard.
 5. Configure the testnet agent key and owned `AgentCap` server-side.
 6. With separate authorization, run one small funded smoke claim and record its
    real digest; automated tests intentionally never broadcast.

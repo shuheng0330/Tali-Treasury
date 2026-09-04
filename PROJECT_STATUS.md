@@ -1,6 +1,6 @@
 # Project status
 
-Last updated: 3 September 2026 (MYT)
+Last updated: 4 September 2026 (MYT)
 
 ## Complete locally
 
@@ -56,6 +56,11 @@ Last updated: 3 September 2026 (MYT)
   safety-test broadcasts, with exact-origin checks before parsing or mutation;
 - employee-session ownership enforcement for salary-stream withdrawals, including
   read-before-withdraw ordering and safe denial without signing;
+- treasurer-only event-member roster services and `GET`/`POST
+  `/api/events/:id/members`, with active-only stable listing, exact-origin writes,
+  strict address/name validation, duplicate conflicts, and sanitized errors;
+- the existing Treasury add-member transport now uses the shared
+  `{ address, displayName }` and `{ member }` contracts;
 - statutory payroll and salary-stream enforcement (`payroll.move`, 29 contract
   tests), the EPF/SOCSO/EIS calculator, and the PayrollDesk/earnings UI — complete
   locally, not yet published to Testnet. See `docs/PAYROLL_LAUNCH_PLAN.md` for the
@@ -92,9 +97,11 @@ must be rerun after Docker Desktop is repaired or upgraded.
   `TALI_APP_ORIGIN` to the deployed HTTPS origin;
 - manually verify member analyze/create/list and treasurer process/review with
   browser Testnet wallets;
-- add trusted MYR-to-USDC quote capture, expiry and converted payout storage;
+- roll out and verify the merged MYR-to-USDC quote capture, expiry, and converted
+  payout path in the hosted environment;
 - add member correction and resubmission after a correction request;
-- add employer-managed payroll/member roster APIs as a separate increment;
+- deploy and verify the event-member roster API, then let the Treasury UI reload
+  and render the authoritative roster after additions;
 - run the hosted receipt flow end to end after authenticated identity is available.
 
 ## Known limitations
@@ -113,4 +120,6 @@ must be rerun after Docker Desktop is repaired or upgraded.
   reconciled or retried automatically; it fails closed for manual investigation.
 - Reconciliation is deliberately treasurer-triggered and on demand; no scheduled
   background job is included in the hackathon scope.
+- Event membership is add-only in this increment; rename, deactivate, reactivate,
+  and payroll Move roster mutation are deferred.
 - Mainnet signing and real-value payments remain out of scope.

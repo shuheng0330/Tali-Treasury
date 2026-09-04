@@ -93,8 +93,10 @@ describe('add event member', () => {
 
   it.each([
     [{ address: '0x1234', displayName: 'New Member' }, 'address'],
+    [{ address: `0x${'B'.repeat(64)}`, displayName: 'New Member' }, 'address'],
     [{ address: memberAddress, displayName: ' padded ' }, 'display name'],
     [{ address: memberAddress, displayName: '' }, 'display name'],
+    [{ address: memberAddress, displayName: 'x'.repeat(121) }, 'display name'],
   ])('rejects an invalid %s request', async (request) => {
     const members = repository();
     const add = createAddEventMemberService({ members });

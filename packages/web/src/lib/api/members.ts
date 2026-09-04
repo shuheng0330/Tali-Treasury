@@ -18,10 +18,10 @@ function describe(error: unknown): string {
       : 'the backend is unreachable';
   }
   if (error.status === 404) {
-    return 'member management is not live yet';
+    return error.message || 'the event was not found';
   }
   if (error.code === 'authentication_required') {
-    return 'the demo identity API is switched off';
+    return 'sign in with the treasurer wallet';
   }
   return error.message;
 }

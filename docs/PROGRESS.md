@@ -51,6 +51,7 @@ the submission time against the organiser channel; older notes used 23:59.
 | Receipt and claim backend | ✅ Complete locally | Wallet sessions, one-time analysis drafts, private storage, deterministic policy, atomic review/payment states, and safe exact-digest reconciliation | Apply latest migrations and configure hosted API/origin/signer |
 | Claim and review UX | ✅ Complete locally | Browser MYR reimbursement verified, readable outcomes and reasons, exact quote approval, payment-status polling | Hosted verification and member correction/resubmission |
 | Payroll and treasury write RBAC | ✅ Complete locally | Employer-only payroll/revoke/safety APIs and employee-only stream withdrawal | Configure hosted employer wallet and verify both roles |
+| Event-member roster backend | ✅ Complete locally | Treasurer-only active roster GET and add-only POST, safe duplicate handling, shared contracts, and dashboard transport adapter | Deploy; verify treasurer success/non-treasurer 403; render authoritative roster in Treasury UI |
 | Payroll contract and chain boundary | ✅ Complete locally | `PayrollMandate`, payroll execution, contribution rules, salary streams, readers and builders | Publish/upgrade, fund, configure and record real evidence |
 | Payroll application | 🟡 Built against incomplete live configuration | Payroll, earnings, history and enforcement screens; RM30 preview converts every leg through the configured MYR/USD rate; write RBAC is enforced | Replace sample identity, connect one registered payroll and verify hosted flow |
 | Authenticated Set Up Payroll | 🟡 Screen built, nothing to sign against | `/payroll/setup`: employer form, live-quote approval, wallet-signed funding through the existing builder, and a registration retry that never refunds | Publish the module, add `POST /api/payroll/register`, then verify idempotent registration and recovery |
@@ -111,7 +112,9 @@ Updated 4 September. See [payroll launch plan](PAYROLL_LAUNCH_PLAN.md) and
    accrued-salary withdrawal from a fresh browser.
 6. Preserve the working expense-claim demo. Build **Create Expense Treasury** as a
    separate follow-up rather than coupling it to payroll setup.
-7. Update evidence, record a backup video, complete disclosures and rehearse.
+7. Deploy and verify the event-member roster API, including one new member who can
+   sign in, analyze, create, and list a claim; complete authoritative roster UI.
+8. Update evidence, record a backup video, complete disclosures and rehearse.
 
 ---
 
