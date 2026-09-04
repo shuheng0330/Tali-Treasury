@@ -8,6 +8,7 @@ coverage/
 next-env.d.ts
 *.tsbuildinfo
 .vercel
+.worktrees/
 
 # Local Supabase runtime files
 supabase/.branches/

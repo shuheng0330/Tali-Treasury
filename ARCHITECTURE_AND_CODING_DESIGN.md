@@ -33,7 +33,10 @@ adapter draft/claim store    (Sui Testnet)
 - `src/server/supabase` owns privileged client construction, database row mapping,
   private uploads and signed URLs.
 - `src/server/auth` issues/verifies signed challenges, hashes opaque tokens,
-  enforces exact origins, and resolves session identity with invalid-cookie precedence.
+  enforces exact origins, resolves session identity with invalid-cookie precedence,
+  and applies server-only employer-wallet authorization for privileged writes.
+- `src/server/events` owns treasurer authorization and validation for the add-only
+  event-member roster use cases.
 - `src/server/dependencies.ts` composes production adapters lazily so importing a
   route never reads secrets.
 - `src/app/api` contains thin Node.js route handlers and testable handler factories.
@@ -48,12 +51,29 @@ The claim boundary and database accept three-letter ISO currency codes plus the
 explicit four-letter `USDC` asset symbol. This keeps validation narrow while
 allowing the configured payment asset to persist end to end.
 
+## Payroll and treasury write authorization
+
+`POST /api/payroll/runs`, `POST /api/mandate/revoke`, and
+`POST /api/safety/attack` use a shared route authorization primitive. The route
+checks the exact `TALI_APP_ORIGIN`, resolves the fixed-expiry wallet session, and
+compares its canonical address with the server-only `TALI_EMPLOYER_WALLET` before
+parsing the body or invoking a service that can sign or mutate. Missing or malformed
+configuration fails closed; the browser never receives the configured address from
+an API response.
+
+`POST /api/streams/:id/withdraw` uses the same origin/session ordering, then reads
+the selected stream and compares the session wallet with `stream.employee`. Only
+after ownership passes may it call the withdrawal dependency. Handler factories
+inject identity and business operations so route tests prove unauthorized requests
+cannot reach chain-signing code. Payroll-history GET behavior remains unchanged.
+
 ## Database design
 
 - `events` stores organisation, treasurer, mandate object, allowed categories and
   lifecycle dates.
 - `event_members` uses `(event_id, wallet_address)` as its primary key and records
-  whether membership is active.
+  whether membership is active. The roster API lists only active rows in stable
+  `created_at`, `wallet_address` order and inserts new rows with `active = true`.
 - `claims` stores positive integer base units, normalized receipt fields, analysis
   JSON, internal object path, decision/payment JSON, nullable review metadata, and
   one nullable payment-attempt digest with prepared/last-checked timestamps. The
@@ -84,6 +104,22 @@ as an HTTP-only strict cookie and never reaches application JSON or persistence.
 Disconnect/account change revokes the current client session. Local compatibility
 identity is possible only with no cookie and an explicit insecure flag; hosted
 deployments disable it.
+
+## Event-member roster design
+
+`GET /api/events/:id/members` resolves the fixed-expiry wallet session, validates
+the event identifier, and authorizes the caller against `events.treasurer_wallet`
+before querying `event_members`. The repository filters `active = true` and applies
+stable database ordering by `created_at` and `wallet_address`.
+
+`POST /api/events/:id/members` checks the exact configured origin before session
+resolution, then performs the same treasurer authorization before parsing the
+member payload. The service accepts only the shared `{ address, displayName }`
+contract and the repository inserts a new active row. PostgreSQL error `23505` is
+mapped to `member_already_exists`; no upsert can rename or reactivate an existing
+row. Provider details remain only on the internal error cause. The existing
+Treasury form adapts its local `walletAddress` field to this shared transport
+contract; authoritative roster rendering remains a frontend handoff.
 
 ## Deterministic policy design
 
@@ -226,6 +262,14 @@ messages are never serialized.
   lookups, terminal success/rejection, RPC uncertainty, idempotency, authorization,
   bounded polling, explorer links, and the guarantee that observation never signs
   or submits.
+- Payroll/revoke/safety route tests cover exact-origin, missing-session,
+  missing-configuration and wrong-wallet failures with mutation spies kept at
+  zero calls. Stream tests additionally prove read-before-withdraw ordering and
+  employee-only ownership.
+- Event-member roster tests cover active-only stable ordering, row mapping,
+  insertion and duplicate sanitization; service tests prove authorization happens
+  before reads/writes; route tests cover sessions, exact origin, payloads and safe
+  status codes; and the client test locks the shared request/response contract.
 - Payment-adapter tests use generated credentials and injected operations to cover
   lazy configuration, success, Move rejection and failure classification without
   a network request or transaction broadcast.
@@ -270,6 +314,10 @@ be verified manually. No automated verification broadcasts a Sui transaction.
 Migration `20260902010000_claim_payment_reconciliation.sql` adds the guarded
 payment-attempt metadata and consistency constraints. It is additive and must be
 applied after the wallet/draft migration during hosted rollout.
+
+The event-member roster increment adds no migration. It reuses the existing
+service-role-only `events` and `event_members` tables and therefore requires only
+application deployment plus hosted treasurer/non-treasurer verification.
 
 Local Logflare analytics and its Vector collector are intentionally disabled. On
 Windows the collector otherwise requires Docker Desktop's unauthenticated TCP API

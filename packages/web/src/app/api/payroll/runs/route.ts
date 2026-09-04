@@ -1,37 +1,76 @@
+import { authorizeEmployerRequest } from '../../../../server/auth/authorization';
+import { resolveWalletIdentity } from '../../../../server/auth/session';
+import { getBackendServices } from '../../../../server/dependencies';
 import { requireDemoIdentityEnabled } from '../../../../server/demo-auth';
+import type { EnvLike } from '../../../../server/env';
 import { ServerError, toApiError } from '../../../../server/errors';
 import {
   getPayrollService,
   payrollRunsArePersisted,
 } from '../../../../server/payroll/dependencies';
-import { payrollRequestSchema } from '../../../../server/payroll/validation';
+import {
+  payrollRequestSchema,
+  type PayrollRequest,
+} from '../../../../server/payroll/validation';
 
 export const runtime = 'nodejs';
 
+export function createPayrollRunsPostHandler(deps: {
+  run: (input: PayrollRequest) => Promise<unknown>;
+  resolveIdentity: (request: Request) => Promise<string>;
+  appOrigin: string;
+  env?: EnvLike;
+}) {
+  return async (request: Request): Promise<Response> => {
+    try {
+      await authorizeEmployerRequest({
+        request,
+        appOrigin: deps.appOrigin,
+        resolveIdentity: deps.resolveIdentity,
+        env: deps.env,
+      });
+
+      let body: unknown;
+      try {
+        body = await request.json();
+      } catch (error) {
+        throw new ServerError('invalid_request', 400, 'Expected valid JSON', { cause: error });
+      }
+
+      const parsed = payrollRequestSchema.safeParse(body);
+      if (!parsed.success) {
+        throw new ServerError(
+          'invalid_request',
+          400,
+          parsed.error.issues[0]?.message ?? 'Invalid payroll request',
+        );
+      }
+
+      /* A run that the contract refuses comes back as a normal result carrying
+         its abort code. Only a request that never reached the contract is an
+         error status. */
+      return Response.json(await deps.run(parsed.data), { status: 201 });
+    } catch (error) {
+      const { body, status } = toApiError(error);
+      return Response.json(body, { status });
+    }
+  };
+}
+
 export async function POST(request: Request): Promise<Response> {
   try {
-    requireDemoIdentityEnabled();
-
-    let body: unknown;
-    try {
-      body = await request.json();
-    } catch (error) {
-      throw new ServerError('invalid_request', 400, 'Expected valid JSON', { cause: error });
-    }
-
-    const parsed = payrollRequestSchema.safeParse(body);
-    if (!parsed.success) {
-      throw new ServerError(
-        'invalid_request',
-        400,
-        parsed.error.issues[0]?.message ?? 'Invalid payroll request',
-      );
-    }
-
-    /* A run that the contract refuses comes back as a normal result carrying
-       its abort code. Only a request that never reached the contract is an
-       error status. */
-    return Response.json(await getPayrollService().run(parsed.data), { status: 201 });
+    const services = getBackendServices();
+    return createPayrollRunsPostHandler({
+      run: (input) => getPayrollService().run(input),
+      resolveIdentity: async (currentRequest) =>
+        (
+          await resolveWalletIdentity({
+            request: currentRequest,
+            auth: services.auth,
+          })
+        ).address,
+      appOrigin: services.appOrigin,
+    })(request);
   } catch (error) {
     const { body, status } = toApiError(error);
     return Response.json(body, { status });

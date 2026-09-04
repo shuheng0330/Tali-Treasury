@@ -1,4 +1,6 @@
-import { TaliApiError, responseJson } from '@/lib/api/client';
+import type { CreateEventMemberResponse } from '@tali/shared';
+
+import { TaliApiError, responseJson } from './client';
 
 export interface AddEventMemberInput {
   walletAddress: string;
@@ -16,20 +18,15 @@ function describe(error: unknown): string {
       : 'the backend is unreachable';
   }
   if (error.status === 404) {
-    return 'member management is not live yet';
+    return error.message || 'the event was not found';
   }
   if (error.code === 'authentication_required') {
-    return 'the demo identity API is switched off';
+    return 'sign in with the treasurer wallet';
   }
   return error.message;
 }
 
-/**
- * POST /api/events/:eventId/members — treasurer-only, not yet built server
- * side (see docs/LAUNCH_PLAN.md, Tier 3a). This already calls the real path,
- * so the screen needs no change once it ships; until then every attempt
- * resolves to 'unavailable' with a plain reason rather than throwing.
- */
+/** POST /api/events/:eventId/members — authenticated treasurer only. */
 export async function tryAddEventMember(
   eventId: string,
   input: AddEventMemberInput,
@@ -38,15 +35,13 @@ export async function tryAddEventMember(
     const response = await fetch(`/api/events/${encodeURIComponent(eventId)}/members`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify(input),
+      body: JSON.stringify({ address: input.walletAddress, displayName: input.displayName }),
     });
-    const result = await responseJson<{ walletAddress: string; displayName: string }>(
-      response,
-    );
+    const result = await responseJson<CreateEventMemberResponse>(response);
     return {
       kind: 'added',
-      walletAddress: result.walletAddress,
-      displayName: result.displayName,
+      walletAddress: result.member.address,
+      displayName: result.member.displayName,
     };
   } catch (error) {
     return { kind: 'unavailable', reason: describe(error) };
