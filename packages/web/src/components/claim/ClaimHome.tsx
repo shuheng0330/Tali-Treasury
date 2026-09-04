@@ -39,10 +39,6 @@ export function ClaimHome({
 }: Props) {
   const used = budget === '0' ? 0 : 100 - ratioBps(available, budget) / 100;
   const needsCorrection = claims.filter((claim) => claim.state === 'needs_correction');
-  /* A claim sent back is surfaced once, in the callout below, not a second
-     time as an ordinary row here — the same claim in two places on one
-     screen reads as two claims. */
-  const listedClaims = claims.filter((claim) => claim.state !== 'needs_correction');
 
   return (
     <div className="flex flex-col gap-6">
@@ -122,13 +118,13 @@ export function ClaimHome({
           <p className="rounded-card border border-dashed border-rule px-4 py-8 text-center text-caption text-ink-3">
             Loading submitted claims…
           </p>
-        ) : listedClaims.length === 0 ? (
+        ) : claims.length === 0 ? (
           <p className="rounded-card border border-dashed border-rule px-4 py-8 text-center text-caption text-ink-3">
             Nothing yet. Photograph a receipt and it lands here.
           </p>
         ) : (
           <ul className="flex flex-col divide-y divide-rule overflow-hidden rounded-card border border-rule bg-surface">
-            {listedClaims.map((claim) => (
+            {claims.map((claim) => (
               <li key={claim.id} className="flex flex-col gap-3 px-4 py-4">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <span className="break-words text-body font-medium">{claim.merchant}</span>
@@ -141,14 +137,17 @@ export function ClaimHome({
                     Updated {relative(claim.updatedAtMs)}
                   </span>
                 </div>
-                  {claim.state === 'paid' && claim.payment?.digest ? (
-                    <a className="link self-start text-caption"
-                      href={EXPLORER.tx(claim.payment.digest).suiscan}
-                      target="_blank" rel="noreferrer">
-                      View payment transaction
-                    </a>
-                  ) : null}
-                </li>
+                {claim.state === 'paid' && claim.payment?.digest ? (
+                  <a
+                    className="link self-start text-caption"
+                    href={EXPLORER.tx(claim.payment.digest).suiscan}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    View payment transaction
+                  </a>
+                ) : null}
+              </li>
             ))}
           </ul>
         )}
