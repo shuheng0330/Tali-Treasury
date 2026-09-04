@@ -145,6 +145,24 @@ The roster backend must:
 - reuse the existing `event_members` table without a schema migration or browser
   database access.
 
+## Implemented payroll-registration scope
+
+The payroll setup backend must:
+
+- expose exact-origin `POST /api/payroll/register` with only a finalized Sui
+  transaction digest and derive the employer from the wallet session;
+- authorize the configured employer before parsing the payload or reading Sui;
+- verify one newly created Testnet USDC `PayrollMandate` and matching
+  address-owned `PayrollCap`, including sender, package, coin, object lineage,
+  pristine state, configured recipients and the supported statutory template;
+- derive the required cap owner from the server signer and never accept object
+  identifiers, policy fields or ownership claims from the browser;
+- append an immutable service-role-only configuration snapshot, while permitting
+  multiple mandates per employer and rejecting digest/mandate/cap collisions;
+- return `201` for a new registration and `200` for an exact replay, so a funded
+  transaction can be retried without creating or funding another mandate; and
+- never sign, submit, or broadcast a transaction during registration or tests.
+
 ## Security and business rules
 
 - Payroll execution, mandate revocation, and safety-test broadcasts require an
@@ -196,6 +214,7 @@ The roster backend must:
   injected fake operations and never broadcasts);
 - member correction and resubmission after `request_correction`;
 - event-member deactivation, reactivation, renaming, or payroll Move roster changes;
+- selecting a registered payroll and binding payroll/proof/earnings pages to it;
 - an authoritative roster list in the Treasury Dashboard (frontend handoff);
 - live browser presentation for payments initiated outside the review flow;
 - production rollout of this new migration and hosted wallet-flow verification.

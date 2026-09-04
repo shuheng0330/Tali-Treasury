@@ -46,11 +46,11 @@ Status words are intentionally precise:
 | Claim outcomes | **Complete locally** | Paid with Auto-paid / Paid after review chips; Rejected tab; correction/rejection reasons on both screens |
 | Payroll Move module and integration | **Live package; setup pending** | Package v2 contains `payroll` and `treasury`; contract tests, builders and readers pass; a funded payroll mandate and proof remain |
 | Payroll MYR → USDC valuation | **Complete locally** | RM statutory calculation is converted leg-by-leg with one approved live-reference rate; hosted proof pending |
-| Authenticated Set Up Payroll | **Complete locally; hosted migration pending** | Employer-only preview, Slush signing, strict finalized-object verification and idempotent Supabase registration are implemented |
+| Authenticated Set Up Payroll | **Complete locally; binding and hosted migration pending** | Employer-only preview and Slush funding use one strict digest-only verifier and immutable registry; payroll pages still need explicit registered-payroll selection |
 | Live payroll run and salary stream | **Pending** | Requires a funded mandate, real employee wiring, authorization and Testnet evidence |
 | Create Expense Treasury | **Complete locally through wallet execution** | Separate reimbursement setup screen can sign against the existing package; verified event registration remains pending |
 | Revoke and Safety Test interactions | **Complete locally; live proof pending** | Employer-authorized APIs can submit through the server signer; unsupported scenarios remain clearly labelled predictions |
-| Gemini receipt analysis and Supabase claims | **Complete locally; rollout pending** | Private drafts, authenticated access and 132 pgTAP assertions |
+| Gemini receipt analysis and Supabase claims | **Complete locally; rollout pending** | Private drafts, authenticated access and 141 pgTAP assertions across the current schema |
 | Deterministic policy and backend agent signing | **Live via local app** | Native USDC payment/recovery and manually approved MYR reimbursement verified on Testnet |
 | Wallet connection and live UI writes | **Complete locally** | Testnet connect, explicit sign-in, one-hour HTTP-only session and sign-out |
 | Statutory payroll enforcement | **Published; live proof pending** | `payroll.move`, 25 contract tests; EPF Third Schedule bands and SOCSO/EIS ceilings are published in package v2. Funded execution proof is next |
@@ -278,6 +278,8 @@ accepts only JPEG, PNG, and WebP. The server exposes:
   digest; returns pending or atomically persists a confirmed terminal result.
 - `POST /api/payroll/runs`, `POST /api/mandate/revoke`, and
   `POST /api/safety/attack` — configured-employer-only writes.
+- `POST /api/payroll/register` — configured-employer-only verification and
+  immutable registration of an already funded payroll creation digest.
 - `POST /api/streams/:id/withdraw` — stream-employee-only withdrawal request.
 
 See [`docs/API.md`](docs/API.md) for request/response and error details. Protected
@@ -309,8 +311,10 @@ Immediate hosted rollout (the local payment flow is already verified):
    teammates. Member correction/resubmission remains pending.
 4. Deploy and verify the event-member roster backend; finish authoritative roster
    reload/rendering in the dashboard.
-5. Configure the testnet agent key and owned `AgentCap` server-side.
-6. With separate authorization, run one small funded smoke claim and record its
+5. Apply the payroll registry migration, retry registration using the already
+   funded digest, and bind pages to the selected registered configuration.
+6. Configure the testnet agent key and owned `AgentCap` server-side.
+7. With separate authorization, run one small funded smoke claim and record its
    real digest; automated tests intentionally never broadcast.
 
 ## AI tooling

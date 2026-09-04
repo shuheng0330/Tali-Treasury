@@ -158,6 +158,17 @@ export interface ListEventMembersResponse {
   members: EventMember[];
 }
 
+/** POST /api/payroll/register */
+export interface RegisterPayrollRequest {
+  digest: Digest;
+}
+
+export interface RegisterPayrollResponse {
+  status: 'registered';
+  mandateId: ObjectId;
+  capId: ObjectId;
+}
+
 /** GET /api/events/:id/claims?state=... */
 export interface ListClaimsResponse {
   claims: Claim[];

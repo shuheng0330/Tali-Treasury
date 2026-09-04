@@ -9,6 +9,7 @@ import {
   buildRevokePayrollTransaction,
   buildRunPayrollTransaction,
   buildWithdrawEarnedTransaction,
+  readPayrollCap,
   readPayrollMandate,
   readSalaryStream,
 } from './payroll.js';
@@ -260,10 +261,14 @@ describe('stream transactions', () => {
   });
 });
 
-function objectClient(type: string, json: unknown) {
+function objectClient(
+  type: string,
+  json: unknown,
+  metadata: Record<string, unknown> = {},
+) {
   return {
     getObject: async () => ({
-      object: { objectId: '0x4', type, json },
+      object: { objectId: '0x4', type, json, ...metadata },
     }),
   } as never;
 }
@@ -331,6 +336,57 @@ describe('readPayrollMandate', () => {
     await expect(readPayrollMandate(client, taliTestnetSuiConfig, '0x4')).rejects.toThrow(
       'is not a payroll mandate',
     );
+  });
+});
+
+describe('readPayrollCap', () => {
+  const type = `${taliTestnetSuiConfig.packageId}::payroll::PayrollCap`;
+
+  it('reads the linked mandate, address owner and creating transaction', async () => {
+    const cap = await readPayrollCap(
+      objectClient(type, { mandate_id: mandateId }, {
+        objectId: capId,
+        owner: { $kind: 'AddressOwner', AddressOwner: capRecipient },
+        previousTransaction: '4'.repeat(44),
+      }),
+      taliTestnetSuiConfig,
+      capId,
+    );
+
+    expect(cap).toEqual({
+      id: `0x${'0'.repeat(63)}5`,
+      mandateId: `0x${'0'.repeat(63)}4`,
+      owner: `0x${'0'.repeat(63)}2`,
+      previousTransaction: '4'.repeat(44),
+    });
+  });
+
+  it('refuses a non-address-owned cap', async () => {
+    await expect(
+      readPayrollCap(
+        objectClient(type, { mandate_id: mandateId }, {
+          objectId: capId,
+          owner: { $kind: 'Shared', Shared: { initialSharedVersion: '1' } },
+          previousTransaction: '4'.repeat(44),
+        }),
+        taliTestnetSuiConfig,
+        capId,
+      ),
+    ).rejects.toThrow('address-owned');
+  });
+
+  it('refuses a cap from another package', async () => {
+    await expect(
+      readPayrollCap(
+        objectClient('0x9::payroll::PayrollCap', { mandate_id: mandateId }, {
+          objectId: capId,
+          owner: { $kind: 'AddressOwner', AddressOwner: capRecipient },
+          previousTransaction: '4'.repeat(44),
+        }),
+        taliTestnetSuiConfig,
+        capId,
+      ),
+    ).rejects.toThrow('configured Tali package');
   });
 });
 

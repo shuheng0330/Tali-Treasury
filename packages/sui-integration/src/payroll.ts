@@ -94,6 +94,13 @@ export interface PayrollMandateState {
   runCount: bigint;
 }
 
+export interface PayrollCapState {
+  id: string;
+  mandateId: string;
+  owner: string;
+  previousTransaction: string;
+}
+
 export interface SalaryStreamState {
   id: string;
   coinType: string;
@@ -416,6 +423,36 @@ export async function readPayrollMandate(
     revoked: asBoolean(fields.revoked, 'revoked flag'),
     totalPaid: asBigInt(fields.total_paid, 'total paid'),
     runCount: asBigInt(fields.run_count, 'run count'),
+  };
+}
+
+export async function readPayrollCap(
+  client: ObjectReader,
+  configInput: TreasuryConfig,
+  capIdInput: string,
+): Promise<PayrollCapState> {
+  const config = normalizeConfig(configInput);
+  const capId = normalizeAddress(capIdInput, 'PayrollCap ID');
+  const { object } = await client.getObject({
+    objectId: capId,
+    include: { json: true, previousTransaction: true },
+  });
+  const expectedType = `${config.packageId}::payroll::PayrollCap`;
+  if (object.type !== expectedType) {
+    throw new Error(`Object ${capId} is not a payroll cap from the configured Tali package`);
+  }
+  if (object.owner.$kind !== 'AddressOwner') {
+    throw new Error(`Payroll cap ${capId} is not address-owned`);
+  }
+  if (!object.previousTransaction) {
+    throw new Error(`Payroll cap ${capId} has no previous transaction`);
+  }
+  const fields = asRecord(object.json, 'payroll cap data');
+  return {
+    id: normalizeAddress(object.objectId, 'PayrollCap ID'),
+    mandateId: asAddress(fields.mandate_id, 'cap mandate ID'),
+    owner: normalizeAddress(object.owner.AddressOwner, 'PayrollCap owner'),
+    previousTransaction: object.previousTransaction,
   };
 }
 

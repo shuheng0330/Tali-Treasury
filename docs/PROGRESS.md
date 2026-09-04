@@ -28,14 +28,11 @@ the submission time against the organiser channel; older notes used 23:59.
 - Integrated the 43 incoming commits through `fa490fb`, including payroll write
   RBAC, role-aware screens, expense-treasury setup, event roster APIs, the purple
   visual refresh, and the submission/deck documents.
-- Preserved the branch's authenticated payroll preview, finalized-object checks
-  and idempotent Supabase registration while adopting `main`'s centralized
-  `TALI_EMPLOYER_WALLET` authorization.
+- Consolidated the parallel payroll-registration implementations around the
+  strict digest-only verifier, immutable registry and centralized
+  `TALI_EMPLOYER_WALLET` authorization while retaining the latest setup UI.
 - Integrated the latest role-aware navigation, treasury action gates and
   submission corrections from `main` through `c20925d`.
-- Fresh verification: 42 Move tests, 45 Sui integration tests, 608 web tests
-  (607 passing and one intentional skip), 132 pgTAP assertions, root typecheck,
-  and the production build all passed.
 - Fast-forwarded to `main` at `9f6a07f`; wallet sign-in now surfaces sanitized
   backend failures before applying wallet/network heuristics.
 - Upgraded the Move package to Testnet version 2 with `payroll` and `treasury` at
@@ -46,6 +43,9 @@ the submission time against the organiser channel; older notes used 23:59.
   and 0.1 SUI, ready for authenticated mandate setup.
 - Fixed Set Up Payroll to prefill the configured employee instead of silently
   copying the authenticated employer address into the immutable allowlist.
+- Fresh combined verification passes 48 Sui integration tests, 644 web tests with
+  one intentional skip, root typecheck, production build and a zero-vulnerability
+  audit. Docker-backed pgTAP verification is reported separately.
 
 ### 4 September roster-backend verification
 
@@ -85,9 +85,10 @@ the submission time against the organiser channel; older notes used 23:59.
 | Claim and review UX | ✅ Complete locally | Browser MYR reimbursement verified, readable outcomes and reasons, exact quote approval, payment-status polling | Hosted verification and member correction/resubmission |
 | Payroll and treasury write RBAC | ✅ Complete locally | Employer-only payroll/revoke/safety APIs and employee-only stream withdrawal | Configure hosted employer wallet and verify both roles |
 | Event-member roster backend | ✅ Complete locally | Treasurer-only active roster GET and add-only POST, safe duplicate handling, shared contracts, and dashboard transport adapter | Deploy; verify treasurer success/non-treasurer 403; render authoritative roster in Treasury UI |
+| Payroll registration backend | ✅ Complete locally | Employer-only digest registration, finalized Sui object verification, immutable service-role registry and idempotent recovery | Apply migration, register the funded digest, then implement explicit registered-payroll selection |
 | Payroll contract and chain boundary | ✅ Published on Testnet | Package v2 `0xeb973d…b97688` contains `PayrollMandate`, payroll execution, contribution rules and salary streams; readers/builders and tests pass | Fund, configure and record mandate/run/refusal/stream evidence |
 | Payroll application | 🟡 Built against incomplete live configuration | Payroll, earnings, history and enforcement screens; RM30 preview converts every leg through the configured MYR/USD rate; write RBAC is enforced | Replace sample identity, connect one registered payroll and verify hosted flow |
-| Authenticated Set Up Payroll | ✅ Complete locally; hosted migration pending | `/payroll/setup`: employer-only live-FX preview, RM30/RM50 demo limits, wallet funding, strict mandate/cap verification and idempotent registration/recovery; package v2 is live | Apply the two `2026090402…` payroll registration migrations, configure package/statutory recipients and run the browser smoke |
+| Authenticated Set Up Payroll | ✅ Complete locally; binding and hosted migration pending | `/payroll/setup`: employer-only live-FX preview, wallet funding, strict mandate/cap verification and idempotent digest-only recovery; package v2 is live | Apply the single payroll-registry migration, register one funded mandate, then bind all payroll pages to the selected record |
 | Create Expense Treasury | 🟡 Screen built and able to sign | `/treasury/setup`: treasurer form, USDC funding preview, wallet-signed creation against the published package, AdminCap retained and AgentCap issued, registration retry that never refunds | Add `POST /api/events`, then event selection/routing and event-aware capability mapping |
 | Safety Test UI | 🟡 Mocked with live evidence links | Local preview plus links to two real rejected transactions; API is employer-only | Interactive signed attempts and revocation scenario |
 | Deployment | ✅ Live reads; auth rollout pending | Vercel production and live Sui dashboard verified | Push wallet migration, configure exact HTTPS origin, verify protected writes |
@@ -139,15 +140,15 @@ Updated 4 September. See [payroll launch plan](PAYROLL_LAUNCH_PLAN.md) and
 2. Configure package v2, create the funded mandate, open the demo stream and
    record mandate, capability, stream and recipient identifiers. Package publication
    is complete (`86914sL2wFj9s7sfcMqdYx9ekST8FRU8Y1tLT5SAaSfN`).
-3. Apply the payroll-configuration migration to hosted Supabase and verify
+3. Apply the single payroll-configuration migration to hosted Supabase and verify
    authenticated **Set Up Payroll** from a fresh browser. Local verification and
    idempotent registration are complete.
-4. Replace `sampleStaff` and global demo assumptions with the registered payroll;
-   enforce employer authorization and employee-only stream withdrawal.
+4. Replace `sampleStaff` and global demo assumptions with an explicitly selected
+   registered payroll; employer and employee write authorization is already enforced.
 5. Verify one successful payroll, one deficient-contribution refusal and one
    accrued-salary withdrawal from a fresh browser.
-6. Preserve the working expense-claim demo. Build **Create Expense Treasury** as a
-   separate follow-up rather than coupling it to payroll setup.
+6. Preserve the working expense-claim demo. Add protected registration and
+   selection behind the separate **Create Expense Treasury** screen.
 7. Deploy and verify the event-member roster API, including one new member who can
    sign in, analyze, create, and list a claim; complete authoritative roster UI.
 8. Update evidence, record a backup video, complete disclosures and rehearse.
