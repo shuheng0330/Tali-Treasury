@@ -52,10 +52,11 @@ the submission time against the organiser channel; older notes used 23:59.
 | Claim and review UX | ✅ Complete locally | Browser MYR reimbursement verified, readable outcomes and reasons, exact quote approval, payment-status polling | Hosted verification and member correction/resubmission |
 | Payroll contract and chain boundary | ✅ Complete locally | `PayrollMandate`, payroll execution, contribution rules, salary streams, readers and builders | Publish/upgrade, fund, configure and record real evidence |
 | Payroll application | 🟡 Built against incomplete live configuration | Payroll, earnings, history and enforcement screens; RM30 preview converts every leg through the configured MYR/USD rate | Replace sample identity, enforce roles, connect one registered payroll and verify hosted flow |
-| Authenticated Set Up Payroll | ⬜ Pending | Existing create-payroll transaction builder | Employer form, wallet-funded `PayrollMandate`, verified idempotent registration and recovery |
+| Authenticated Set Up Payroll | 🟡 Screen built, nothing to sign against | `/payroll/setup`: employer form, live-quote approval, wallet-signed funding through the existing builder, and a registration retry that never refunds | Publish the module, add `POST /api/payroll/register`, then verify idempotent registration and recovery |
 | Create Expense Treasury | ⬜ Pending | Existing reimbursement builder and manual/local event setup | Separate authenticated form, wallet signing, verified registration and event-aware capability mapping |
 | Safety Test UI | 🟡 Mocked with live evidence links | Local preview plus links to two real rejected transactions | Interactive signed attempts and revocation scenario |
 | Deployment | ✅ Live reads; auth rollout pending | Vercel production and live Sui dashboard verified | Push wallet migration, configure exact HTTPS origin, verify protected writes |
+| Payroll and salary streams | 🟡 Complete locally | `payroll.move` (29 tests), EPF/SOCSO/EIS calculator, PayrollDesk/earnings UI, all wired to flip live once env vars exist | Package upgrade publish, mandate creation, funded stream — see `docs/PAYROLL_LAUNCH_PLAN.md` |
 | Submission | ⬜ Pending | — | Landing content, videos, deck, disclosure and rehearsal |
 
 ## Real versus simulated

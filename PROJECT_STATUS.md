@@ -52,6 +52,11 @@ Last updated: 2 September 2026 (MYT)
   explorer links, explicit bounded polling, and reconcile-on-refresh behavior;
 - 349 web tests passing at the reconciliation checkpoint. The new migration and
   pgTAP assertions are authored; their local replay remains pending Docker startup.
+- statutory payroll and salary-stream enforcement (`payroll.move`, 29 contract
+  tests), the EPF/SOCSO/EIS calculator, and the PayrollDesk/earnings UI — complete
+  locally, not yet published to Testnet. See `docs/PAYROLL_LAUNCH_PLAN.md` for the
+  publish/RBAC work remaining before the pitch.
+- 394 web tests and 45 Sui integration tests passing as of this note.
 
 ## Hosted schema verified
 
