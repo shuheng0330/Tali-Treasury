@@ -87,7 +87,7 @@ demo.
 
 ### Gate 2 — publish and verify the chain configuration
 
-- Publish or upgrade the payroll module and record the package and UpgradeCap.
+- ✅ Upgrade the payroll module and record package v2, the transaction and UpgradeCap.
 - Create a `PayrollMandate` with the approved employee and Testnet stand-in
   recipients. Deliver its `PayrollCap` to the intended server signer.
 - Open a salary stream whose accrual window overlaps rehearsal and presentation.
