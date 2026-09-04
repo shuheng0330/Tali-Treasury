@@ -84,19 +84,37 @@ The nav shows six tabs to everybody, four of which most readers cannot use.
 payroll is not theirs; a treasurer sees Treasury and Claims first. No route
 404s or redirects based on role.
 
-## Phase 3 — a role-appropriate entry screen
+## Phase 3 — a role-appropriate entry screen — done
 
-Deferred. Today `/payroll/setup` is the landing target for everyone, which is
-right for an employer and wrong for an employee.
+Brought forward once Phase 1 landed and Lane A finished early.
 
-1. Add a small chooser after sign-in that names the roles the connected wallet
-   holds and links to each one's first screen.
-2. Where a wallet holds no role, say so and offer the read-only views rather
-   than an empty dashboard.
+1. ✅ `/start` names the four ways in and marks the ones the connected wallet
+   holds. It answers with `walletAccess` against the employer wallet, the
+   event's treasurer and the stream's employee — **not** `viewerRole`, which
+   Lane B is reshaping into a role set. One primitive, no second role model to
+   drift.
+2. ✅ A wallet holding no role is told so plainly and pointed at the parts that
+   need no permission: the enforcement proof, the safety test and the testnet
+   transactions on the overview.
+3. ✅ The landing header's "Open the app" now goes to `/start` rather than
+   `/payroll/setup`. The hero's button keeps its direct link, because it is
+   labelled "Set up payroll" and going there is what it says it does.
+
+A stream that has not been opened reports a placeholder employee. Comparing a
+real wallet against it would answer "not yours" to everybody with the
+confidence of a real check, so a non-canonical address is treated as
+unconfigured and `walletAccess` explains that it cannot tell.
+
+**Left for Lane B:** `/start` is reachable from the landing header and by URL,
+but has no nav tab — `AppNav` belongs to Lane B and adding one here would
+collide with B2 and B3. Worth a tab once that lands.
 
 ## Recommendation on sequencing
 
 **Phase 1 before the pitch. Phase 2 only if there is time. Phase 3 after.**
+
+*Superseded 4 September: Phase 1 and Phase 3 are both done. Phase 2 is Lane B's
+B3 and is the only one outstanding.*
 
 Phase 1 is a correctness fix — it stops the interface disagreeing with the
 contract, which is the one thing this product cannot afford to do in front of
