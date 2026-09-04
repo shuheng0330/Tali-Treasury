@@ -44,7 +44,7 @@ Status words are intentionally precise:
 | Claim outcomes | **Complete locally** | Paid with Auto-paid / Paid after review chips; Rejected tab; correction/rejection reasons on both screens |
 | Payroll Move module and integration | **Complete locally; publication pending** | Contract, tests, builders, readers, payroll service and screens exist; live configuration and proof remain |
 | Payroll MYR → USDC valuation | **Complete locally** | RM statutory calculation is converted leg-by-leg with one approved live-reference rate; hosted proof pending |
-| Authenticated Set Up Payroll | **Pending** | Primary launch CTA; wallet creates/funds a verified `PayrollMandate` |
+| Authenticated Set Up Payroll | **Complete locally; registration pending** | Employer-only preview uses the current MYR/USD rate; Slush signs and funds the `PayrollMandate` on Testnet. Finalized-transaction verification and durable registration are next |
 | Live payroll run and salary stream | **Pending** | Requires published package, funded mandate, real employee wiring, authorization and Testnet evidence |
 | Create Expense Treasury | **Pending** | Separate reimbursement setup backed by the existing `Mandate`; not part of payroll setup |
 | Revoke and Safety Test interactions | **Mocked** | Clearly labelled previews; no browser signing or state changes |

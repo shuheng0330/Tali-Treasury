@@ -14,6 +14,9 @@ The percentage estimates below are a historical 1 September snapshot, not curren
 completion claims. The local browser flow now paid RM6 as 1.484561 Testnet USDC;
 wallet auth, live quotes, backend signing and reconciliation have been verified.
 Paid/rejected tabs, review reasons and compact claim summaries are implemented.
+The employer-only Set Up Payroll preview and connected-wallet creation transaction
+are also complete locally; finalized-object verification and durable registration
+remain the next payroll gate.
 Use [PROGRESS.md](PROGRESS.md) for current status,
 [PAYROLL_LAUNCH_PLAN.md](PAYROLL_LAUNCH_PLAN.md) for the payroll release sequence,
 and [PRODUCT_NEXT_STEPS.md](PRODUCT_NEXT_STEPS.md) for the separate setup flows and

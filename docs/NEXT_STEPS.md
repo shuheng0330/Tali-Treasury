@@ -37,8 +37,11 @@ budget, capability ownership and stream state.
 
 ## 3. Authenticated Set Up Payroll
 
-- Build `/payroll/setup` as the primary CTA.
-- Preview immutable rules, Testnet funding and gas before wallet signing.
+- ✅ Build `/payroll/setup` as the primary CTA.
+- ✅ Require the configured employer session, fetch the current MYR/USD rate and
+  preview the immutable rules and exact Testnet USDC funding before wallet signing.
+- ✅ Build the transaction through `@tali/treasury-sui` and let the connected
+  employer wallet sign and fund it. Cancellation leaves no application record.
 - Verify the finalized transaction server-side before registration.
 - Make registration idempotent and recoverable without creating a second mandate.
 - Replace sample employee data across payroll, proof and earnings screens.

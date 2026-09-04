@@ -12,6 +12,7 @@ export type ServerErrorCode =
   | 'member_not_found'
   | 'processor_forbidden'
   | 'reviewer_forbidden'
+  | 'payroll_employer_forbidden'
   | 'claim_not_found'
   | 'payroll_run_not_found'
   | 'stream_not_found'

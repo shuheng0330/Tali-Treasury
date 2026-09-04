@@ -22,6 +22,10 @@ export default function PayrollPage() {
         </p>
       </header>
 
+      <Link href="/payroll/setup" className="btn btn--primary btn--block">
+        Set Up Payroll
+      </Link>
+
       <PayrollDesk staff={sampleStaff} runsAreLive={payrollIsLive()} />
 
       <div className="flex flex-col gap-3">

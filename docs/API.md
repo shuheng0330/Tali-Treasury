@@ -102,3 +102,20 @@ or broadcasts. Terminal claims replay their stored payment result.
 
 Database, RPC, signature, token, key and private storage details are never part of
 API errors.
+
+## Payroll setup preview
+
+`POST /api/payroll/setup/preview` requires the same-origin wallet session and accepts:
+
+```json
+{ "employee": "0x…", "expiryMs": 1788281999000 }
+```
+
+Only `PAYROLL_EMPLOYER_ADDRESS` may call it. The server returns the configured
+Testnet package, official USDC type, backend `PayrollCap` recipient, statutory
+recipients and rules, plus the exact RM50-equivalent micro-USDC budget derived
+from the current MYR/USD rate. The browser uses that server-issued preview with
+the shared transaction builder; it never receives the backend agent key.
+
+The current endpoint does not register a payroll. Server-side verification of the
+finalized digest and idempotent durable registration are the next gate.
