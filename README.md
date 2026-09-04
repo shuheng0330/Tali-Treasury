@@ -51,6 +51,8 @@ Status words are intentionally precise:
 | Gemini receipt analysis and Supabase claims | **Complete locally; rollout pending** | Private drafts, authenticated access and 91 pgTAP assertions |
 | Deterministic policy and backend agent signing | **Live via local app** | Native USDC payment/recovery and manually approved MYR reimbursement verified on Testnet |
 | Wallet connection and live UI writes | **Complete locally** | Testnet connect, explicit sign-in, one-hour HTTP-only session and sign-out |
+| Statutory payroll enforcement | **Complete locally** | `payroll.move`, 29 contract tests; EPF Third Schedule bands and SOCSO/EIS ceilings enforced as an on-chain basis-point floor. Not yet published to Testnet |
+| Per-second salary accrual | **Complete locally** | `SalaryStream` open/accrue/withdraw, tested against the same integer arithmetic the UI displays. Not yet published to Testnet |
 | Web hosting | **Live** | [`tali-treasury.vercel.app`](https://tali-treasury.vercel.app) |
 | Submission pack | **Pending** | Final hackathon phase |
 
@@ -288,6 +290,23 @@ Immediate hosted rollout (the local payment flow is already verified):
 4. Configure the testnet agent key and owned `AgentCap` server-side.
 5. With separate authorization, run one small funded smoke claim and record its
    real digest; automated tests intentionally never broadcast.
+
+## AI tooling
+
+Built with AI-assisted development across contracts, backend, and frontend —
+primarily Claude (Anthropic) and Codex (OpenAI). Git history and PR descriptions
+carry no AI attribution by design (see `CLAUDE.md`); that is a commit-metadata
+convention, not concealment. Tool use is disclosed here as MUBA's rules require
+and does not affect judging.
+
+## What's new this increment
+
+This repository continues work started earlier in the same MUBA hackathon window
+(27 August – 5 September 2026); it is not a prior or external project reused
+without change. The two payroll rows in the status table above — statutory
+EPF/SOCSO/EIS enforcement and per-second salary accrual — are new since the
+milestone recorded in `docs/PROGRESS.md`, alongside the reconciliation and
+wallet-session work already listed there.
 
 ## Documentation index
 

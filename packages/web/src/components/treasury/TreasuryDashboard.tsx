@@ -5,10 +5,16 @@ import { useRouter } from 'next/navigation';
 import { useMemo, useState, useTransition } from 'react';
 import type { ClaimReviewAction, MandateView } from '@tali/shared';
 import { Money } from '@/components/Money';
-import { COMMITTED, event } from '@/lib/mock/data';
+import { event } from '@/lib/mock/data';
 import { ClaimStatusSummary } from '../claim/ClaimStatusSummary';
 import { FxQuoteSummary } from '../claim/FxQuoteSummary';
-import { DEMO_EVENT_NAME, DEMO_TREASURER, SINGLE_WALLET_DEMO } from '@/lib/demo-config';
+import {
+  DEMO_EVENT_ID,
+  DEMO_EVENT_NAME,
+  DEMO_TREASURER,
+  SINGLE_WALLET_DEMO,
+} from '@/lib/demo-config';
+import { viewerRole } from '@/lib/viewer-role';
 import { reviewQueue, settledClaims } from '@/lib/mock/api';
 import { committedFrom, settledFrom, toReviewQueue } from '@/lib/queue';
 import { useClaims } from '@/lib/api/useClaims';
@@ -17,6 +23,7 @@ import { reconcileClaim, TaliApiError } from '@/lib/api/client';
 import { pollPaymentReconciliation } from '@/lib/api/reconciliation';
 import { DataNotice } from '@/components/DataNotice';
 import { ClaimRow } from './ClaimRow';
+import { AddMemberForm } from './AddMemberForm';
 import { MandateHeader } from './MandateHeader';
 import { RevokeDialog } from './RevokeDialog';
 import { ReviewActionDialog } from './ReviewActionDialog';
@@ -98,9 +105,13 @@ export function TreasuryDashboard({
      budget still counts them as available, so subtracting them here is what
      stops the header inviting an approval the money cannot cover. */
   const committed = useMemo(
-    /* The sample evaluator measures the budget against COMMITTED, so the header
-       has to use the same figure or it contradicts the rows underneath it. */
-    () => (live.source === 'live' ? committedFrom(live.claims) : COMMITTED),
+    /* Only a real queue can say what is really spoken for. The mandate figures
+       above come from the chain, so subtracting the sample constant from them
+       produced an "available" that was neither real nor sample — a fabricated
+       number under a real mandate id, which is what the sample rows below are
+       labelled to avoid. When the queue is not live, nothing is known to be
+       committed and the header reports the chain balance alone. */
+    () => (live.source === 'live' ? committedFrom(live.claims) : '0'),
     [live.source, live.claims],
   );
 
@@ -296,6 +307,10 @@ export function TreasuryDashboard({
         onRevoke={() => setConfirming(true)}
       />
 
+      {viewerRole(wallet.address) === 'treasurer' ? (
+        <AddMemberForm eventId={DEMO_EVENT_ID} onAdded={() => live.reload()} />
+      ) : null}
+
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-card border border-ok-line bg-ok-soft px-4 py-3 sm:px-6">
         <div>
           <p className="text-body font-medium text-ok">Live from Sui Testnet</p>
@@ -316,35 +331,39 @@ export function TreasuryDashboard({
       </div>
 
       <section className="flex flex-col overflow-hidden rounded-panel border border-rule bg-surface">
-        <div className="border-b border-rule p-4">
-          <DataNotice
-            source={live.source}
-            reason={live.reason}
-            live="Claim loading, policy decisions, and review actions"
-            plural
-            simulated="Reviewing and paying a claim need the live queue, so on sample data their controls do nothing."
-          />
+        <div className="flex flex-col gap-3 border-b border-rule p-4 empty:hidden">
+          {/* Silent when the queue is live: the "Live from Sui Testnet" card
+              above and a populated, working queue below already say so. This
+              box only needs to speak up when something fell back, which is
+              the one time a treasurer needs to know. */}
+          {live.source !== 'live' ? (
+            <DataNotice
+              source={live.source}
+              reason={live.reason}
+              live="Claim loading, policy decisions, and review actions"
+              plural
+              simulated="Reviewing and paying a claim need the live queue, so on sample data their controls do nothing."
+            />
+          ) : null}
           {live.source === 'live' && !reviewsRecordable ? (
-            <p className="mt-3 rounded-control border border-wait-line bg-wait-soft p-3 text-caption text-wait">
-              A decision cannot be recorded: the database has no review columns, so there
-              would be nothing saying who decided or why. Apply migration{' '}
+            <p className="rounded-control border border-wait-line bg-wait-soft p-3 text-caption text-wait">
+              A decision can&rsquo;t be recorded yet — apply migration{' '}
               <span className="font-mono">20260901020000_claim_review_actions.sql</span>.
-              Evaluating a claim, releasing a payment and recording an outcome write none
-              of those columns, so they still work.
+              Evaluating, paying and reconciling still work.
             </p>
           ) : null}
           {actionError ? (
-            <p className="mt-3 rounded-control border border-no-line bg-no-soft p-3 text-caption text-no" role="alert">
+            <p className="rounded-control border border-no-line bg-no-soft p-3 text-caption text-no" role="alert">
               {actionError}
             </p>
           ) : null}
           {reconciliationNotice ? (
-            <p className="mt-3 rounded-control border border-wait-line bg-wait-soft p-3 text-caption text-ink-2" role="status">
+            <p className="rounded-control border border-wait-line bg-wait-soft p-3 text-caption text-ink-2" role="status">
               {reconciliationNotice}
             </p>
           ) : null}
           {reconciliationError ? (
-            <p className="mt-3 rounded-control border border-no-line bg-no-soft p-3 text-caption text-no" role="alert">
+            <p className="rounded-control border border-no-line bg-no-soft p-3 text-caption text-no" role="alert">
               Reconciliation failed: {reconciliationError}
             </p>
           ) : null}

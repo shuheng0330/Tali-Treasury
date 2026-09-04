@@ -38,6 +38,7 @@ export function ClaimHome({
   onCapture,
 }: Props) {
   const used = budget === '0' ? 0 : 100 - ratioBps(available, budget) / 100;
+  const needsCorrection = claims.filter((claim) => claim.state === 'needs_correction');
 
   return (
     <div className="flex flex-col gap-6">
@@ -83,31 +84,33 @@ export function ClaimHome({
       ) : null}
 
       <section className="flex flex-col gap-3">
-        {claims
-          .filter((claim) => claim.state === 'needs_correction')
-          .map((claim) => (
-            <div
-              key={claim.id}
-              className="mb-5 flex flex-col gap-3 rounded-card border border-wait-line bg-wait-soft p-4"
-            >
-              <div className="flex flex-col gap-1">
-                <span className="text-body font-medium text-wait">
-                  {claim.merchant} needs a correction
-                </span>
-                <p className="text-caption text-ink-2">
-                  {claim.review?.reason ??
-                    'The treasurer sent this back. Check the details against the receipt.'}
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => onCorrect(claim)}
-                className="btn btn--primary h-9 w-fit px-5 text-label"
+        {needsCorrection.length > 0 ? (
+          <div className="flex flex-col gap-3">
+            {needsCorrection.map((claim) => (
+              <div
+                key={claim.id}
+                className="flex flex-col gap-3 rounded-card border border-wait-line bg-wait-soft p-4"
               >
-                Fix and resubmit
-              </button>
-            </div>
-          ))}
+                <div className="flex flex-col gap-1">
+                  <span className="text-body font-medium text-wait">
+                    {claim.merchant} needs a correction
+                  </span>
+                  <p className="text-caption text-ink-2">
+                    {claim.review?.reason ??
+                      'The treasurer sent this back. Check the details against the receipt.'}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => onCorrect(claim)}
+                  className="btn btn--primary h-9 w-fit px-5 text-label"
+                >
+                  Fix and resubmit
+                </button>
+              </div>
+            ))}
+          </div>
+        ) : null}
 
         <h2 className="eyebrow">My claims</h2>
 
@@ -121,27 +124,30 @@ export function ClaimHome({
           </p>
         ) : (
           <ul className="flex flex-col divide-y divide-rule overflow-hidden rounded-card border border-rule bg-surface">
-              {claims.map((claim) => (
-                <li key={claim.id} className="flex flex-col gap-3 px-4 py-4">
-                  <div className="flex flex-wrap items-start justify-between gap-3">
-                    <span className="break-words text-body font-medium">{claim.merchant}</span>
-                    <Money amount={claim.amount} unit={claim.analysis?.currency ?? 'USDC'} size="row" />
-                  </div>
-                  <div className="flex min-w-0 flex-1 flex-col gap-2">
-                    <ClaimStatusSummary claim={claim} />
-                    <FxQuoteSummary claim={claim} />
-                    <span className="text-caption text-ink-3" suppressHydrationWarning>
-                      Updated {relative(claim.updatedAtMs)}
-                    </span>
-                  </div>
-                  {claim.state === 'paid' && claim.payment?.digest ? (
-                    <a className="link self-start text-caption"
-                      href={EXPLORER.tx(claim.payment.digest).suiscan}
-                      target="_blank" rel="noreferrer">
-                      View payment transaction
-                    </a>
-                  ) : null}
-                </li>
+            {claims.map((claim) => (
+              <li key={claim.id} className="flex flex-col gap-3 px-4 py-4">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <span className="break-words text-body font-medium">{claim.merchant}</span>
+                  <Money amount={claim.amount} unit={claim.analysis?.currency ?? 'USDC'} size="row" />
+                </div>
+                <div className="flex min-w-0 flex-1 flex-col gap-2">
+                  <ClaimStatusSummary claim={claim} />
+                  <FxQuoteSummary claim={claim} />
+                  <span className="text-caption text-ink-3" suppressHydrationWarning>
+                    Updated {relative(claim.updatedAtMs)}
+                  </span>
+                </div>
+                {claim.state === 'paid' && claim.payment?.digest ? (
+                  <a
+                    className="link self-start text-caption"
+                    href={EXPLORER.tx(claim.payment.digest).suiscan}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    View payment transaction
+                  </a>
+                ) : null}
+              </li>
             ))}
           </ul>
         )}
