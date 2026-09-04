@@ -19,6 +19,14 @@ This proves that the database schema and demo event/member seed are hosted. It
 does not prove that the web API is deployed, configured with production secrets,
 authenticated, or tested end to end.
 
+## Current hosted delta
+
+This record is historical. Before the payroll setup flow is deployed, apply all
+newer repository migrations, including the `20260904020000` payroll table and
+`20260904020100` payroll grants migrations. They have passed the
+local pgTAP suite but is not claimed as hosted until a teammate reruns the linked
+migration and lint checks below.
+
 ## Reproduce the non-secret checks
 
 An authorized teammate can link the Supabase CLI and compare migration history:

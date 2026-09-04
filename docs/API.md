@@ -139,3 +139,31 @@ or broadcasts. Terminal claims replay their stored payment result.
 
 Database, RPC, signature, token, key and private storage details are never part of
 API errors.
+
+## Payroll setup preview
+
+`POST /api/payroll/setup/preview` requires the same-origin wallet session and accepts:
+
+```json
+{ "employee": "0x…", "expiryMs": 1788281999000 }
+```
+
+Only `TALI_EMPLOYER_WALLET` may call it. The server returns the configured
+Testnet package, official USDC type, backend `PayrollCap` recipient, statutory
+recipients and rules, plus the exact RM50-equivalent micro-USDC budget derived
+from the current MYR/USD rate. The browser uses that server-issued preview with
+the shared transaction builder; it never receives the backend agent key.
+
+The preview endpoint does not register a payroll or accept a transaction digest.
+
+`POST /api/payroll/setup/verify` accepts `{ "digest": "…" }` from the same
+authenticated employer. It waits for a checkpoint and independently verifies the
+transaction sender, configured package and coin type, the single created mandate,
+every immutable rule, and the created `PayrollCap` owner. It returns the verified
+mandate and cap IDs. It never signs, rebuilds or resubmits a transaction.
+
+Verification is complete locally. Durable idempotent registration of this verified
+result is performed by `POST /api/payroll/setup/register`. It accepts only the
+digest, repeats the same server-side verification, and stores the verified fields
+in `payroll_configurations`. Replaying a stored digest returns the existing record
+without another chain transaction; conflicting mandate or capability IDs return 409.
