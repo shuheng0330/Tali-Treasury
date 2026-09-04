@@ -9,7 +9,7 @@ import {
 import { ServerError } from '../errors';
 import type { EnvLike } from '../env';
 import type { FxRate } from '../fx/rates';
-import { createPayrollSetupPreview } from './setup';
+import { assertPayrollEmployer, createPayrollSetupPreview } from './setup';
 
 type VerificationClient = Pick<SuiGrpcClient, 'waitForTransaction' | 'getObject'>;
 
@@ -18,6 +18,7 @@ export interface VerifiedPayrollSetup {
   checkpoint: string;
   mandateId: string;
   capId: string;
+  packageId: string;
   employer: string;
   employee: string;
   capRecipient: string;
@@ -45,15 +46,8 @@ export async function verifyPayrollSetupTransaction(input: {
 }): Promise<VerifiedPayrollSetup> {
   const env = input.env ?? process.env;
   const client = input.client ?? createTestnetClient(env.SUI_GRPC_URL?.trim());
-  const employer = normalizeAddress(env.PAYROLL_EMPLOYER_ADDRESS ?? '', 'payroll employer');
-  const identity = normalizeAddress(input.identity, 'authenticated employer');
-  if (identity !== employer) {
-    throw new ServerError(
-      'payroll_employer_forbidden',
-      403,
-      'Only the configured employer can verify payroll setup.',
-    );
-  }
+  const employer = assertPayrollEmployer(input.identity, env);
+  const identity = employer;
 
   const packageId = normalizeAddress(env.PAYROLL_PACKAGE_ID ?? '', 'payroll package ID');
   let result;
@@ -143,6 +137,7 @@ export async function verifyPayrollSetupTransaction(input: {
       checkpoint: transaction.checkpoint,
       mandateId: normalizeAddress(mandateId),
       capId: normalizeAddress(capId),
+      packageId,
       employer,
       employee,
       capRecipient: expected.capRecipient,

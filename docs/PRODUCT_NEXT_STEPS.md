@@ -45,7 +45,7 @@ Owner: frontend + backend, with Sui integration support.
    `buildCreatePayrollMandateTransaction` through the connected employer wallet.
 3. ✅ Verify finality, sender, package, coin type, mandate fields and `PayrollCap`
    ownership in a protected endpoint without trusting browser object IDs.
-4. Next: make registration idempotent by transaction and mandate. Recover a successful
+4. ✅ Make registration idempotent by transaction and mandate. Recover a successful
    chain creation whose database registration failed without funding twice.
 5. Route payroll, proof, history and earnings from the registered payroll. Remove
    `sampleStaff` from the live journey.
@@ -91,8 +91,8 @@ cannot be confused with claim recipients, `AgentCap` or per-claim policy.
 
 1. Lock and fund the single-employee payroll configuration.
 2. Publish/configure payroll and record the real objects.
-3. Finish verified, idempotent Set Up Payroll registration and close all payroll
-   write permissions. The employer preview and wallet execution are complete locally.
+3. Apply the registration migration to hosted Supabase, wire payroll pages to the
+   registered configuration and close all payroll write permissions.
 4. Record successful payroll, atomic refusal and employee withdrawal evidence.
 5. Keep the proven claim journey available; defer correction editing and dynamic
    expense-treasury creation if they threaten the payroll proof.

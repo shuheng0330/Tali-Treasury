@@ -1,4 +1,5 @@
 import type { PayrollSetupPreview } from '@/server/payroll/setup';
+import type { PayrollSetupRegistration } from '@/server/payroll/setup-registration';
 import type { VerifiedPayrollSetup } from '@/server/payroll/setup-verification';
 import { responseJson } from './client';
 
@@ -23,4 +24,15 @@ export async function verifyPayrollSetup(digest: string): Promise<VerifiedPayrol
       body: JSON.stringify({ digest }),
     }),
   );
+}
+
+export async function registerPayrollSetup(digest: string): Promise<PayrollSetupRegistration> {
+  const response = await responseJson<{ registration: PayrollSetupRegistration }>(
+    await fetch('/api/payroll/setup/register', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ digest }),
+    }),
+  );
+  return response.registration;
 }

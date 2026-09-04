@@ -44,7 +44,8 @@ budget, capability ownership and stream state.
   employer wallet sign and fund it. Cancellation leaves no application record.
 - ✅ Verify finality, sender, package, coin type, all mandate rules and the
   `PayrollCap` owner server-side. Failed verification never rebuilds or resubmits.
-- Make registration idempotent and recoverable without creating a second mandate.
+- ✅ Persist only server-verified fields. Unique digest, mandate and capability IDs
+  make registration idempotent; retry checks storage before chain/FX and never funds again.
 - Replace sample employee data across payroll, proof and earnings screens.
 
 Acceptance: an authorized employer can create and reopen the registered payroll;

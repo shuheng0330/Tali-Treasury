@@ -6,9 +6,9 @@ import { toDisplay } from '@tali/shared';
 import { useEffect, useState } from 'react';
 
 import { useWalletSession } from '@/components/wallet/WalletSessionProvider';
-import { previewPayrollSetup, verifyPayrollSetup } from '@/lib/api/payroll-setup';
+import { previewPayrollSetup, registerPayrollSetup } from '@/lib/api/payroll-setup';
 import type { PayrollSetupPreview } from '@/server/payroll/setup';
-import type { VerifiedPayrollSetup } from '@/server/payroll/setup-verification';
+import type { PayrollSetupRegistration } from '@/server/payroll/setup-registration';
 
 function defaultExpiry(): string {
   const date = new Date();
@@ -30,10 +30,10 @@ export function PayrollSetup() {
   const [employee, setEmployee] = useState('');
   const [expiry, setExpiry] = useState(defaultExpiry);
   const [preview, setPreview] = useState<PayrollSetupPreview | null>(null);
-  const [status, setStatus] = useState<'idle' | 'previewing' | 'ready' | 'signing' | 'verifying' | 'verified'>('idle');
+  const [status, setStatus] = useState<'idle' | 'previewing' | 'ready' | 'signing' | 'verifying' | 'registered'>('idle');
   const [error, setError] = useState<string | null>(null);
   const [digest, setDigest] = useState<string | null>(null);
-  const [verified, setVerified] = useState<VerifiedPayrollSetup | null>(null);
+  const [registration, setRegistration] = useState<PayrollSetupRegistration | null>(null);
 
   useEffect(() => {
     if (!employee && wallet.address) setEmployee(wallet.address);
@@ -52,7 +52,7 @@ export function PayrollSetup() {
     setStatus('previewing');
     setError(null);
     setDigest(null);
-    setVerified(null);
+    setRegistration(null);
     try {
       const value = await previewPayrollSetup({ employee, expiryMs });
       setPreview(value);
@@ -98,24 +98,24 @@ export function PayrollSetup() {
       submittedDigest = transactionDigest;
       setDigest(transactionDigest);
       setStatus('verifying');
-      const verification = await verifyPayrollSetup(transactionDigest);
-      setVerified(verification);
-      setStatus('verified');
+      const registered = await registerPayrollSetup(transactionDigest);
+      setRegistration(registered);
+      setStatus('registered');
     } catch (reason) {
       setStatus(submittedDigest ? 'verifying' : 'ready');
       setError(walletMessage(reason));
     }
   }
 
-  async function retryVerification() {
+  async function retryRegistration() {
     if (!digest) return;
     setStatus('verifying');
     setError(null);
     try {
-      setVerified(await verifyPayrollSetup(digest));
-      setStatus('verified');
+      setRegistration(await registerPayrollSetup(digest));
+      setStatus('registered');
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : 'Payroll verification is unavailable.');
+      setError(reason instanceof Error ? reason.message : 'Payroll registration is unavailable.');
     }
   }
 
@@ -170,21 +170,21 @@ export function PayrollSetup() {
             Your wallet will spend Testnet USDC and gas. These rules and the employee allowlist are immutable for this mandate.
           </p>
           <button className="btn btn--primary btn--block" type="button" onClick={createPayroll}
-            disabled={status === 'signing' || status === 'verifying' || status === 'verified'}>
-            {status === 'signing' ? 'Check your wallet…' : status === 'verifying' ? 'Verifying on Sui…' : status === 'verified' ? 'Payroll verified' : 'Create and fund PayrollMandate'}
+            disabled={status === 'signing' || status === 'verifying' || status === 'registered'}>
+            {status === 'signing' ? 'Check your wallet…' : status === 'verifying' ? 'Verifying and registering…' : status === 'registered' ? 'Payroll registered' : 'Create and fund PayrollMandate'}
           </button>
         </div>
       ) : null}
 
       {error ? <p className="rounded-card border border-stop-line bg-stop-soft p-4 text-caption text-stop">{error}</p> : null}
-      {digest && !verified && status === 'verifying' ? (
-        <button className="btn btn--ghost btn--block" type="button" onClick={retryVerification}>
-          Retry verification (do not fund again)
+      {digest && !registration && status === 'verifying' ? (
+        <button className="btn btn--ghost btn--block" type="button" onClick={retryRegistration}>
+          Retry registration (do not fund again)
         </button>
       ) : null}
       {digest ? (
         <p className="rounded-card border border-ok-line bg-ok-soft p-4 text-caption text-ok">
-          {verified ? `Verified mandate ${verified.mandateId.slice(0, 10)}… ` : 'The wallet transaction succeeded; server verification is still pending. '}
+          {registration ? `Registered mandate ${registration.mandateId.slice(0, 10)}… ` : 'The wallet transaction succeeded; verification or registration is still pending. '}
           <a className="link" href={`https://suiscan.xyz/testnet/tx/${digest}`} target="_blank" rel="noreferrer">View transaction</a>
         </p>
       ) : null}

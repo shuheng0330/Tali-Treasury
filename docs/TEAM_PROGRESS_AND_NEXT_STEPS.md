@@ -14,9 +14,9 @@ The percentage estimates below are a historical 1 September snapshot, not curren
 completion claims. The local browser flow now paid RM6 as 1.484561 Testnet USDC;
 wallet auth, live quotes, backend signing and reconciliation have been verified.
 Paid/rejected tabs, review reasons and compact claim summaries are implemented.
-The employer-only Set Up Payroll preview, connected-wallet creation transaction and
-strict finalized-object verification are also complete locally; durable idempotent
-registration remains the next payroll gate.
+The employer-only Set Up Payroll preview, connected-wallet creation transaction,
+strict finalized-object verification and idempotent Supabase registration are
+complete locally. Hosted migration and registered-payroll page wiring are next.
 Use [PROGRESS.md](PROGRESS.md) for current status,
 [PAYROLL_LAUNCH_PLAN.md](PAYROLL_LAUNCH_PLAN.md) for the payroll release sequence,
 and [PRODUCT_NEXT_STEPS.md](PRODUCT_NEXT_STEPS.md) for the separate setup flows and

@@ -47,6 +47,19 @@ function required(env: EnvLike, name: string): string {
   return value;
 }
 
+export function assertPayrollEmployer(identityInput: string, env: EnvLike = process.env): string {
+  const employer = normalizeAddress(required(env, 'PAYROLL_EMPLOYER_ADDRESS'), 'payroll employer');
+  const identity = normalizeAddress(identityInput, 'authenticated employer');
+  if (identity !== employer) {
+    throw new ServerError(
+      'payroll_employer_forbidden',
+      403,
+      'Only the configured employer can set up payroll.',
+    );
+  }
+  return employer;
+}
+
 export async function createPayrollSetupPreview(input: {
   identity: string;
   employee: string;
@@ -57,15 +70,7 @@ export async function createPayrollSetupPreview(input: {
 }): Promise<PayrollSetupPreview> {
   const env = input.env ?? process.env;
   const now = input.now ?? Date.now;
-  const employer = normalizeAddress(required(env, 'PAYROLL_EMPLOYER_ADDRESS'), 'payroll employer');
-  const identity = normalizeAddress(input.identity, 'authenticated employer');
-  if (identity !== employer) {
-    throw new ServerError(
-      'payroll_employer_forbidden',
-      403,
-      'Only the configured employer can set up payroll.',
-    );
-  }
+  const employer = assertPayrollEmployer(input.identity, env);
   if (!Number.isSafeInteger(input.expiryMs) || input.expiryMs <= now() + 60 * 60_000) {
     throw new ServerError('invalid_request', 400, 'Payroll expiry must be at least one hour in the future.');
   }

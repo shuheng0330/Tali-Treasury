@@ -44,7 +44,7 @@ Status words are intentionally precise:
 | Claim outcomes | **Complete locally** | Paid with Auto-paid / Paid after review chips; Rejected tab; correction/rejection reasons on both screens |
 | Payroll Move module and integration | **Complete locally; publication pending** | Contract, tests, builders, readers, payroll service and screens exist; live configuration and proof remain |
 | Payroll MYR → USDC valuation | **Complete locally** | RM statutory calculation is converted leg-by-leg with one approved live-reference rate; hosted proof pending |
-| Authenticated Set Up Payroll | **Complete locally; registration pending** | Employer-only preview, Slush signing and strict finalized-object verification are implemented. Durable idempotent registration is next |
+| Authenticated Set Up Payroll | **Complete locally; hosted migration pending** | Employer-only preview, Slush signing, strict finalized-object verification and idempotent Supabase registration are implemented |
 | Live payroll run and salary stream | **Pending** | Requires published package, funded mandate, real employee wiring, authorization and Testnet evidence |
 | Create Expense Treasury | **Pending** | Separate reimbursement setup backed by the existing `Mandate`; not part of payroll setup |
 | Revoke and Safety Test interactions | **Mocked** | Clearly labelled previews; no browser signing or state changes |

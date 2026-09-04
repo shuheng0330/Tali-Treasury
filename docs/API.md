@@ -126,4 +126,7 @@ every immutable rule, and the created `PayrollCap` owner. It returns the verifie
 mandate and cap IDs. It never signs, rebuilds or resubmits a transaction.
 
 Verification is complete locally. Durable idempotent registration of this verified
-result remains pending.
+result is performed by `POST /api/payroll/setup/register`. It accepts only the
+digest, repeats the same server-side verification, and stores the verified fields
+in `payroll_configurations`. Replaying a stored digest returns the existing record
+without another chain transaction; conflicting mandate or capability IDs return 409.

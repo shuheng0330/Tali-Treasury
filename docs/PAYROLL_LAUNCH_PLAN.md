@@ -101,8 +101,9 @@ demo.
   existing Sui transaction builder for connected-wallet execution.
 - ✅ Verify the finalized transaction, sender, created mandate fields and
   `PayrollCap` owner server-side instead of trusting browser-submitted object fields.
-- Add idempotent durable registration for that verified result.
-- Recover safely if the chain transaction succeeds but database registration
+- ✅ Add idempotent durable registration for that verified result, with unique
+  transaction, mandate and capability identifiers.
+- ✅ Recover safely if the chain transaction succeeds but database registration
   fails. A registration retry must never fund a second mandate.
 - Bind payroll pages, proof and earnings to the registered payroll rather than
   `sampleStaff` or a single global demo constant.
