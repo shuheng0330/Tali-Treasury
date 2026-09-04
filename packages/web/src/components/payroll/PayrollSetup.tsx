@@ -7,9 +7,10 @@ import { useEffect, useState } from 'react';
 
 import { RoleNotice } from '@/components/RoleNotice';
 import { useWalletSession } from '@/components/wallet/WalletSessionProvider';
-import { EMPLOYER_WALLET } from '@/lib/demo-config';
+import { EMPLOYER_WALLET, PAYROLL_EMPLOYEE } from '@/lib/demo-config';
 import { SETUP_COPY, walletAccess } from '@/lib/wallet-access';
 import { previewPayrollSetup, registerPayrollSetup } from '@/lib/api/payroll-setup';
+import { initialPayrollEmployee } from '@/lib/payroll-setup-defaults';
 import type { PayrollSetupPreview } from '@/server/payroll/setup';
 import type { PayrollSetupRegistration } from '@/server/payroll/setup-registration';
 
@@ -46,7 +47,9 @@ export function PayrollSetup() {
      not the employer regardless. It is here so the refusal arrives before the
      form is filled in rather than after, where it reads as a malfunction. */
   const access = walletAccess(wallet.address, EMPLOYER_WALLET, SETUP_COPY);
-  const [employee, setEmployee] = useState('');
+  const [employee, setEmployee] = useState(() =>
+    initialPayrollEmployee(PAYROLL_EMPLOYEE, wallet.address),
+  );
   const [expiry, setExpiry] = useState(defaultExpiry);
   const [preview, setPreview] = useState<PayrollSetupPreview | null>(null);
   const [status, setStatus] = useState<'idle' | 'previewing' | 'ready' | 'signing' | 'verifying' | 'registered'>('idle');
@@ -55,7 +58,9 @@ export function PayrollSetup() {
   const [registration, setRegistration] = useState<PayrollSetupRegistration | null>(null);
 
   useEffect(() => {
-    if (!employee && wallet.address) setEmployee(wallet.address);
+    if (!employee && wallet.address) {
+      setEmployee(initialPayrollEmployee(PAYROLL_EMPLOYEE, wallet.address));
+    }
   }, [employee, wallet.address]);
 
   async function loadPreview() {
