@@ -311,6 +311,13 @@ export function TreasuryDashboard({
         <AddMemberForm eventId={DEMO_EVENT_ID} onAdded={() => live.reload()} />
       ) : null}
 
+      {/* Navigation, not an action: the setup screen checks the wallet itself,
+          and hiding the way there from everyone who has not signed in yet
+          leaves no way to reach it at all. */}
+      <Link href="/treasury/setup" className="link self-start text-caption">
+        Create another expense treasury
+      </Link>
+
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-card border border-ok-line bg-ok-soft px-4 py-3 sm:px-6">
         <div>
           <p className="text-body font-medium text-ok">Live from Sui Testnet</p>

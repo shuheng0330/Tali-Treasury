@@ -210,7 +210,8 @@ export default function Page() {
           Look around as the <Link href="/payroll" className="link">employer</Link>, as{' '}
           <Link href="/earnings" className="link">someone being paid</Link>, as a{' '}
           <Link href="/claim" className="link">member claiming an expense</Link>, as the{' '}
-          <Link href="/treasury" className="link">treasurer</Link>, or in the{' '}
+          <Link href="/treasury" className="link">treasurer</Link>, set up{' '}
+          <Link href="/treasury/setup" className="link">an expense treasury</Link>, or in the{' '}
           <Link href="/safety" className="link">safety test</Link>.
         </p>
         <div className="rounded-panel border border-rule bg-surface p-6 md:p-8">
