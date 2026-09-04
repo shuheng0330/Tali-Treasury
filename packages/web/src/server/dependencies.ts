@@ -21,6 +21,11 @@ import { createSupabaseReceiptStore } from './supabase/receipt-store';
 import { createSupabaseWalletAuthRepository } from './supabase/wallet-auth-repository';
 import { createSuiMandateReader } from './sui/mandate-reader';
 import { createSuiPaymentExecutor } from './sui/payment-executor';
+import {
+  createAddEventMemberService,
+  createListEventMembersService,
+} from './events/members';
+import { createSupabaseEventMemberRepository } from './supabase/event-member-repository';
 
 export interface BackendServices {
   analyzeReceipt: ReturnType<typeof createAnalyzeReceiptService>;
@@ -34,6 +39,8 @@ export interface BackendServices {
   auth: ReturnType<typeof createSupabaseWalletAuthRepository>;
   issueWalletChallenge: ReturnType<typeof createIssueWalletChallengeService>;
   completeWalletSession: ReturnType<typeof createCompleteWalletSessionService>;
+  addEventMember: ReturnType<typeof createAddEventMemberService>;
+  listEventMembers: ReturnType<typeof createListEventMembersService>;
   appOrigin: string;
 }
 
@@ -58,6 +65,7 @@ export function getBackendServices(): BackendServices {
   const mandates = createSuiMandateReader();
   const payments = createSuiPaymentExecutor();
   const auth = createSupabaseWalletAuthRepository(client);
+  const members = createSupabaseEventMemberRepository(client);
   const appOrigin = requireAppOrigin();
 
   services = {
@@ -72,6 +80,8 @@ export function getBackendServices(): BackendServices {
     auth,
     issueWalletChallenge: createIssueWalletChallengeService({ auth, appOrigin }),
     completeWalletSession: createCompleteWalletSessionService({ auth }),
+    addEventMember: createAddEventMemberService({ members }),
+    listEventMembers: createListEventMembersService({ members }),
     appOrigin,
   };
   return services;
