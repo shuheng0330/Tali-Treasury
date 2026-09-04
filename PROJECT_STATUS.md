@@ -65,7 +65,8 @@ Last updated: 4 September 2026 (MYT)
   tests), the EPF/SOCSO/EIS calculator, and the PayrollDesk/earnings UI — complete
   locally, not yet published to Testnet. See `docs/PAYROLL_LAUNCH_PLAN.md` for the
   remaining publish work before the pitch;
-- 394 web tests and 45 Sui integration tests passing as of this note.
+- 535 web tests (534 passing, one intentional skip), 45 Sui integration tests,
+  and 125 pgTAP assertions passing after the roster integration.
 
 ## Hosted schema verified
 
@@ -79,14 +80,12 @@ Last updated: 4 September 2026 (MYT)
   were checked. The recorded scope and reproducible checks are in
   [`docs/HOSTED_SUPABASE_VERIFICATION.md`](docs/HOSTED_SUPABASE_VERIFICATION.md).
 
-## Environment note
+## Local verification environment
 
-Docker Desktop 4.66.1 currently fails during startup while removing inaccessible
-Windows Unix-socket files for its disabled inference and secrets services. The
-transient `Docker\run` and `docker-secrets-engine` runtime directories were moved
-to timestamped local backups; no images, volumes, or project data were removed.
-The application suite is verified, but the new local Supabase reset/pgTAP replay
-must be rerun after Docker Desktop is repaired or upgraded.
+Docker Desktop and the local Supabase stack are available. Pending local migrations
+`20260901040000`, `20260903010000`, and `20260904010000` were applied without a
+reset on 4 September; all 125 pgTAP assertions then passed. No hosted migration or
+hosted data was changed by this verification.
 
 ## Pending integration
 

@@ -50,7 +50,7 @@ Status words are intentionally precise:
 | Live payroll run and salary stream | **Pending** | Requires published package, funded mandate, real employee wiring, authorization and Testnet evidence |
 | Create Expense Treasury | **Pending** | Separate reimbursement setup backed by the existing `Mandate`; not part of payroll setup |
 | Revoke and Safety Test interactions | **Mocked** | Clearly labelled previews; no browser signing or state changes |
-| Gemini receipt analysis and Supabase claims | **Complete locally; rollout pending** | Private drafts, authenticated access and 91 pgTAP assertions |
+| Gemini receipt analysis and Supabase claims | **Complete locally; rollout pending** | Private drafts, authenticated access and 125 pgTAP assertions |
 | Deterministic policy and backend agent signing | **Live via local app** | Native USDC payment/recovery and manually approved MYR reimbursement verified on Testnet |
 | Wallet connection and live UI writes | **Complete locally** | Testnet connect, explicit sign-in, one-hour HTTP-only session and sign-out |
 | Statutory payroll enforcement | **Complete locally** | `payroll.move`, 25 contract tests; EPF Third Schedule bands and SOCSO/EIS ceilings enforced as an on-chain basis-point floor. Not yet published to Testnet |

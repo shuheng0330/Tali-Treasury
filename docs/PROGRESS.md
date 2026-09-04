@@ -23,6 +23,15 @@ the submission time against the organiser channel; older notes used 23:59.
 
 ## Current status by subsystem
 
+### 4 September roster-backend verification
+
+- Treasurer-only active roster GET and add-only POST are implemented against the
+  existing `event_members` table; no migration was added for this increment.
+- The dashboard add-member transport now matches the shared request/response
+  contract. Authoritative roster rendering remains a frontend handoff.
+- Fresh verification: 45 Sui tests passed; 535 web tests completed with 534 passing
+  and one intentional skip; all 125 pgTAP assertions passed.
+
 ### 3 September local verification update (`test_main`)
 
 - Slush zkLogin sign-in fixed and covered by regression tests.
