@@ -31,6 +31,9 @@ export default function PayrollPage() {
         <Link href="/payroll/history" className="link self-start">
           What has been run
         </Link>
+        <Link href="/payroll/setup" className="link self-start">
+          Set up a payroll mandate
+        </Link>
       </div>
     </div>
   );

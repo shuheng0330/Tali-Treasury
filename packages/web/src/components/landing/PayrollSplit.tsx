@@ -26,10 +26,10 @@ export function PayrollSplit() {
       <div className="flex flex-col gap-3 rounded-card border border-rule bg-surface p-6">
         <span className="eyebrow">The treasury pays</span>
         <p className="tnum font-display text-title">
-          {toDisplay(person.breakdown.employerCost)}
+          RM{toDisplay(person.breakdown.employerCost)}
         </p>
         <p className="text-caption text-ink-3">
-          Gross {toDisplay(person.breakdown.gross)} plus the employer&rsquo;s share of every
+          Gross RM{toDisplay(person.breakdown.gross)} plus the employer&rsquo;s share of every
           statutory contribution.
         </p>
       </div>
@@ -48,7 +48,7 @@ export function PayrollSplit() {
           <div className="flex items-baseline justify-between gap-4">
             <span className="text-body font-medium text-ok">{person.name} takes home</span>
             <span className="tnum font-display text-heading text-ok">
-              {toDisplay(person.breakdown.net)}
+              RM{toDisplay(person.breakdown.net)}
             </span>
           </div>
           <p className="text-caption text-ok/80">Straight to their own wallet.</p>
@@ -66,7 +66,7 @@ export function PayrollSplit() {
                 <span className="text-body">{line.label}</span>
                 <span className="truncate text-caption text-ink-3">{line.note}</span>
               </span>
-              <span className="tnum shrink-0 text-body">{toDisplay(amountOf(line.key))}</span>
+              <span className="tnum shrink-0 text-body">RM{toDisplay(amountOf(line.key))}</span>
             </li>
           ))}
         </ul>

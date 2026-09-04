@@ -4,6 +4,7 @@ import { mandate } from '@/lib/mock/data';
 import { sampleStaff } from '@/lib/mock/payroll';
 import { TALI_TESTNET_PACKAGE_ID } from '@tali/treasury-sui';
 import { SPEND_CHECKS } from '@/lib/checks';
+import { PAYROLL_CONFIGURED } from '@/lib/demo-config';
 import { CheckMarquee } from '@/components/landing/CheckMarquee';
 import { Evidence } from '@/components/landing/Evidence';
 import { PhoneCode } from '@/components/landing/PhoneCode';
@@ -24,7 +25,7 @@ export default function Page() {
           </span>
           <div className="flex items-center gap-5">
             <span className="eyebrow hidden sm:inline-flex">Sui testnet</span>
-            <Link href="/payroll" className="btn btn--primary h-10 px-5">
+            <Link href="/payroll/setup" className="btn btn--primary h-10 px-5">
               Open the app
             </Link>
           </div>
@@ -49,11 +50,11 @@ export default function Page() {
         </p>
 
         <div className="flex flex-wrap items-center gap-3">
-          <Link href="/payroll" className="btn btn--accent btn--lg">
-            Run a payroll
+          <Link href="/payroll/setup" className="btn btn--accent btn--lg">
+            Set up payroll
           </Link>
-          <Link href="/payroll/proof" className="btn btn--ghost btn--lg">
-            Try underpaying EPF
+          <Link href="/payroll" className="btn btn--ghost btn--lg">
+            Run a payroll
           </Link>
         </div>
       </section>
@@ -62,17 +63,28 @@ export default function Page() {
         <div className="flex flex-col gap-4">
           <p className="eyebrow">One salary, one transaction</p>
           <h2 className="max-w-3xl text-title">
-            {sampleStaff[0]!.name} earns {toDisplay(sampleStaff[0]!.breakdown.gross)} a month.
-            Four payments have to leave at once.
+            {sampleStaff[0]!.name} earns RM{toDisplay(sampleStaff[0]!.breakdown.gross)} a
+            month. Four payments have to leave at once.
           </h2>
           <p className="max-w-2xl text-body-lg text-ink-2">
-            Figures follow the EPF Third Schedule bands and the RM6,000 SOCSO and EIS ceilings.
-            The mandate holds a minimum for each body, measured against the wage — so paying
-            EPF a single sen fails the same check as paying it nothing.
+            The wage is scaled down so a whole month of it fits inside a Testnet faucet
+            grant. The arithmetic is not scaled: figures follow the EPF Third Schedule bands
+            and the RM6,000 SOCSO and EIS ceilings. The mandate holds a minimum for each
+            body, measured against the wage — so paying EPF a single sen fails the same
+            check as paying it nothing.
           </p>
         </div>
 
         <PayrollSplit />
+
+        {PAYROLL_CONFIGURED ? null : (
+          <p className="max-w-3xl rounded-card border border-wait-line bg-wait-soft p-4 text-body text-wait">
+            <span className="font-medium">Not yet on chain.</span> The payroll module is
+            written and tested, but not published to Testnet — so these figures are what the
+            contract will enforce, not a transaction you can look up. The claims contract
+            further down is live, and its refusals are real.
+          </p>
+        )}
 
         <p className="max-w-3xl text-body text-ink-2">
           Underpay any one of them and{' '}
@@ -210,9 +222,11 @@ export default function Page() {
         <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-5 py-12 text-caption text-ink-3 sm:px-8">
           <p className="max-w-2xl">
             The claims contract and its mandate are live on Sui testnet, and the treasurer view
-            reads them straight off the chain rather than from a copy we keep. The payroll module
-            is written and tested but not yet published, so payroll screens compute the split the
-            contract will enforce and say so on every screen. Receipt submission and server policy
+            reads them straight off the chain rather than from a copy we keep.{' '}
+            {PAYROLL_CONFIGURED
+              ? 'The payroll module is published, and its mandate and salary stream are read from the chain.'
+              : 'The payroll module is written and tested but not yet published, so payroll screens compute the split the contract will enforce and say so on every screen.'}{' '}
+            Receipt submission and server policy
             processing are connected when demo identity is enabled; review, safety controls, and
             payment are not yet signed transactions. No mainnet, no real funds, and nothing here
             is a custody service.
