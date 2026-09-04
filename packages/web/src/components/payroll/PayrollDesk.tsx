@@ -13,6 +13,7 @@ import { grossProblem, grossToBaseUnits, type WageClassValue } from '@/lib/payro
 import { WageClass } from './WageClass';
 import { RoleNotice } from '@/components/RoleNotice';
 import { useWalletSession } from '@/components/wallet/WalletSessionProvider';
+import { payrollRunNote, type PayrollStage } from '@/lib/chain-status';
 import { EMPLOYER_WALLET } from '@/lib/demo-config';
 import { EMPLOYER_COPY, walletAccess } from '@/lib/wallet-access';
 
@@ -25,9 +26,13 @@ interface RunState {
 export function PayrollDesk({
   staff,
   runsAreLive,
+  /* Read on the server and handed down: the package and mandate ids are not
+     NEXT_PUBLIC_, so this component cannot work the stage out for itself. */
+  stage,
 }: {
   staff: SampleEmployee[];
   runsAreLive: boolean;
+  stage: PayrollStage;
 }) {
   const { address } = useWalletSession();
   const access = walletAccess(address, EMPLOYER_WALLET, EMPLOYER_COPY);
@@ -146,11 +151,10 @@ export function PayrollDesk({
         source={source}
         reason={reason}
         live="The statutory split"
-        simulated={`Figures follow the EPF Third Schedule bands and the RM6,000 SOCSO and EIS ceilings. ${
-          runsAreLive
-            ? 'Running payroll signs a real transaction on Sui testnet.'
-            : 'Paying a run still needs the payroll module on chain.'
-        }`}
+        simulated={`Figures follow the EPF Third Schedule bands and the RM6,000 SOCSO and EIS ceilings. ${payrollRunNote(
+          stage,
+          runsAreLive,
+        )}`}
       />
 
       <div className="flex flex-col gap-3">

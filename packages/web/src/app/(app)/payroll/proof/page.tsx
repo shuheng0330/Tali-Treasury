@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { EnforcementProof } from '@/components/payroll/EnforcementProof';
+import { epfFloorNote, payrollStage } from '@/lib/chain-status';
 import { payrollStaff } from '@/lib/mock/payroll';
 import { readEpfFloor } from '@/server/payroll/floors';
 
@@ -30,9 +31,8 @@ export default async function PayrollProofPage() {
 
       <p className="text-caption text-ink-3">
         {floor.source === 'chain'
-          ? 'The minimum above was read from the mandate itself, so it is the figure the contract will actually enforce.'
-          : 'The minimum above is the floor this mandate is created with. It has not been read off the chain, because the payroll module is not published yet.'}{' '}
-        Both outcomes become real testnet transactions once it is.
+          ? 'The minimum above was read from the mandate itself, so it is the figure the contract will actually enforce. Both outcomes are real testnet transactions.'
+          : `The minimum above is the floor this mandate is created with. ${epfFloorNote(payrollStage())}`}
       </p>
 
       <Link href="/payroll" className="link self-start">
