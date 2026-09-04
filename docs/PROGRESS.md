@@ -39,6 +39,9 @@ the submission time against the organiser channel; older notes used 23:59.
 - Upgraded the Move package to Testnet version 2 with `payroll` and `treasury` at
   `0xeb973dbac9e4e5c2ea0c31ffb6b51b4df1f34e05443f970e89a35301e6b97688`.
   Upgrade transaction: `86914sL2wFj9s7sfcMqdYx9ekST8FRU8Y1tLT5SAaSfN`.
+- Locked the demo employee plus separate EPF/SOCSO/EIS stand-ins. Funded the Slush
+  employer with 9.5 USDC and 0.1 SUI; its verified balance is now 12.640845 USDC
+  and 0.1 SUI, ready for authenticated mandate setup.
 
 ### 4 September roster-backend verification
 
@@ -126,8 +129,9 @@ Legend: ✅ done · 🟡 in progress · ⬜ not started · ⛔ cut
 Updated 4 September. See [payroll launch plan](PAYROLL_LAUNCH_PLAN.md) and
 [product next steps](PRODUCT_NEXT_STEPS.md) for acceptance criteria:
 
-1. Lock one employee wallet, supported employee class, scaled wage, payroll cap,
-   stream timing and total Testnet funding.
+1. ✅ Lock one employee wallet and separate Testnet statutory stand-ins; fund the
+   employer for the RM50-equivalent mandate. Employee class and stream timing still
+   need to be confirmed in the setup preview.
 2. Configure package v2, create the funded mandate, open the demo stream and
    record mandate, capability, stream and recipient identifiers. Package publication
    is complete (`86914sL2wFj9s7sfcMqdYx9ekST8FRU8Y1tLT5SAaSfN`).
