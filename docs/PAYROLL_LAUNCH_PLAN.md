@@ -89,11 +89,12 @@ demo.
 ### Gate 2 — publish and verify the chain configuration
 
 - ✅ Upgrade the payroll module and record package v2, the transaction and UpgradeCap.
-- Create a `PayrollMandate` with the approved employee and Testnet stand-in
+- ✅ Create a `PayrollMandate` with the approved employee and Testnet stand-in
   recipients. Deliver its `PayrollCap` to the intended server signer.
 - Open a salary stream whose accrual window overlaps rehearsal and presentation.
-- Record public object IDs and successful/refused transaction evidence. Never
-  commit a private key or recovery phrase.
+- Record public object IDs and successful/refused transaction evidence. Setup
+  and successful-run evidence are complete; refusal and stream evidence remain.
+  Never commit a private key or recovery phrase.
 
 ### Gate 3 — implement authenticated Set Up Payroll
 
@@ -120,8 +121,8 @@ demo.
 
 ### Gate 5 — prove and freeze
 
-- Verify one successful payroll, one contribution refusal and one employee stream
-  withdrawal from a fresh browser.
+- ✅ Verify one successful payroll. One contribution refusal and one employee
+  stream withdrawal from a fresh browser remain.
 - Check database records, Sui balances and explorer links after finality.
 - Record a backup demo video and update deployment evidence.
 - Freeze nonessential features. Dynamic roster changes, OT, PCB/income tax, batch
