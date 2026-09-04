@@ -1,4 +1,5 @@
 import type { PayrollSetupPreview } from '@/server/payroll/setup';
+import type { VerifiedPayrollSetup } from '@/server/payroll/setup-verification';
 import { responseJson } from './client';
 
 export async function previewPayrollSetup(input: {
@@ -10,6 +11,16 @@ export async function previewPayrollSetup(input: {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify(input),
+    }),
+  );
+}
+
+export async function verifyPayrollSetup(digest: string): Promise<VerifiedPayrollSetup> {
+  return responseJson<VerifiedPayrollSetup>(
+    await fetch('/api/payroll/setup/verify', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ digest }),
     }),
   );
 }

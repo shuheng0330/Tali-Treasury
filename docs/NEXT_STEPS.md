@@ -42,7 +42,8 @@ budget, capability ownership and stream state.
   preview the immutable rules and exact Testnet USDC funding before wallet signing.
 - ✅ Build the transaction through `@tali/treasury-sui` and let the connected
   employer wallet sign and fund it. Cancellation leaves no application record.
-- Verify the finalized transaction server-side before registration.
+- ✅ Verify finality, sender, package, coin type, all mandate rules and the
+  `PayrollCap` owner server-side. Failed verification never rebuilds or resubmits.
 - Make registration idempotent and recoverable without creating a second mandate.
 - Replace sample employee data across payroll, proof and earnings screens.
 

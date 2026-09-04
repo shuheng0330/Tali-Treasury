@@ -6,8 +6,9 @@ import { toDisplay } from '@tali/shared';
 import { useEffect, useState } from 'react';
 
 import { useWalletSession } from '@/components/wallet/WalletSessionProvider';
-import { previewPayrollSetup } from '@/lib/api/payroll-setup';
+import { previewPayrollSetup, verifyPayrollSetup } from '@/lib/api/payroll-setup';
 import type { PayrollSetupPreview } from '@/server/payroll/setup';
+import type { VerifiedPayrollSetup } from '@/server/payroll/setup-verification';
 
 function defaultExpiry(): string {
   const date = new Date();
@@ -29,9 +30,10 @@ export function PayrollSetup() {
   const [employee, setEmployee] = useState('');
   const [expiry, setExpiry] = useState(defaultExpiry);
   const [preview, setPreview] = useState<PayrollSetupPreview | null>(null);
-  const [status, setStatus] = useState<'idle' | 'previewing' | 'ready' | 'signing' | 'created'>('idle');
+  const [status, setStatus] = useState<'idle' | 'previewing' | 'ready' | 'signing' | 'verifying' | 'verified'>('idle');
   const [error, setError] = useState<string | null>(null);
   const [digest, setDigest] = useState<string | null>(null);
+  const [verified, setVerified] = useState<VerifiedPayrollSetup | null>(null);
 
   useEffect(() => {
     if (!employee && wallet.address) setEmployee(wallet.address);
@@ -50,6 +52,7 @@ export function PayrollSetup() {
     setStatus('previewing');
     setError(null);
     setDigest(null);
+    setVerified(null);
     try {
       const value = await previewPayrollSetup({ employee, expiryMs });
       setPreview(value);
@@ -68,6 +71,7 @@ export function PayrollSetup() {
     }
     setStatus('signing');
     setError(null);
+    let submittedDigest: string | null = null;
     try {
       const transaction = buildCreatePayrollMandateTransaction(
         { packageId: preview.packageId, coinType: preview.coinType },
@@ -90,11 +94,28 @@ export function PayrollSetup() {
       if (result.$kind === 'FailedTransaction') {
         throw new Error(result.FailedTransaction.status.error?.message ?? 'Sui refused the setup transaction.');
       }
-      setDigest(result.Transaction.digest);
-      setStatus('created');
+      const transactionDigest = result.Transaction.digest;
+      submittedDigest = transactionDigest;
+      setDigest(transactionDigest);
+      setStatus('verifying');
+      const verification = await verifyPayrollSetup(transactionDigest);
+      setVerified(verification);
+      setStatus('verified');
     } catch (reason) {
-      setStatus('ready');
+      setStatus(submittedDigest ? 'verifying' : 'ready');
       setError(walletMessage(reason));
+    }
+  }
+
+  async function retryVerification() {
+    if (!digest) return;
+    setStatus('verifying');
+    setError(null);
+    try {
+      setVerified(await verifyPayrollSetup(digest));
+      setStatus('verified');
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'Payroll verification is unavailable.');
     }
   }
 
@@ -149,16 +170,21 @@ export function PayrollSetup() {
             Your wallet will spend Testnet USDC and gas. These rules and the employee allowlist are immutable for this mandate.
           </p>
           <button className="btn btn--primary btn--block" type="button" onClick={createPayroll}
-            disabled={status === 'signing' || status === 'created'}>
-            {status === 'signing' ? 'Check your wallet…' : status === 'created' ? 'Payroll created' : 'Create and fund PayrollMandate'}
+            disabled={status === 'signing' || status === 'verifying' || status === 'verified'}>
+            {status === 'signing' ? 'Check your wallet…' : status === 'verifying' ? 'Verifying on Sui…' : status === 'verified' ? 'Payroll verified' : 'Create and fund PayrollMandate'}
           </button>
         </div>
       ) : null}
 
       {error ? <p className="rounded-card border border-stop-line bg-stop-soft p-4 text-caption text-stop">{error}</p> : null}
+      {digest && !verified && status === 'verifying' ? (
+        <button className="btn btn--ghost btn--block" type="button" onClick={retryVerification}>
+          Retry verification (do not fund again)
+        </button>
+      ) : null}
       {digest ? (
         <p className="rounded-card border border-ok-line bg-ok-soft p-4 text-caption text-ok">
-          Payroll mandate creation succeeded.{' '}
+          {verified ? `Verified mandate ${verified.mandateId.slice(0, 10)}… ` : 'The wallet transaction succeeded; server verification is still pending. '}
           <a className="link" href={`https://suiscan.xyz/testnet/tx/${digest}`} target="_blank" rel="noreferrer">View transaction</a>
         </p>
       ) : null}

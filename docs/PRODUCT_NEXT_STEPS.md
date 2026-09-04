@@ -43,9 +43,9 @@ Owner: frontend + backend, with Sui integration support.
    current FX quote, agent cap owner and configured statutory recipients.
 2. ✅ Preview exact Testnet USDC funding and immutable rules, then use the existing
    `buildCreatePayrollMandateTransaction` through the connected employer wallet.
-3. Next: verify finality, sender, package, coin type, mandate fields and `PayrollCap`
-   ownership in a protected backend registration endpoint.
-4. Make registration idempotent by transaction and mandate. Recover a successful
+3. ✅ Verify finality, sender, package, coin type, mandate fields and `PayrollCap`
+   ownership in a protected endpoint without trusting browser object IDs.
+4. Next: make registration idempotent by transaction and mandate. Recover a successful
    chain creation whose database registration failed without funding twice.
 5. Route payroll, proof, history and earnings from the registered payroll. Remove
    `sampleStaff` from the live journey.
