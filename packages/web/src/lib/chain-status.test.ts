@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   epfFloorNote,
+  payrollAttemptNote,
   payrollRunNote,
   payrollStage,
   streamFallbackReason,
@@ -92,5 +93,22 @@ describe('epfFloorNote', () => {
 
   it('does not say a mandate is missing when one is configured', () => {
     expect(epfFloorNote('mandated')).toContain('could not be read');
+  });
+});
+
+describe('payrollAttemptNote', () => {
+  /* The fourth place this false claim was hiding, worded differently enough
+     that a grep for the other three missed it. */
+  it('stops asking for a module that is already published', () => {
+    expect(payrollAttemptNote('published')).not.toContain('once the payroll module is published');
+    expect(payrollAttemptNote('published')).toContain('once a mandate is funded');
+  });
+
+  it('still asks for the module when there is none', () => {
+    expect(payrollAttemptNote('unpublished')).toContain('once the payroll module is published');
+  });
+
+  it('asks for the signer once a mandate exists', () => {
+    expect(payrollAttemptNote('mandated')).toContain('signer');
   });
 });
