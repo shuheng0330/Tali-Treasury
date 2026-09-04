@@ -317,10 +317,14 @@ export function Wire() {
               >
                 {gate.label}
               </span>
+              {/* On a failed row this is the figure that explains the refusal,
+                  so it follows its label into `no` rather than staying the
+                  lightest grey on the page. DESIGN.md: ink-3 never carries
+                  anything load-bearing. */}
               <span
-                className={`shrink-0 pl-4 text-right font-mono text-caption text-ink-3 ${
-                  state === 'skipped' ? '' : 'tnum'
-                }`}
+                className={`shrink-0 pl-4 text-right font-mono text-caption ${
+                  state === 'failed' ? 'font-medium text-no' : 'text-ink-3'
+                } ${state === 'skipped' ? '' : 'tnum'}`}
               >
                 {state === 'skipped' ? 'never reached' : gate.detail(base)}
               </span>
