@@ -59,7 +59,8 @@ Status words are intentionally precise:
 | Submission pack | **Complete locally; recording pending** | Written submission and six-slide deck are present; video and rehearsal remain |
 
 The detailed team checklist lives in [`docs/PROGRESS.md`](docs/PROGRESS.md).
-Upcoming correction/resubmission and authenticated event creation are specified in
+Member correction/resubmission is delivered; authenticated event creation is still
+specified rather than built. Both are recorded in
 [`docs/PRODUCT_NEXT_STEPS.md`](docs/PRODUCT_NEXT_STEPS.md).
 The payroll-first release order and acceptance gate live in
 [`docs/PAYROLL_LAUNCH_PLAN.md`](docs/PAYROLL_LAUNCH_PLAN.md).
