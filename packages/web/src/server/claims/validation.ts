@@ -111,6 +111,39 @@ export function parseCreateClaimInput(input: unknown): {
   return createClaimInputSchema.parse(input);
 }
 
+/*
+ * A correction restates the figures, so it has to hold them to the same rules
+ * the original submission did. Built from the same pieces rather than a second
+ * set: a looser copy here let a date the create path refuses through the
+ * correction path instead.
+ */
+const resubmitClaimInputSchema = z
+  .object({
+    claimId: claimIdSchema,
+    submitter: suiAddressSchema,
+    amount: z.string().regex(BASE_UNIT_AMOUNT, 'amount must be base units above zero'),
+    merchant: trimmedString(200),
+    receiptDate: z.string().refine(isValidIsoDate, 'invalid receipt date'),
+    category: categorySchema,
+    description: z
+      .string()
+      .max(500)
+      .refine((value) => value === value.trim(), 'must already be trimmed'),
+  })
+  .strict();
+
+export function parseResubmitClaimInput(input: unknown): {
+  claimId: string;
+  submitter: string;
+  amount: string;
+  merchant: string;
+  receiptDate: string;
+  category: ExpenseCategory;
+  description: string;
+} {
+  return resubmitClaimInputSchema.parse(input);
+}
+
 const processClaimInputSchema = z
   .object({
     claimId: claimIdSchema,

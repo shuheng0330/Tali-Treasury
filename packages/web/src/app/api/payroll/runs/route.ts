@@ -1,6 +1,9 @@
 import { requireDemoIdentityEnabled } from '../../../../server/demo-auth';
 import { ServerError, toApiError } from '../../../../server/errors';
-import { getPayrollService } from '../../../../server/payroll/dependencies';
+import {
+  getPayrollService,
+  payrollRunsArePersisted,
+} from '../../../../server/payroll/dependencies';
 import { payrollRequestSchema } from '../../../../server/payroll/validation';
 
 export const runtime = 'nodejs';
@@ -38,7 +41,16 @@ export async function POST(request: Request): Promise<Response> {
 export async function GET(): Promise<Response> {
   try {
     requireDemoIdentityEnabled();
-    return Response.json({ runs: await getPayrollService().listRecent(20) });
+    const runs = await getPayrollService().listRecent(20);
+    /* An empty list from a store that is not durable is not the same answer as
+       an empty list from one that is. Without this the endpoint reports
+       success over runs that vanish with the process. */
+    const storage = payrollRunsArePersisted();
+    return Response.json({
+      runs,
+      persisted: storage.persisted,
+      ...(storage.reason ? { storageWarning: storage.reason } : {}),
+    });
   } catch (error) {
     const { body, status } = toApiError(error);
     return Response.json(body, { status });

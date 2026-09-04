@@ -1,9 +1,18 @@
 import { Money } from '@/components/Money';
+import { EXPLORER } from '@tali/shared';
 import type { ClaimReviewAction, ReviewQueueItem } from '@tali/shared';
 import { approvalBlockReason } from '@/lib/review-actions';
 import { FxQuoteSummary } from '../claim/FxQuoteSummary';
 
-function Verdict({ passed }: { passed: boolean }) {
+function Verdict({ passed, pending }: { passed: boolean; pending?: boolean }) {
+  if (pending) {
+    return (
+      <svg viewBox="0 0 12 12" width="11" height="11" className="text-ink-3" aria-hidden>
+        <path d="M2.5 6 H9.5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+      </svg>
+    );
+  }
+
   return passed ? (
     <svg viewBox="0 0 12 12" width="11" height="11" className="text-ok" aria-hidden>
       <path d="M2 6.4 L4.8 9 L10 3" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
@@ -49,14 +58,54 @@ interface Props {
   pendingAction: ClaimReviewAction | null;
   onProcess: (id: string) => void;
   onReview: (id: string, action: ClaimReviewAction) => void;
+  onPay: (id: string) => void;
+  onCheckPayment: (id: string) => void;
+  paying: boolean;
+  reconciling: boolean;
+  /** No write is possible at all — nobody is signed in to make one. */
   actionsDisabled?: boolean;
+  /** Carried by every greyed review control, not only the first one. */
+  disabledReason?: string;
+  /** Only a recorded verdict is impossible. Evaluating, paying and recording an
+   *  outcome write no review columns, so they stay available. */
+  reviewsBlocked?: boolean;
+  reviewsBlockedReason?: string;
 }
 
-export function ClaimRow({ item, processing, pendingAction, onProcess, onReview, actionsDisabled = false }: Props) {
+export function ClaimRow({
+  item,
+  processing,
+  pendingAction,
+  onProcess,
+  onReview,
+  onPay,
+  onCheckPayment,
+  paying,
+  reconciling,
+  actionsDisabled = false,
+  disabledReason,
+  reviewsBlocked = false,
+  reviewsBlockedReason,
+}: Props) {
   const { claim, decision, agentNote, reason } = item;
   const approvalBlocked = approvalBlockReason(claim, decision);
+
+  /* The cap and the budget are measured in USDC, so for anything else they
+     were never evaluated. Decisions stored before the engine started saying so
+     still carry a tick that was never earned, and the row is the last place
+     that can tell. */
+  const unquoted = Boolean(claim.analysis && claim.analysis.currency !== 'USDC');
+  const notEvaluated = (check: (typeof decision.checks)[number]) =>
+    check.pending === true ||
+    (unquoted && (check.rule === 'per_claim_max' || check.rule === 'total_budget'));
   const awaitingPolicy = claim.state === 'submitted' && claim.decision === null;
   const reviewPending = pendingAction !== null;
+  const verdictBlocked = actionsDisabled || reviewsBlocked;
+  const verdictReason = actionsDisabled
+    ? disabledReason
+    : reviewsBlocked
+      ? reviewsBlockedReason
+      : undefined;
 
   return (
     <li className="flex flex-col gap-3 px-4 py-4">
@@ -83,14 +132,26 @@ export function ClaimRow({ item, processing, pendingAction, onProcess, onReview,
         ) : (
           <ul className="grid gap-x-6 gap-y-1 sm:grid-cols-2">
             {decision.checks.map((check) => (
-              <li key={check.rule} className="flex items-baseline gap-2">
+              <li key={check.rule} className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
                 <span className="translate-y-0.5">
-                  <Verdict passed={check.passed} />
+                  <Verdict passed={check.passed} pending={notEvaluated(check)} />
                 </span>
-                <span className={`text-caption ${check.passed ? 'text-ink-2' : 'font-medium text-no'}`}>
+                <span
+                  className={`text-caption ${
+                    notEvaluated(check)
+                      ? 'text-ink-3'
+                      : check.passed
+                        ? 'text-ink-2'
+                        : 'font-medium text-no'
+                  }`}
+                >
                   {check.label}
                 </span>
-                <span className="tnum ml-auto text-caption text-ink-3">{check.detail}</span>
+                <span className="tnum ml-auto text-right text-caption text-ink-3">
+                  {notEvaluated(check) && !check.pending
+                    ? 'Checked after an explicit USDC conversion quote is attached'
+                    : check.detail}
+                </span>
               </li>
             ))}
           </ul>
@@ -108,12 +169,79 @@ export function ClaimRow({ item, processing, pendingAction, onProcess, onReview,
       ) : null}
 
       <div className="ml-7 flex flex-wrap items-center gap-3">
-        {awaitingPolicy ? (
+        {claim.state === 'paying' ? (
+          <div className="flex w-full flex-col gap-2">
+            <p className="text-caption text-wait">
+              The payment was submitted and the server never learned what happened to
+              it. Nothing retries automatically — the digest below is what was signed,
+              and checking reads its outcome from the chain.
+            </p>
+            {claim.paymentAttempt ? (
+              <a
+                className="link self-start font-mono text-caption"
+                href={EXPLORER.tx(claim.paymentAttempt.digest).suiscan}
+                target="_blank"
+                rel="noreferrer"
+              >
+                {claim.paymentAttempt.digest.slice(0, 10)}…
+                {claim.paymentAttempt.digest.slice(-8)}
+              </a>
+            ) : null}
+            <button
+              type="button"
+              disabled={reconciling || actionsDisabled}
+              onClick={() => onCheckPayment(claim.id)}
+              className="btn btn--primary h-9 w-fit px-5 text-label"
+              title={actionsDisabled ? disabledReason : undefined}
+            >
+              {reconciling ? 'Checking Sui…' : 'Check payment status'}
+            </button>
+          </div>
+        ) : claim.state === 'payment_failed' ? (
+          <>
+            <button
+              type="button"
+              disabled={paying || actionsDisabled}
+              onClick={() => onPay(claim.id)}
+              className="btn btn--primary h-9 px-5 text-label"
+              title={actionsDisabled ? disabledReason : undefined}
+            >
+              {paying ? 'Paying…' : 'Try the payment again'}
+            </button>
+            <p className="text-caption text-ink-3">
+              {claim.payment?.message ?? 'The payment did not go through.'} Nothing left
+              the mandate, so this can be released again.
+            </p>
+          </>
+        ) : claim.state === 'needs_correction' ? (
+          <p className="text-caption text-ink-3">
+            Sent back to {claim.submitterName}
+            {claim.review?.reason ? `: ${claim.review.reason}` : ''}. It returns here once
+            they resubmit it.
+          </p>
+        ) : claim.state === 'approved' ? (
+          <>
+            <button
+              type="button"
+              disabled={paying || actionsDisabled}
+              onClick={() => onPay(claim.id)}
+              className="btn btn--primary h-9 px-5 text-label"
+              title={actionsDisabled ? disabledReason : undefined}
+            >
+              {paying ? 'Paying…' : 'Release the payment'}
+            </button>
+            <p className="text-caption text-ink-3">
+              Approved. The transfer is a separate step, so a signing failure never
+              reads as a change of mind.
+            </p>
+          </>
+        ) : awaitingPolicy ? (
           <button
             type="button"
             disabled={processing || actionsDisabled}
             onClick={() => onProcess(claim.id)}
             className="btn btn--primary h-9 px-5 text-label"
+            title={actionsDisabled ? disabledReason : undefined}
           >
             {processing ? 'Evaluating…' : claim.analysis?.currency === 'MYR' ? 'Get live quote & evaluate' : 'Evaluate claim'}
           </button>
@@ -127,10 +255,10 @@ export function ClaimRow({ item, processing, pendingAction, onProcess, onReview,
             ) : null}
             <button
               type="button"
-              disabled={approvalBlocked !== null || reviewPending || actionsDisabled}
+              disabled={approvalBlocked !== null || reviewPending || verdictBlocked}
               onClick={() => onReview(claim.id, 'approve')}
               className="btn btn--primary h-9 px-5 text-label"
-              title={approvalBlocked ?? undefined}
+              title={approvalBlocked ?? verdictReason}
             >
               {approvalBlocked
                 ? 'Cannot approve'
@@ -140,17 +268,19 @@ export function ClaimRow({ item, processing, pendingAction, onProcess, onReview,
             </button>
             <button
               type="button"
-              disabled={reviewPending || actionsDisabled}
+              disabled={reviewPending || verdictBlocked}
               onClick={() => onReview(claim.id, 'reject')}
               className="btn btn--danger h-9 px-5 text-label"
+              title={verdictReason}
             >
               {pendingAction === 'reject' ? 'Rejecting…' : 'Reject'}
             </button>
             <button
               type="button"
-              disabled={reviewPending || actionsDisabled}
+              disabled={reviewPending || verdictBlocked}
               onClick={() => onReview(claim.id, 'request_correction')}
               className="btn btn--ghost h-9 px-5 text-label"
+              title={verdictReason}
             >
               {pendingAction === 'request_correction'
                 ? 'Requesting…'

@@ -3,6 +3,7 @@ import type {
   Claim,
   CreateClaimRequest,
   CreateClaimResponse,
+  PayClaimResponse,
   ProcessClaimResponse,
   ReviewClaimRequest,
   ReviewClaimResponse,
@@ -11,6 +12,7 @@ import {
   analyzeReceipt,
   createClaim,
   listClaims,
+  payClaim,
   processClaim,
   reviewClaim,
   TaliApiError,
@@ -79,9 +81,9 @@ export async function tryCreateClaim(
   }
 }
 
-export async function tryListClaims(): Promise<Sourced<Claim[]>> {
+export async function tryListClaims(viewer?: string): Promise<Sourced<Claim[]>> {
   try {
-    const body = await listClaims(DEMO_EVENT_ID);
+    const body = await listClaims(DEMO_EVENT_ID, viewer);
     return { data: body.claims, source: 'live', reason: null };
   } catch (error) {
     return { data: recentClaims, source: 'mock', reason: describe(error) };
@@ -94,6 +96,16 @@ export async function tryProcessClaim(
   try {
     const data = await processClaim(claimId);
     return { data, source: 'live', reason: null };
+  } catch (error) {
+    return { data: null, source: 'mock', reason: describe(error) };
+  }
+}
+
+export async function tryPayClaim(
+  claimId: string,
+): Promise<Sourced<PayClaimResponse | null>> {
+  try {
+    return { data: await payClaim(claimId), source: 'live', reason: null };
   } catch (error) {
     return { data: null, source: 'mock', reason: describe(error) };
   }

@@ -10,9 +10,9 @@ import type {
   ReviewClaimResponse,
   RuleId,
 } from '@tali/shared';
-import { ZodError } from 'zod';
 import { claimPaymentAmount } from '@tali/shared';
 import type { createClaimQuoter } from '../fx/quotes';
+import { ZodError } from 'zod';
 
 import { ServerError, isServerError } from '../errors';
 import { evaluatePolicy } from '../policy/evaluate';
@@ -221,22 +221,19 @@ export function createListClaimsService(deps: {
       throw databaseError(error);
     }
 
-    try {
-      const claims = await Promise.all(
-        storedClaims.map(async ({ claim, storagePath }) => ({
-          ...claim,
-          receiptUrl: await deps.receipts.createSignedUrl(storagePath, 300),
-        })),
-      );
-      return { claims, cursor: null };
-    } catch (error) {
-      throw new ServerError(
-        'storage_failed',
-        500,
-        'Receipt URL creation failed',
-        { cause: error },
-      );
-    }
+    /* One receipt whose object is missing must not cost the caller every other
+       claim. The screens already render a claim without an image and say so,
+       whereas a thrown error leaves the queue empty and the treasurer with
+       nothing to act on. */
+    const claims = await Promise.all(
+      storedClaims.map(async ({ claim, storagePath }) => ({
+        ...claim,
+        receiptUrl: await deps.receipts
+          .createSignedUrl(storagePath, 300)
+          .catch(() => null),
+      })),
+    );
+    return { claims, cursor: null };
   };
 }
 
@@ -325,17 +322,30 @@ export function createProcessClaimService(deps: {
       }
     }
 
-    // Quotes are server-issued only after the existing treasurer authorization.
-    // Terminal/paying claims never refresh quotes or initiate a second payment.
-    if (deps.quotes && context.claim.analysis?.currency === 'MYR' && !context.claim.review &&
-        ['submitted', 'awaiting_review'].includes(context.claim.state) &&
-        claimPaymentAmount(context.claim, deps.now?.() ?? Date.now()) === null) {
-      if (!deps.claims.saveFxQuote) throw new ServerError('fx_unavailable', 503, 'Quote storage is unavailable.');
+    // A quote is created only after treasurer authorization. It is bound to the
+    // claim, event, recipient and mandate before policy evaluation continues.
+    if (
+      deps.quotes &&
+      context.claim.analysis?.currency === 'MYR' &&
+      !context.claim.review &&
+      ['submitted', 'awaiting_review'].includes(context.claim.state) &&
+      claimPaymentAmount(context.claim, deps.now?.() ?? Date.now()) === null
+    ) {
+      if (!deps.claims.saveFxQuote) {
+        throw new ServerError(
+          'fx_unavailable',
+          503,
+          'Quote storage is unavailable.',
+        );
+      }
       const quote = await deps.quotes(context);
       const saved = await deps.claims.saveFxQuote({ claim: context.claim, quote });
-      if (saved.status !== 'saved') throw conflict('Claim changed while quoting; refresh and evaluate again.');
+      if (saved.status !== 'saved') {
+        throw conflict('Claim changed while quoting; refresh and evaluate again.');
+      }
       context.claim = saved.claim;
     }
+
     let approvedClaim = context.claim;
     if (context.claim.decision) {
       const response = inspectAutoPayState(context.claim);
@@ -549,8 +559,11 @@ export function createReviewClaimService(deps: {
       );
 
     function replay(storedClaim: Claim): ReviewClaimResponse {
-      if (request.action === 'approve' && storedClaim.analysis?.currency === 'MYR' &&
-          request.quoteId !== storedClaim.fxQuote?.id) {
+      if (
+        request.action === 'approve' &&
+        storedClaim.analysis?.currency === 'MYR' &&
+        request.quoteId !== storedClaim.fxQuote?.id
+      ) {
         throw conflict('Approval does not match the saved payment quote.');
       }
       const stored = storedClaim.review;
@@ -564,17 +577,10 @@ export function createReviewClaimService(deps: {
         throw conflict('A different review action has already been recorded');
       }
 
-      if (stored.action !== 'approve') {
-        return { claim: storedClaim, payment: null };
-      }
-      if (storedClaim.state === 'paying') throw uncertain();
-      if (
-        (storedClaim.state === 'paid' || storedClaim.state === 'payment_failed') &&
-        storedClaim.payment
-      ) {
-        return { claim: storedClaim, payment: storedClaim.payment };
-      }
-      throw conflict('Claim payment state is inconsistent');
+      /* The same decision, already stored. Reporting it as not recorded is
+         what stops the caller believing this request is the one that took
+         effect. */
+      return { claim: storedClaim, recorded: false };
     }
 
     if (context.claim.review) return replay(context.claim);
@@ -603,25 +609,26 @@ export function createReviewClaimService(deps: {
         throw databaseError(error);
       }
       return applied.status === 'saved'
-        ? { claim: applied.claim, payment: null }
+        ? { claim: applied.claim, recorded: true }
         : replay(applied.claim);
     }
 
-    const paymentAmount = claimPaymentAmount(context.claim, deps.now?.() ?? Date.now());
-    if (paymentAmount === null) throw conflict('A valid USDC amount or unexpired MYR quote is required. Refresh the quote and review again.');
-    if (context.claim.analysis?.currency === 'MYR' &&
-        (request.quoteId !== context.claim.fxQuote?.id || context.claim.fxQuote?.mandateId !== context.event.mandateId)) {
-      throw conflict('The displayed quote changed. Refresh and approve the new quote explicitly.');
+    const paymentAmount = claimPaymentAmount(
+      context.claim,
+      deps.now?.() ?? Date.now(),
+    );
+    if (paymentAmount === null) {
+      throw conflict(
+        'A valid USDC amount or unexpired MYR quote is required. Refresh the quote and review again.',
+      );
     }
-
-    try {
-      deps.payments.assertReady();
-    } catch (error) {
-      throw new ServerError(
-        'payment_configuration_failed',
-        503,
-        'Backend payment configuration is unavailable',
-        { cause: error },
+    if (
+      context.claim.analysis?.currency === 'MYR' &&
+      (request.quoteId !== context.claim.fxQuote?.id ||
+        context.claim.fxQuote?.mandateId !== context.event.mandateId)
+    ) {
+      throw conflict(
+        'The displayed quote changed. Refresh and approve the new quote explicitly.',
       );
     }
 
@@ -666,59 +673,10 @@ export function createReviewClaimService(deps: {
     }
     if (applied.status === 'lost_race') return replay(applied.claim);
 
-    let execution;
-    try {
-      execution = await deps.payments.execute(
-        {
-          claimId: context.claim.id,
-          mandateId: context.event.mandateId,
-          recipient: context.claim.submitter,
-          amount: paymentAmount,
-          budgetBefore: mandate.remainingBudget,
-        },
-        async (attempt) => {
-          let recorded;
-          try {
-            recorded = await deps.claims.recordPaymentAttempt({
-              claimId: context.claim.id,
-              budgetBefore: mandate.remainingBudget,
-              ...attempt,
-            });
-          } catch (error) {
-            throw databaseError(error);
-          }
-          if (recorded.status !== 'saved') {
-            throw conflict('A different payment attempt is already recorded');
-          }
-        },
-      );
-    } catch (error) {
-      if (isServerError(error)) throw error;
-      throw new ServerError(
-        'payment_submission_uncertain',
-        502,
-        'Payment submission requires reconciliation before retrying',
-        { cause: error },
-      );
-    }
-
-    let finished;
-    try {
-      finished = await deps.claims.finishPayment({
-        claimId: context.claim.id,
-        state: execution.status === 'paid' ? 'paid' : 'payment_failed',
-        payment: execution.payment,
-      });
-    } catch (error) {
-      throw databaseError(error);
-    }
-    if (
-      (finished.claim.state === 'paid' || finished.claim.state === 'payment_failed') &&
-      finished.claim.payment
-    ) {
-      return { claim: finished.claim, payment: finished.claim.payment };
-    }
-    throw uncertain();
+    /* Approving leaves the claim in `approved`, and the transfer is a separate
+       request. A signature that fails then reads as a failed payment on an
+       approved claim, rather than as a treasurer who changed their mind. */
+    return { claim: applied.claim, recorded: true };
   };
 }
 
@@ -787,19 +745,26 @@ export function createReconcileClaimService(deps: {
         'This payment has no durable transaction digest to reconcile',
       );
     }
-
-    const reconciliationAmount = claimPaymentAmount(context.claim);
-    if (context.claim.analysis?.currency === 'MYR' && reconciliationAmount === null) {
-      throw new ServerError('payment_reconciliation_unavailable', 409, 'The original MYR payment quote is unavailable; manual investigation is required.');
+    const verifiedPaymentAmount = claimPaymentAmount(context.claim);
+    const paymentAmount =
+      context.claim.analysis?.currency === 'MYR'
+        ? verifiedPaymentAmount
+        : verifiedPaymentAmount ?? context.claim.amount;
+    if (paymentAmount === null) {
+      throw new ServerError(
+        'payment_reconciliation_unavailable',
+        409,
+        'This payment has no verified USDC amount to reconcile',
+      );
     }
+
     let result;
     try {
       result = await deps.payments.reconcile({
         claimId: context.claim.id,
         mandateId: context.event.mandateId,
         recipient: context.claim.submitter,
-        // An already signed attempt retains its original valuation, even if expired.
-        amount: reconciliationAmount ?? context.claim.amount,
+        amount: paymentAmount,
         budgetBefore: context.paymentAttemptBudgetBefore,
         digest: attempt.digest,
         preparedAtMs: attempt.preparedAtMs,

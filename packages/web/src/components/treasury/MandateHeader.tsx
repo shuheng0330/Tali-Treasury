@@ -28,7 +28,13 @@ function daysUntil(atMs: number) {
 export function MandateHeader({ eventName, organisation, mandate, committed, onRevoke }: Props) {
   const status = mandateStatus(mandate);
   const available = subtract(mandate.remainingBudget, committed);
-  const capacity = Math.floor(Number(available) / Number(mandate.maxPerClaim));
+  /* BigInt, not Number: these are base units, and 6 decimals of a large budget
+     leaves the double short. Committed can exceed what remains — nothing stops
+     a treasurer approving past the budget — so the count is floored at zero
+     rather than rendered as "-1 more claims at cap". */
+  const perClaim = BigInt(mandate.maxPerClaim);
+  const capacity =
+    perClaim > 0n && BigInt(available) > 0n ? BigInt(available) / perClaim : 0n;
 
   return (
     <section className="flex flex-col gap-6 rounded-panel border border-rule bg-surface p-6 md:p-8">
@@ -54,7 +60,7 @@ export function MandateHeader({ eventName, organisation, mandate, committed, onR
             disabled={status !== 'active'}
             className="btn btn--danger h-9 px-4 text-label"
           >
-            Preview revoke
+            Revoke mandate
           </button>
         </div>
       </div>
@@ -70,7 +76,11 @@ export function MandateHeader({ eventName, organisation, mandate, committed, onR
         <Stat
           label="Max per claim"
           value={toDisplay(mandate.maxPerClaim)}
-          note={`${capacity} more claims at cap`}
+          note={
+            BigInt(available) < 0n
+              ? 'approved past what remains'
+              : `${capacity} more claims at cap`
+          }
         />
         <Stat
           label="Expires"

@@ -4,6 +4,7 @@ import { createOpenExchangeRateReader, type FxRate, type RateCache } from './rat
 import { createClaimQuoter } from './quotes';
 import { evaluatePolicy } from '../policy/evaluate';
 import { createProcessClaimService, createReviewClaimService, createReconcileClaimService } from '../claims/services';
+import { createPayApprovedClaimService } from '../claims/pay';
 import type { ClaimRepository, ClaimProcessContext, PaymentExecutor } from '../claims/ports';
 
 const now = Date.parse('2026-09-03T09:00:00Z');
@@ -122,11 +123,17 @@ function workflow(initial: Claim = { ...claim }) {
   let stored = initial;
   const claims: ClaimRepository = {
     assertEventExists: vi.fn(), assertActiveMember: vi.fn(), assertEventViewer: vi.fn(),
-    findDuplicateReceipt: vi.fn(), create: vi.fn(), listByEvent: vi.fn(), reservePayment: vi.fn(), failApprovedPayment: vi.fn(),
+    findDuplicateReceipt: vi.fn(), create: vi.fn(), listByEvent: vi.fn(),
+    reservePayment: vi.fn<ClaimRepository['reservePayment']>(async () => {
+      stored = { ...stored, state: 'paying', payment: null, paymentAttempt: null };
+      return { status: 'saved', claim: stored };
+    }),
+    failApprovedPayment: vi.fn(),
+    resubmit: vi.fn(),
     getProcessContext: vi.fn(async (): Promise<ClaimProcessContext> => ({ claim: stored, event, paymentAttemptBudgetBefore: stored.paymentAttempt ? '16000000' : null })),
     saveFxQuote: vi.fn<NonNullable<ClaimRepository['saveFxQuote']>>(async ({ quote }) => { stored = { ...stored, fxQuote: quote, decision: null, state: 'submitted' }; return { status: 'saved', claim: stored }; }),
     saveDecision: vi.fn<ClaimRepository['saveDecision']>(async ({ decision, state }) => { stored = { ...stored, decision, state }; return { status: 'saved', claim: stored }; }),
-    applyReview: vi.fn<ClaimRepository['applyReview']>(async ({ review }) => { stored = { ...stored, review, state: 'paying' }; return { status: 'saved', claim: stored }; }),
+    applyReview: vi.fn<ClaimRepository['applyReview']>(async ({ review }) => { stored = { ...stored, review, state: 'approved' }; return { status: 'saved', claim: stored }; }),
     recordPaymentAttempt: vi.fn<ClaimRepository['recordPaymentAttempt']>(async ({ digest, preparedAtMs }) => { stored = { ...stored, paymentAttempt: { digest, preparedAtMs, lastCheckedAtMs: null } }; return { status: 'saved', claim: stored }; }),
     markPaymentAttemptChecked: vi.fn<ClaimRepository['markPaymentAttemptChecked']>(async () => ({ status: 'saved', claim: stored })),
     finishPayment: vi.fn<ClaimRepository['finishPayment']>(async ({ state, payment }) => { stored = { ...stored, state, payment }; return { status: 'saved', claim: stored }; }),
@@ -152,6 +159,8 @@ describe('MYR claim workflow', () => {
     expect(w.payments.execute).not.toHaveBeenCalled();
     const q = result.claim.fxQuote!;
     await createReviewClaimService({ ...w, now: () => now })({ claimId, reviewer: treasurer, action: 'approve', quoteId: q.id });
+    expect(w.stored().state).toBe('approved');
+    await createPayApprovedClaimService({ ...w, now: () => now })({ claimId, processor: treasurer });
     expect(w.payments.execute).toHaveBeenCalledWith(expect.objectContaining({ amount: '4312500', recipient: member }), expect.any(Function));
     expect(w.claims.applyReview).toHaveBeenCalledWith(expect.objectContaining({ quoteId: q.id }));
     expect(w.stored().state).toBe('paid');

@@ -11,6 +11,7 @@ import type {
   ReconcileClaimRequest,
   ReconcileClaimResponse,
   ReviewClaimRequest,
+  PayClaimResponse,
   ReviewClaimResponse,
 } from '@tali/shared';
 import { isApiError } from '@tali/shared';
@@ -81,9 +82,14 @@ export async function createClaim(
 
 export async function listClaims(
   eventId: string,
+  /* Named only so the demo identity can still read the queue while wallet
+     sign-in is unavailable. A session cookie always wins over it, and the
+     server ignores it entirely unless the demo flag is on. */
+  viewer?: string,
 ): Promise<ListClaimsResponse> {
+  const query = viewer ? `?viewer=${encodeURIComponent(viewer)}` : '';
   return responseJson<ListClaimsResponse>(
-    await fetch(`/api/events/${encodeURIComponent(eventId)}/claims`, {
+    await fetch(`/api/events/${encodeURIComponent(eventId)}/claims${query}`, {
       cache: 'no-store',
     }),
   );
@@ -149,6 +155,16 @@ export async function getWalletSession(): Promise<GetWalletSessionResponse> {
 export async function deleteWalletSession(): Promise<void> {
   const response = await fetch('/api/auth/session', { method: 'DELETE' });
   if (!response.ok) await responseJson<never>(response);
+}
+
+export async function payClaim(claimId: string): Promise<PayClaimResponse> {
+  return responseJson<PayClaimResponse>(
+    await fetch(`/api/claims/${encodeURIComponent(claimId)}/pay`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: '{}',
+    }),
+  );
 }
 
 export async function reviewClaim(

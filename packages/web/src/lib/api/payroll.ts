@@ -21,11 +21,10 @@ function describe(error: unknown): string {
       : 'the payroll API is unreachable';
   }
 
-  /* A route that does not exist yet answers with Next's HTML 404, which parses
-     as an unreadable response. Saying so would blame the server for a route
-     nobody has written. */
   if (error.status === 404) {
-    return 'the payroll API is not built yet';
+    /* The routes exist. A 404 from them means the mandate or the stream the
+       request named was not found, which is what the server already says. */
+    return error.message.charAt(0).toLowerCase() + error.message.slice(1);
   }
   if (error.code === 'authentication_required') {
     return 'the demo identity API is switched off';
@@ -43,20 +42,23 @@ async function post<T>(path: string, body: unknown): Promise<T> {
 }
 
 /**
- * Falls back to the caller's sample rather than to nothing: the payroll screen
- * is readable either way, and the banner says which it is showing. The claim
- * flow deliberately does the opposite, because an invented merchant beside a
- * photograph reads as an extraction. An invented salary beside a name does not.
+ * Falls back to the caller's sample when one is offered: the payroll screen is
+ * readable either way, and the banner says which it is showing.
+ *
+ * The fallback is only sound for the wage it was computed for. Once the figures
+ * on screen can be edited, showing a stored split for a different salary would
+ * put the wrong arithmetic under the number somebody just typed, so callers
+ * pass nothing and get null instead.
  */
 export async function tryPreviewPayroll(
   request: PreviewRequest,
-  fallback: PayrollBreakdown,
-): Promise<Sourced<PayrollBreakdown>> {
+  fallback?: PayrollBreakdown,
+): Promise<Sourced<PayrollBreakdown | null>> {
   try {
     const data = await post<PayrollBreakdown>('/api/payroll/preview', request);
     return { data, source: 'live', reason: null };
   } catch (error) {
-    return { data: fallback, source: 'mock', reason: describe(error) };
+    return { data: fallback ?? null, source: 'mock', reason: describe(error) };
   }
 }
 

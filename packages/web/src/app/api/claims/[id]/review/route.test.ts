@@ -8,7 +8,7 @@ const claimId = '14ab1f35-2e55-4ca1-a917-dfdc5cf555c7';
 const reviewer = `0x${'b'.repeat(64)}`;
 const response = {
   claim: { id: claimId, state: 'rejected' },
-  payment: null,
+  recorded: true,
 } as ReviewClaimResponse;
 const context = { params: Promise.resolve({ id: claimId }) };
 

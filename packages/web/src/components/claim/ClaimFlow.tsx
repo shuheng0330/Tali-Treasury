@@ -7,6 +7,8 @@ import type {
   MandateView,
   ReceiptAnalysis,
 } from '@tali/shared';
+import { subtract } from '@tali/shared';
+import { committedFrom } from '@/lib/queue';
 import { mandate as sampleMandate } from '@/lib/mock/data';
 import { tryAnalyzeReceipt, tryCreateClaim, type Source } from '@/lib/api/demo';
 import { useClaims } from '@/lib/api/useClaims';
@@ -14,10 +16,11 @@ import { DEMO_EVENT_ID, DEMO_EVENT_NAME, DEMO_SUBMITTER } from '@/lib/demo-confi
 import { DataNotice } from '@/components/DataNotice';
 import { ClaimHome } from './ClaimHome';
 import { ReceiptConfirm } from './ReceiptConfirm';
+import { tryResubmitClaim } from '@/lib/api/resubmit';
 import { Submitted } from './Outcome';
 import { useWalletSession } from '@/components/wallet/WalletSessionProvider';
 
-type Step = 'home' | 'reading' | 'confirm' | 'submitting' | 'submitted';
+type Step = 'home' | 'reading' | 'confirm' | 'correcting' | 'submitting' | 'submitted';
 
 interface Props {
   apiEnabled: boolean;
@@ -50,6 +53,7 @@ export function ClaimFlow({ apiEnabled, mandate, mandateReadError }: Props) {
   const [draftExpiresAt, setDraftExpiresAt] = useState<string | null>(null);
   const [duplicateOf, setDuplicateOf] = useState<string | null>(null);
   const [submittedClaim, setSubmittedClaim] = useState<Claim | null>(null);
+  const [correcting, setCorrecting] = useState<Claim | null>(null);
 
   /** Where this receipt's analysis came from, which decides whether the claim
    *  can be persisted: without a live read there is no uploaded image, so the
@@ -62,7 +66,7 @@ export function ClaimFlow({ apiEnabled, mandate, mandateReadError }: Props) {
    *  blaming the analyser for a database refusal. */
   const [saveError, setSaveError] = useState<string | null>(null);
 
-  const claims = useClaims(authenticated);
+  const claims = useClaims(apiEnabled, wallet.address ?? DEMO_SUBMITTER);
   const reloadClaims = claims.reload;
 
   /** The chain is the authority on the budget. Falling back to the sample
@@ -129,8 +133,57 @@ export function ClaimFlow({ apiEnabled, mandate, mandateReadError }: Props) {
     [source, analysis, draftId, draftExpiresAt, reloadClaims],
   );
 
+  const onCorrect = useCallback((claim: Claim) => {
+    setCorrecting(claim);
+    setSaveError(null);
+    setStep('correcting');
+  }, []);
+
+  const onResubmit = useCallback(
+    async (next: DraftClaim) => {
+      if (correcting === null) return;
+
+      setSaveError(null);
+      setStep('submitting');
+      const saved = await tryResubmitClaim({
+        claimId: correcting.id,
+        merchant: next.merchant.trim(),
+        amount: next.amount,
+        receiptDate: next.receiptDate,
+        category: next.category,
+        description: next.description.trim(),
+      });
+      if (saved.data === null) {
+        setSaveError(`This correction was not saved: ${saved.reason}.`);
+        setStep('correcting');
+        return;
+      }
+      if (!saved.data.accepted) {
+        /* The treasurer moved the claim on between the read and the write, so
+           the correction no longer applies. Showing "Claim submitted" here
+           would tell the member their fix landed when it was discarded. */
+        setSaveError(
+          'This correction was not saved: the treasurer had already moved the claim on.',
+        );
+        reloadClaims();
+        setStep('correcting');
+        return;
+      }
+      setSubmittedClaim(saved.data.claim);
+      setCorrecting(null);
+      reloadClaims();
+      setStep('submitted');
+    },
+    [correcting, reloadClaims],
+  );
+
   const reset = useCallback(() => {
+    setPhotoUrl((previous) => {
+      if (previous) URL.revokeObjectURL(previous);
+      return null;
+    });
     setAnalysis(null);
+    setCorrecting(null);
     setDraftId(null);
     setDraftExpiresAt(null);
     setDuplicateOf(null);
@@ -146,6 +199,14 @@ export function ClaimFlow({ apiEnabled, mandate, mandateReadError }: Props) {
       ? claim.submitter.toLowerCase() === wallet.address.toLowerCase()
       : claim.submitter.toLowerCase() === DEMO_SUBMITTER.toLowerCase(),
   );
+
+  /* The same subtraction the treasurer's header makes. Claims already approved
+     are spoken for, and showing the member a larger figure than the treasurer
+     sees would invite a receipt the budget cannot cover. */
+  const available =
+    claims.source === 'live'
+      ? subtract(budget.remainingBudget, committedFrom(claims.claims))
+      : budget.remainingBudget;
 
   const home = step === 'home';
   const homeLive = claims.source === 'live' && chainLive;
@@ -172,15 +233,25 @@ export function ClaimFlow({ apiEnabled, mandate, mandateReadError }: Props) {
         </div>
       )}
 
+      {saveError ? (
+        <p
+          role="alert"
+          className="mb-6 rounded-card border border-no-line bg-no-soft p-4 text-caption text-no"
+        >
+          {saveError}
+        </p>
+      ) : null}
+
       {home ? (
         <ClaimHome
           eventName={DEMO_EVENT_NAME}
-          available={budget.remainingBudget}
+          available={available}
           budget={budget.initialBudget}
           claims={mine}
           claimsLoading={claims.loading}
           captureDisabled={!authenticated}
           onCapture={onCapture}
+          onCorrect={onCorrect}
         />
       ) : null}
 
@@ -196,8 +267,33 @@ export function ClaimFlow({ apiEnabled, mandate, mandateReadError }: Props) {
         />
       ) : null}
 
-      {step === 'submitting' && photoUrl ? (
-        <Reading photoUrl={photoUrl} message="Submitting your claim…" />
+      {step === 'correcting' && correcting ? (
+        <ReceiptConfirm
+          photoUrl={correcting.receiptUrl ?? ''}
+          analysis={correcting.analysis}
+          duplicateOf={null}
+          returnedReason={correcting.review?.reason ?? null}
+          initial={{
+            merchant: correcting.merchant,
+            amount: correcting.amount,
+            receiptDate: correcting.receiptDate,
+            category: correcting.category,
+            description: correcting.description,
+          }}
+          submitLabel="Resubmit this claim"
+          onRetake={reset}
+          onSubmit={onResubmit}
+        />
+      ) : null}
+
+      {step === 'submitting' ? (
+        correcting === null && photoUrl ? (
+          <Reading photoUrl={photoUrl} message="Submitting your claim…" />
+        ) : (
+          <p className="pt-6 text-center text-subhead text-ink-2" aria-live="polite">
+            Sending your correction…
+          </p>
+        )
       ) : null}
 
       {step === 'submitted' && submittedClaim ? (

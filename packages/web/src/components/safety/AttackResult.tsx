@@ -1,5 +1,5 @@
 import type { PaymentResult, RuleCheck } from '@tali/shared';
-import { toDisplay } from '@tali/shared';
+import { EXPLORER, toDisplay } from '@tali/shared';
 
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -25,14 +25,24 @@ function Mark({ passed }: { passed: boolean }) {
 interface Props {
   attempted: string;
   payment: PaymentResult;
+  /** Whether the contract answered, or this is the local model's guess. */
+  delivery: { broadcast: true } | { broadcast: false; reason: string };
   checks: RuleCheck[];
   onAgain: () => void;
   onCounterfactual: () => void;
 }
 
-export function AttackResult({ attempted, payment, checks, onAgain, onCounterfactual }: Props) {
+export function AttackResult({
+  attempted,
+  payment,
+  delivery,
+  checks,
+  onAgain,
+  onCounterfactual,
+}: Props) {
   const blocked = !payment.ok;
   const failed = checks.filter((check) => !check.passed);
+  const real = delivery.broadcast;
 
   return (
     <div className="flex flex-col gap-5">
@@ -48,22 +58,50 @@ export function AttackResult({ attempted, payment, checks, onAgain, onCounterfac
           </svg>
         )}
 
-        <h2 className="text-title">{blocked ? 'Predicted to be blocked' : 'Predicted to pass'}</h2>
+        <h2 className="text-title">
+          {real
+            ? blocked
+              ? 'The contract refused it'
+              : 'The contract allowed it'
+            : blocked
+              ? 'Predicted to be blocked'
+              : 'Predicted to pass'}
+        </h2>
         <p className="max-w-md text-body text-ink-2">
-          {blocked
-            ? `A ${toDisplay(attempted)} transfer violates the simulated mandate rules. No transaction was submitted.`
-            : 'The local policy model predicts that this input is inside the mandate rules. No payment was submitted.'}
+          {real
+            ? blocked
+              ? `The transaction was signed and submitted. Sui aborted it on code ${payment.abortCode ?? '—'}, gas was spent refusing it, and the balance did not move.`
+              : `A ${toDisplay(attempted)} transfer was inside every rule, so the contract settled it.`
+            : blocked
+              ? `A ${toDisplay(attempted)} transfer violates the mandate rules. Nothing was submitted, because ${delivery.reason}.`
+              : `The local model puts this inside the mandate rules. Nothing was submitted, because ${delivery.reason}.`}
         </p>
       </div>
 
       <section className="flex flex-col overflow-hidden rounded-card border border-rule bg-surface">
-        <h3 className="eyebrow border-b border-rule px-5 py-3.5">Simulated result</h3>
+        <h3 className="eyebrow border-b border-rule px-5 py-3.5">
+          {real ? 'What the contract did' : 'Predicted result'}
+        </h3>
         <div className="flex flex-col px-4 py-3">
-          <Row label="Status">{blocked ? 'WOULD FAIL' : 'WOULD PASS'}</Row>
+          <Row label="Status">
+            {real ? (blocked ? 'ABORTED' : 'SETTLED') : blocked ? 'WOULD FAIL' : 'WOULD PASS'}
+          </Row>
           {blocked ? <Row label="Abort">{payment.abortKey}</Row> : null}
           {blocked ? <Row label="Message">{payment.message}</Row> : null}
-          <Row label="Network">Not submitted</Row>
-          <Row label="Gas">None</Row>
+          <Row label="Network">{real ? 'Sui testnet' : 'Not submitted'}</Row>
+          <Row label="Gas">{real ? (payment.gasUsed ?? 'Unknown') : 'None'}</Row>
+          {real && payment.digest ? (
+            <Row label="Digest">
+              <a
+                className="link font-mono"
+                href={EXPLORER.tx(payment.digest).suiscan}
+                target="_blank"
+                rel="noreferrer"
+              >
+                {payment.digest.slice(0, 10)}…
+              </a>
+            </Row>
+          ) : null}
           {payment.rawError ? (
             <details className="pt-2">
               <summary className="cursor-pointer text-caption text-ink-3">Raw abort</summary>
@@ -98,7 +136,9 @@ export function AttackResult({ attempted, payment, checks, onAgain, onCounterfac
       </section>
 
       <section className="flex flex-col gap-2 rounded-card border border-rule bg-surface p-4">
-        <h3 className="eyebrow">Simulated treasury before → after</h3>
+        <h3 className="eyebrow">
+          {real ? 'Treasury before → after' : 'Predicted treasury before → after'}
+        </h3>
         <div className="flex items-baseline justify-between gap-4">
           <span className="text-caption text-ink-3">before</span>
           <span className="tnum text-subhead">{toDisplay(payment.budgetBefore)}</span>

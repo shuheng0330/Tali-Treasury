@@ -41,6 +41,7 @@ export type ClaimChip =
   | 'submitted'
   | 'needs_review'
   | 'approved'
+  | 'paying'
   | 'paid'
   | 'rejected'
   | 'payment_failed';
@@ -52,7 +53,7 @@ export const CLAIM_CHIP: Record<ClaimState, ClaimChip> = {
   submitted: 'submitted',
   awaiting_review: 'needs_review',
   approved: 'approved',
-  paying: 'approved',
+  paying: 'paying',
   paid: 'paid',
   rejected: 'rejected',
   payment_failed: 'payment_failed',
@@ -65,6 +66,7 @@ export const CLAIM_CHIP_LABEL: Record<ClaimChip, string> = {
   submitted: 'Submitted',
   needs_review: 'Needs review',
   approved: 'Approved',
+  paying: 'Paying',
   paid: 'Paid',
   rejected: 'Rejected',
   payment_failed: 'Payment failed',
@@ -111,6 +113,13 @@ export const ON_CHAIN_RULES: Partial<Record<RuleId, number>> = {
 export interface RuleCheck {
   rule: RuleId;
   passed: boolean;
+  /**
+   * True when the rule could not be evaluated at all — a non-USDC amount has
+   * nothing to compare against the mandate until a conversion quote exists.
+   * Such a check is not a failure, and it is not a pass either; rendering it
+   * as a tick tells a treasurer a guard held when it never ran.
+   */
+  pending?: boolean;
   label: string;
   detail: string;
   onChain: boolean;
@@ -147,9 +156,16 @@ export interface ClaimPaymentAttempt {
 
 export type ClaimReviewAction = 'approve' | 'reject' | 'request_correction';
 
+/**
+ * What a treasurer decided about a claim the policy engine sent to review.
+ *
+ * Kept apart from `PolicyDecision`, which is the engine's own output. They are
+ * different authorities, and merging them would lose which one spoke.
+ */
 export interface ClaimReview {
   action: ClaimReviewAction;
   reviewer: Address;
+  /** Required for a rejection or a correction request, null on approval. */
   reason: string | null;
   reviewedAtMs: number;
 }

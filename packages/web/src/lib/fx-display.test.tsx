@@ -40,7 +40,7 @@ describe('FX display and approval disclosure', () => {
       const html = renderToStaticMarkup(<ReviewActionDialog claim={claim} action="approve" pending={false}
         serverError={null} onCancel={() => {}} onConfirm={() => {}} />);
       expect(html).toContain('Refresh the quote and review again');
-      expect(html).toMatch(/<button[^>]*disabled=""[^>]*>Approve and pay<\/button>/);
+      expect(html).toMatch(/<button[^>]*disabled=""[^>]*>Record the approval<\/button>/);
     } finally { vi.restoreAllMocks(); }
   });
 });

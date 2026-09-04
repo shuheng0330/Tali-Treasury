@@ -71,5 +71,33 @@ select is((select state from public.claims where id = '52222222-2222-4222-8222-2
 select is(pg_temp.fx_sqlstate($sql$
   update public.claims set fx_quote = null where id = '52222222-2222-4222-8222-222222222222'
 $sql$), '23514', 'payment quote is immutable');
+
+insert into public.claims(id, event_id, submitter_wallet, receipt_object_path, receipt_sha256, fuzzy_key,
+  state, amount, merchant, currency, receipt_date, category, description, receipt_analysis)
+values ('54444444-4444-4444-8444-444444444444', '51111111-1111-4111-8111-111111111111', '0x' || repeat('a',64),
+  'fx-test/correction.png', repeat('b',64), 'fx-correction', 'submitted', 17250000, 'FX correction', 'MYR', current_date,
+  'printing', '', jsonb_build_object('currency', 'MYR', 'receiptHash', repeat('b',64)));
+update public.claims set fx_quote = (
+  select q || jsonb_build_object(
+    'id', '55555555-5555-4555-8555-555555555555',
+    'claimId', '54444444-4444-4444-8444-444444444444'
+  ) from fx_test_quote
+) where id = '54444444-4444-4444-8444-444444444444';
+update public.claims set state = 'awaiting_review', decision = '{"outcome":"review"}'::jsonb
+where id = '54444444-4444-4444-8444-444444444444';
+update public.claims set state = 'needs_correction', review_action = 'request_correction',
+  reviewer_wallet = '0x' || repeat('b',64), review_reason = 'Correct the amount', reviewed_at = now()
+where id = '54444444-4444-4444-8444-444444444444';
+select lives_ok($sql$
+  update public.claims set state = 'submitted', amount = 6000000, decision = null, fx_quote = null,
+    review_action = null, reviewer_wallet = null, review_reason = null, reviewed_at = null
+  where id = '54444444-4444-4444-8444-444444444444'
+$sql$, 'a correction clears the stale quote and active review before reevaluation');
+select is(
+  (select amount::text || '|' || coalesce(fx_quote::text, 'null') from public.claims
+   where id = '54444444-4444-4444-8444-444444444444'),
+  '6000000|null',
+  'the corrected amount is unquoted until the server issues a new valuation'
+);
 select * from finish();
 rollback;

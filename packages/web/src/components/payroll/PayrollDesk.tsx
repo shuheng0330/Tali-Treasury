@@ -8,6 +8,9 @@ import type { Source } from '@/lib/api/demo';
 import type { SampleEmployee } from '@/lib/mock/payroll';
 import { DataNotice } from '@/components/DataNotice';
 import { Breakdown } from './Breakdown';
+import { ClassNote } from './ClassNote';
+import { grossProblem, grossToBaseUnits, type WageClassValue } from '@/lib/payroll-wage';
+import { WageClass } from './WageClass';
 
 interface RunState {
   status: 'idle' | 'running' | 'paid' | 'refused' | 'unknown';
@@ -23,37 +26,70 @@ export function PayrollDesk({
   runsAreLive: boolean;
 }) {
   const [selected, setSelected] = useState(staff[0]);
-  const [breakdown, setBreakdown] = useState<PayrollBreakdown>(staff[0].breakdown);
+  const [wage, setWage] = useState<WageClassValue>({
+    gross: toDisplay(staff[0].breakdown.gross),
+    age: 30,
+    citizenship: 'local',
+  });
+  const [breakdown, setBreakdown] = useState<PayrollBreakdown | null>(staff[0].breakdown);
   const [source, setSource] = useState<Source>('mock');
   const [reason, setReason] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [run, setRun] = useState<RunState>({ status: 'idle' });
 
+  const base = grossToBaseUnits(wage.gross);
+  /* True while the inputs still describe the sample this screen shipped with,
+     which is the only case a stored breakdown legitimately answers. */
+  const untouched =
+    wage.age === 30 &&
+    wage.citizenship === 'local' &&
+    base !== null &&
+    base.toString() === selected.breakdown.gross;
+  const invalid =
+    grossProblem(wage.gross) !== null || wage.age < 16 || wage.age > 100 || base === null;
+
   useEffect(() => {
+    if (invalid || base === null) {
+      /* Clearing it matters: leaving the last good split on screen puts the
+         arithmetic for a different wage under the number now in the input, and
+         the figures would read as though they described it. */
+      setBreakdown(null);
+      setLoading(false);
+      return;
+    }
+
     let current = true;
     setLoading(true);
     setRun({ status: 'idle' });
 
-    tryPreviewPayroll(
-      {
-        employee: selected.address,
-        gross: selected.breakdown.gross,
-        age: 30,
-        citizenship: 'local',
-      },
-      selected.breakdown,
-    ).then((result) => {
-      if (!current) return;
-      setBreakdown(result.data);
-      setSource(result.source);
-      setReason(result.reason);
-      setLoading(false);
-    });
+    /* Typing a wage should not send a request per keystroke. The figures catch
+       up a moment after the number settles. */
+    const timer = setTimeout(() => {
+      tryPreviewPayroll(
+        {
+          employee: selected.address,
+          gross: base.toString(),
+          age: wage.age,
+          citizenship: wage.citizenship,
+        },
+        /* No fallback once the wage is the operator's to type: a stored split
+           for a different salary under a number somebody just entered is worse
+           than saying the figures could not be computed. */
+        untouched ? selected.breakdown : undefined,
+      ).then((result) => {
+        if (!current) return;
+        setBreakdown(result.data);
+        setSource(result.source);
+        setReason(result.reason);
+        setLoading(false);
+      });
+    }, 350);
 
     return () => {
       current = false;
+      clearTimeout(timer);
     };
-  }, [selected]);
+  }, [selected, wage.age, wage.citizenship, base?.toString(), invalid]);
 
   const monthlyCost = staff.reduce(
     (sum, person) => sum + BigInt(person.breakdown.employerCost),
@@ -61,12 +97,14 @@ export function PayrollDesk({
   );
 
   async function onRun() {
+    if (invalid || base === null) return;
+
     setRun({ status: 'running' });
     const result = await tryRunPayroll({
       employee: selected.address,
-      gross: selected.breakdown.gross,
-      age: 30,
-      citizenship: 'local',
+      gross: base.toString(),
+      age: wage.age,
+      citizenship: wage.citizenship,
     });
 
     if (result.data === null) {
@@ -109,7 +147,14 @@ export function PayrollDesk({
               <button
                 key={person.address}
                 type="button"
-                onClick={() => setSelected(person)}
+                onClick={() => {
+                  setSelected(person);
+                  setWage({
+                    gross: toDisplay(person.breakdown.gross),
+                    age: 30,
+                    citizenship: 'local',
+                  });
+                }}
                 aria-pressed={active}
                 className={`flex items-baseline justify-between gap-4 rounded-control border px-4 py-3 text-left transition-colors duration-150 ${
                   active
@@ -130,8 +175,9 @@ export function PayrollDesk({
         </div>
 
         <p className="text-caption text-ink-3">
-          Every person here is a local worker under 60. The mandate&rsquo;s floors are set
-          for that class, so a different class needs its own mandate.
+          The mandate&rsquo;s floors are fixed on chain for one class of worker, so a
+          class it was not created for can be refused by the contract even when the
+          arithmetic below is right.
         </p>
       </div>
 
@@ -139,21 +185,42 @@ export function PayrollDesk({
         <span className="eyebrow">
           {selected.name}&rsquo;s payroll run{loading ? ' · reading' : ''}
         </span>
-        <div className={loading ? 'opacity-60 transition-opacity' : 'transition-opacity'}>
-          <Breakdown breakdown={breakdown} />
-        </div>
+
+        <WageClass value={wage} onChange={setWage} disabled={run.status === 'running'} />
+
+        {breakdown ? (
+          <>
+            <div className={loading ? 'opacity-60 transition-opacity' : 'transition-opacity'}>
+              <Breakdown breakdown={breakdown} />
+            </div>
+            <ClassNote breakdown={breakdown} />
+          </>
+        ) : (
+          <p className="rounded-card border border-dashed border-rule bg-surface p-4 text-caption text-ink-3">
+            {invalid
+              ? 'No split is shown while the figures above cannot be read as a monthly wage.'
+              : `The statutory split could not be computed${reason ? `: ${reason}` : ''}.`}
+          </p>
+        )}
       </div>
 
       <div className="flex flex-col gap-3 rounded-card border border-rule bg-surface p-5">
         <div className="flex items-baseline justify-between gap-4">
-          <span className="text-body text-ink-2">This month, all staff</span>
-          <span className="tnum text-title">{toDisplay(monthlyCost.toString())}</span>
+          <span className="flex flex-col">
+            <span className="text-body text-ink-2">This run costs the employer</span>
+            <span className="text-caption text-ink-3">
+              {toDisplay(monthlyCost.toString())} for all {staff.length} at their listed wages
+            </span>
+          </span>
+          <span className="tnum text-title">
+            {breakdown ? toDisplay(breakdown.employerCost) : '—'}
+          </span>
         </div>
 
         <button
           type="button"
           className="btn btn--primary btn--block"
-          disabled={run.status === 'running'}
+          disabled={run.status === 'running' || invalid || breakdown === null}
           onClick={onRun}
         >
           {run.status === 'running' ? 'Running…' : 'Run payroll'}

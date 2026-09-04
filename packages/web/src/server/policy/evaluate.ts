@@ -8,10 +8,10 @@ import type {
   RuleId,
 } from '@tali/shared';
 import {
+  claimPaymentAmount,
   isAllowedRecipient,
   ON_CHAIN_RULES,
   toDisplay,
-  claimPaymentAmount,
 } from '@tali/shared';
 
 export interface PolicyEventSnapshot {
@@ -174,22 +174,28 @@ export function evaluatePolicy(input: PolicyEvaluationInput): PolicyDecision {
   );
 
   const checks: RuleCheck[] = [
-    check(
-      'per_claim_max',
-      amountWithinCap,
-      'Per-claim cap',
-      currencyReady
-        ? `${displayAmount(paymentAmount!)} against a ${displayAmount(input.mandate.maxPerClaim)} cap`
-        : 'Checked after an explicit USDC conversion quote is attached',
-    ),
-    check(
-      'total_budget',
-      amountWithinBudget,
-      'Budget remaining',
-      currencyReady
-        ? `${displayAmount(input.mandate.remainingBudget)} remains in the mandate`
-        : 'Checked after an explicit USDC conversion quote is attached',
-    ),
+    {
+      ...check(
+        'per_claim_max',
+        amountWithinCap,
+        'Per-claim cap',
+        currencyReady
+          ? `${displayAmount(paymentAmount!)} against a ${displayAmount(input.mandate.maxPerClaim)} cap`
+          : 'Checked after an explicit USDC conversion quote is attached',
+      ),
+      ...(currencyReady ? {} : { pending: true }),
+    },
+    {
+      ...check(
+        'total_budget',
+        amountWithinBudget,
+        'Budget remaining',
+        currencyReady
+          ? `${displayAmount(input.mandate.remainingBudget)} remains in the mandate`
+          : 'Checked after an explicit USDC conversion quote is attached',
+      ),
+      ...(currencyReady ? {} : { pending: true }),
+    },
     check(
       'recipient_allowlist',
       recipientAllowed,
@@ -249,10 +255,26 @@ export function evaluatePolicy(input: PolicyEvaluationInput): PolicyDecision {
   ];
 
   if (receiptCurrency === 'MYR') {
-    checks.push(check('fx_quote_valid', currencyReady, 'Current FX quote',
-      currencyReady ? 'Server-issued MYR/USD quote is valid; USDC valued at USD parity' : 'Fetch or refresh the MYR quote before approval'));
-    checks.push(check('fx_quote_approval', false, 'Approve quoted payment', 'Treasurer must approve the displayed USDC amount; MYR claims are never auto-paid'));
+    checks.push(
+      check(
+        'fx_quote_valid',
+        currencyReady,
+        'Current FX quote',
+        currencyReady
+          ? 'Server-issued MYR/USD quote is valid; USDC valued at USD parity'
+          : 'Fetch or refresh the MYR quote before approval',
+      ),
+    );
+    checks.push(
+      check(
+        'fx_quote_approval',
+        false,
+        'Approve quoted payment',
+        'Treasurer must approve the displayed USDC amount; MYR claims are never auto-paid',
+      ),
+    );
   }
+
   const outcome = decisionOutcome(checks);
   const failedLabels = checks
     .filter(({ passed }) => !passed)

@@ -6,17 +6,21 @@ import type {
 import { claimPaymentAmount } from '@tali/shared';
 
 export function approvalBlockReason(
-  claim: Pick<Claim, 'analysis'> & Partial<Pick<Claim, 'amount' | 'fxQuote'>>,
+  claim: Pick<Claim, 'id' | 'eventId' | 'submitter' | 'amount' | 'analysis' | 'fxQuote'>,
   decision: PolicyDecision,
 ): string | null {
-  if (claim.analysis?.currency !== 'USDC' && claimPaymentAmount({ ...claim, amount: claim.amount ?? '' }, Date.now()) === null) {
-    return 'A current MYR → USDC quote is required. Refresh the quote and review again.';
+  /* Only when the currency is actually known and wrong. `analysis` being
+     absent is a different problem, and naming this one puts a tooltip about
+     currency beside a row that renders "USDC". */
+  if (claim.analysis?.currency === 'MYR') {
+    if (claimPaymentAmount(claim, Date.now()) === null) {
+      return 'The MYR-to-USDC quote expired. Refresh the quote and review again.';
+    }
+  } else if (claim.analysis && claim.analysis.currency !== 'USDC') {
+    return 'This claim needs an explicit conversion quote before it can be paid.';
   }
   if (decision.checks.some((check) => check.onChain && !check.passed)) {
     return 'This claim fails an immutable on-chain mandate check.';
-  }
-  if (decision.checks.some(check => !check.passed && ['fx_quote_valid', 'not_duplicate'].includes(check.rule))) {
-    return 'The quote or duplicate-receipt check blocks payment.';
   }
   return null;
 }
@@ -38,10 +42,14 @@ export function reviewDialogCopy(action: ClaimReviewAction): {
   confirmLabel: string;
 } {
   if (action === 'approve') {
+    /* Approving records the decision and nothing else. The transfer is a
+       separate button, so promising a payment here would describe a step this
+       one does not take. */
     return {
-      title: 'Approve and start payment?',
-      consequence: 'This immediately starts a Sui Testnet USDC payment to the claimant.',
-      confirmLabel: 'Approve and pay',
+      title: 'Approve this claim?',
+      consequence:
+        'Nothing is paid yet. The claim moves to approved, and releasing the payment is a separate step.',
+      confirmLabel: 'Record the approval',
     };
   }
   if (action === 'reject') {
