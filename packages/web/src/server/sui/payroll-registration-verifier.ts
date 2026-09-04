@@ -43,6 +43,11 @@ interface RegistrationConfig {
   statutoryRecipients: string[];
 }
 
+export function isPendingTransactionLookupError(error: unknown): boolean {
+  return (error instanceof TransactionError && error.reason === 'notFound')
+    || (error instanceof Error && error.name === 'TimeoutError');
+}
+
 function configurationFailure(): ServerError {
   return new ServerError(
     'payroll_registration_configuration_failed',
@@ -119,7 +124,7 @@ function createDefaultOperations(input: {
           include: { effects: true, transaction: true, objectTypes: true },
         });
       } catch (error) {
-        if (error instanceof TransactionError && error.reason === 'notFound') return null;
+        if (isPendingTransactionLookupError(error)) return null;
         throw error;
       }
       const envelope = result as {

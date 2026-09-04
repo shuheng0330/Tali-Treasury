@@ -1,9 +1,11 @@
 import { Ed25519Keypair } from '@mysten/sui/keypairs/ed25519';
+import { TransactionError } from '@mysten/sui/client';
 import { CIRCLE_TESTNET_USDC_TYPE, type PayrollCapState, type PayrollMandateState } from '@tali/treasury-sui';
 import { describe, expect, it, vi } from 'vitest';
 
 import {
   createSuiPayrollRegistrationVerifier,
+  isPendingTransactionLookupError,
   type PayrollRegistrationOperations,
   type PayrollRegistrationTransaction,
 } from './payroll-registration-verifier';
@@ -88,6 +90,12 @@ function verifier(overrides: Partial<PayrollRegistrationOperations> = {}, nowMs 
 }
 
 describe('createSuiPayrollRegistrationVerifier', () => {
+  it('classifies not-found and wait timeouts as pending, but not network failures', () => {
+    expect(isPendingTransactionLookupError(new TransactionError('notFound', digest))).toBe(true);
+    expect(isPendingTransactionLookupError(new DOMException('timed out', 'TimeoutError'))).toBe(true);
+    expect(isPendingTransactionLookupError(new Error('connection reset'))).toBe(false);
+  });
+
   it('returns an immutable snapshot for a finalized supported payroll', async () => {
     await expect(verifier().verify({ digest, employer })).resolves.toMatchObject({
       creationDigest: digest,

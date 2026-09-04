@@ -161,7 +161,27 @@ function sameSnapshot(
   left: PayrollConfigurationSnapshot,
   right: PayrollConfigurationSnapshot,
 ): boolean {
-  return JSON.stringify(left) === JSON.stringify(right);
+  return left.creationDigest === right.creationDigest
+    && left.packageId === right.packageId
+    && left.coinType === right.coinType
+    && left.mandateId === right.mandateId
+    && left.capId === right.capId
+    && left.employerWallet === right.employerWallet
+    && left.capOwnerWallet === right.capOwnerWallet
+    && left.netMinBps === right.netMinBps
+    && left.initialBudget === right.initialBudget
+    && left.maxPerRun === right.maxPerRun
+    && left.expiryMs === right.expiryMs
+    && left.approvedEmployees.length === right.approvedEmployees.length
+    && left.approvedEmployees.every((employee, index) => employee === right.approvedEmployees[index])
+    && left.statutoryTerms.length === right.statutoryTerms.length
+    && left.statutoryTerms.every((term, index) => {
+      const candidate = right.statutoryTerms[index];
+      return candidate !== undefined
+        && term.recipient === candidate.recipient
+        && term.minBps === candidate.minBps
+        && term.wageCap === candidate.wageCap;
+    });
 }
 
 export function createSupabasePayrollConfigurationRepository(

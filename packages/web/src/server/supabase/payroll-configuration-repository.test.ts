@@ -74,9 +74,17 @@ describe('createSupabasePayrollConfigurationRepository', () => {
   });
 
   it('reloads an exact digest after a uniqueness race and reports replay', async () => {
+    const jsonbRow = {
+      ...row,
+      statutory_terms: snapshot.statutoryTerms.map((term) => ({
+        wageCap: term.wageCap,
+        minBps: term.minBps,
+        recipient: term.recipient,
+      })),
+    };
     const supabase = client([
       { data: null, error: { code: '23505', message: 'constraint details' } },
-      { data: row, error: null },
+      { data: jsonbRow, error: null },
     ]);
     const repository = createSupabasePayrollConfigurationRepository(supabase as never);
 
