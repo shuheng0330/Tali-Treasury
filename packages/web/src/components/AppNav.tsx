@@ -34,7 +34,6 @@ export function AppNav({ className = '' }: { className?: string }) {
               key={tab.href}
               href={tab.href}
               aria-current={active ? 'page' : undefined}
-              aria-label={tab.full}
               title={tab.full}
               className={`shrink-0 snap-start rounded-badge px-3 py-2 text-center font-display text-label uppercase transition-colors duration-150 sm:px-4 ${
                 active

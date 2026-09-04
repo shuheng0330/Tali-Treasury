@@ -128,9 +128,9 @@ export default function Page() {
           <p className="max-w-2xl text-body-lg text-ink-2">
             <span className="tnum">{RUN_TALLY.total}</span> transactions submitted to Sui
             testnet against the deployed package:{' '}
-            <span className="tnum">{RUN_TALLY.allowed}</span> payments the mandate allowed,{' '}
-            <span className="tnum">{RUN_TALLY.refused}</span> it refused, and the upgrade that
-            published payroll. Every digest below opens in an explorer that has nothing to do
+            <span className="tnum">{RUN_TALLY.allowed}</span> payments that a mandate allowed,{' '}
+            <span className="tnum">{RUN_TALLY.refused}</span> that a mandate refused, and the
+            upgrade that published payroll. Every digest below opens in an explorer that has nothing to do
             with us.
           </p>
         </div>

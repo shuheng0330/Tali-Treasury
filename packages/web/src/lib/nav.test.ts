@@ -97,6 +97,15 @@ describe('otherRolesNote', () => {
     expect(note).toBe("Treasurer view is the treasurer's.");
   });
 
+  it('names a screen in the third person, never handing the reader their own', () => {
+    expect(otherRolesNote(roles('employer', 'member'))).toBe(
+      "Treasurer view is the treasurer's. The earnings screen is the employee's.",
+    );
+    expect(otherRolesNote(roles('treasurer', 'member'))).toBe(
+      "Set up payroll, Run payroll and Safety test are the employer's. The earnings screen is the employee's.",
+    );
+  });
+
   it('says nothing when every tab is the viewer’s', () => {
     expect(otherRolesNote(roles('employer', 'treasurer', 'employee', 'member'))).toBeNull();
   });

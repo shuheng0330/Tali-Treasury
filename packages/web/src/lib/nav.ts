@@ -4,8 +4,13 @@ export interface NavTab {
   href: string;
   /** What the pill reads. Short enough to survive six of them on a phone. */
   label: string;
-  /** The whole action, for the note under the nav and the accessible name. */
+  /** The whole action, for the tab's tooltip. */
   full: string;
+  /**
+   * How the note names this screen. `full` addresses the reader, which in the
+   * note would hand them somebody else's earnings. Singular, so the verb agrees.
+   */
+  subject?: string;
   /** Whose screen this primarily is. Every route stays reachable by URL. */
   role: ViewerRole;
 }
@@ -13,9 +18,9 @@ export interface NavTab {
 export const NAV_TABS: readonly NavTab[] = [
   { href: '/payroll/setup', label: 'Set up', full: 'Set up payroll', role: 'employer' },
   { href: '/payroll', label: 'Payroll', full: 'Run payroll', role: 'employer' },
-  { href: '/earnings', label: 'Earn', full: 'Your earnings', role: 'employee' },
+  { href: '/earnings', label: 'Earn', full: 'Your earnings', subject: 'The earnings screen', role: 'employee' },
   { href: '/treasury', label: 'Treasury', full: 'Treasurer view', role: 'treasurer' },
-  { href: '/claim', label: 'Claim', full: 'Submit a claim', role: 'member' },
+  { href: '/claim', label: 'Claim', full: 'Submit a claim', subject: 'The claim form', role: 'member' },
   { href: '/safety', label: 'Safety', full: 'Safety test', role: 'employer' },
 ];
 
@@ -92,7 +97,9 @@ export function otherRolesNote(
     if (roles.has(role)) continue;
     const theirs = tabs.filter((tab) => tab.role === role);
     if (theirs.length === 0) continue;
-    sentences.push(`${list(theirs.map((tab) => tab.full))} ${theirs.length > 1 ? 'are' : 'is'} ${OWNER[role]}.`);
+    sentences.push(
+      `${list(theirs.map((tab) => tab.subject ?? tab.full))} ${theirs.length > 1 ? 'are' : 'is'} ${OWNER[role]}.`,
+    );
   }
 
   return sentences.length > 0 ? sentences.join(' ') : null;
