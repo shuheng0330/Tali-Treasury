@@ -102,6 +102,9 @@ demo.
   finalized transaction instead of trusting browser-submitted object fields.
 - Recover safely if the chain transaction succeeds but database registration
   fails. A registration retry must never fund a second mandate.
+- **Implemented locally:** the endpoint accepts only the digest, verifies sender,
+  package, USDC type, object lineage, supported terms and signer-owned cap, then
+  appends one service-role-only snapshot. New/replay responses are `201`/`200`.
 - Bind payroll pages, proof and earnings to the registered payroll rather than
   `sampleStaff` or a single global demo constant.
 

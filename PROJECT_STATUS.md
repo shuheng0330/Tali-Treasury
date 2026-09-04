@@ -61,12 +61,19 @@ Last updated: 4 September 2026 (MYT)
   strict address/name validation, duplicate conflicts, and sanitized errors;
 - the existing Treasury add-member transport now uses the shared
   `{ address, displayName }` and `{ member }` contracts;
+- authenticated payroll registration with exact-origin employer authorization,
+  finalized-transaction discovery, package/coin/template/ownership verification,
+  immutable Supabase snapshots, exact replay and collision-safe concurrency;
+- `/payroll/setup` reaches the real registration endpoint using only the funded
+  digest and preserves that digest for registration-only retries;
 - statutory payroll and salary-stream enforcement (`payroll.move`, 29 contract
   tests), the EPF/SOCSO/EIS calculator, and the PayrollDesk/earnings UI — complete
   locally, not yet published to Testnet. See `docs/PAYROLL_LAUNCH_PLAN.md` for the
   remaining publish work before the pitch;
 - 535 web tests (534 passing, one intentional skip), 45 Sui integration tests,
   and 125 pgTAP assertions passing after the roster integration.
+- 579 web tests passing with one intentional skip, 48 Sui integration tests and
+  141 pgTAP assertions passing at the payroll-registration checkpoint.
 
 ## Hosted schema verified
 
@@ -82,10 +89,10 @@ Last updated: 4 September 2026 (MYT)
 
 ## Local verification environment
 
-Docker Desktop and the local Supabase stack are available. Pending local migrations
-`20260901040000`, `20260903010000`, and `20260904010000` were applied without a
-reset on 4 September; all 125 pgTAP assertions then passed. No hosted migration or
-hosted data was changed by this verification.
+Docker Desktop and the local Supabase stack are available. The complete migration
+chain through `20260904020000_payroll_configurations.sql` was replayed from a reset
+on 4 September; all 141 pgTAP assertions then passed. No hosted migration or hosted
+data was changed by this verification.
 
 ## Pending integration
 
@@ -101,6 +108,8 @@ hosted data was changed by this verification.
 - add member correction and resubmission after a correction request;
 - deploy and verify the event-member roster API, then let the Treasury UI reload
   and render the authoritative roster after additions;
+- apply the payroll-registry migration, register an already funded creation
+  digest, then bind payroll, proof and earnings to an explicitly selected record;
 - run the hosted receipt flow end to end after authenticated identity is available.
 
 ## Known limitations
@@ -121,4 +130,6 @@ hosted data was changed by this verification.
   background job is included in the hackathon scope.
 - Event membership is add-only in this increment; rename, deactivate, reactivate,
   and payroll Move roster mutation are deferred.
+- Registered payroll selection and page/API binding remain the next development
+  increment; registration deliberately does not overwrite global payroll IDs.
 - Mainnet signing and real-value payments remain out of scope.

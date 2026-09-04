@@ -23,6 +23,15 @@ the submission time against the organiser channel; older notes used 23:59.
 
 ## Current status by subsystem
 
+### 4 September payroll-registration verification
+
+- Added employer-authenticated `POST /api/payroll/register`, finalized Testnet
+  transaction/object verification and immutable configuration persistence.
+- Registration accepts only a digest, returns `201` for a new snapshot and `200`
+  for an exact replay, and never signs or broadcasts.
+- Fresh verification: 48 Sui integration tests passed; 579 web tests passed with
+  one intentional skip; all 141 pgTAP assertions passed after a complete reset.
+
 ### 4 September roster-backend verification
 
 - Treasurer-only active roster GET and add-only POST are implemented against the
@@ -61,9 +70,10 @@ the submission time against the organiser channel; older notes used 23:59.
 | Claim and review UX | ✅ Complete locally | Browser MYR reimbursement verified, readable outcomes and reasons, exact quote approval, payment-status polling | Hosted verification and member correction/resubmission |
 | Payroll and treasury write RBAC | ✅ Complete locally | Employer-only payroll/revoke/safety APIs and employee-only stream withdrawal | Configure hosted employer wallet and verify both roles |
 | Event-member roster backend | ✅ Complete locally | Treasurer-only active roster GET and add-only POST, safe duplicate handling, shared contracts, and dashboard transport adapter | Deploy; verify treasurer success/non-treasurer 403; render authoritative roster in Treasury UI |
+| Payroll registration backend | ✅ Complete locally | Employer-only digest registration, finalized Sui object verification, immutable service-role registry and idempotent recovery | Apply migration, register the funded digest, then implement explicit registered-payroll selection |
 | Payroll contract and chain boundary | ✅ Complete locally | `PayrollMandate`, payroll execution, contribution rules, salary streams, readers and builders | Publish/upgrade, fund, configure and record real evidence |
 | Payroll application | 🟡 Built against incomplete live configuration | Payroll, earnings, history and enforcement screens; RM30 preview converts every leg through the configured MYR/USD rate; write RBAC is enforced | Replace sample identity, connect one registered payroll and verify hosted flow |
-| Authenticated Set Up Payroll | 🟡 Screen built, nothing to sign against | `/payroll/setup`: employer form, live-quote approval, wallet-signed funding through the existing builder, and a registration retry that never refunds | Publish the module, add `POST /api/payroll/register`, then verify idempotent registration and recovery |
+| Authenticated Set Up Payroll | 🟡 Registration complete locally | `/payroll/setup`: employer form, live-quote approval, wallet-signed funding, authenticated server verification and digest-only retry | Publish/apply configuration, register one funded mandate, then bind all payroll pages to the selected record |
 | Create Expense Treasury | ⬜ Pending | Existing reimbursement builder and manual/local event setup | Separate authenticated form, wallet signing, verified registration and event-aware capability mapping |
 | Safety Test UI | 🟡 Mocked with live evidence links | Local preview plus links to two real rejected transactions; API is employer-only | Interactive signed attempts and revocation scenario |
 | Deployment | ✅ Live reads; auth rollout pending | Vercel production and live Sui dashboard verified | Push wallet migration, configure exact HTTPS origin, verify protected writes |
@@ -113,10 +123,10 @@ Updated 4 September. See [payroll launch plan](PAYROLL_LAUNCH_PLAN.md) and
    stream timing and total Testnet funding.
 2. Publish/upgrade payroll, create the funded mandate, open the demo stream and
    record package, mandate, capability, stream and recipient identifiers.
-3. Implement authenticated **Set Up Payroll** with wallet signing and verified,
-   idempotent backend registration.
-4. Replace `sampleStaff` and global demo assumptions with the registered payroll;
-   enforce employer authorization and employee-only stream withdrawal.
+3. Deploy and verify the completed authenticated **Set Up Payroll** registration
+   using the already funded digest.
+4. Replace `sampleStaff` and global demo assumptions with an explicitly selected
+   registered payroll; authorization is already enforced on write routes.
 5. Verify one successful payroll, one deficient-contribution refusal and one
    accrued-salary withdrawal from a fresh browser.
 6. Preserve the working expense-claim demo. Build **Create Expense Treasury** as a

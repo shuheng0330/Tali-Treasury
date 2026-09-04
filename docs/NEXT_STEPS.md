@@ -37,10 +37,15 @@ budget, capability ownership and stream state.
 
 ## 3. Authenticated Set Up Payroll
 
+The setup screen, wallet funding, employer authorization and idempotent
+digest-only backend registration are complete locally. The remaining work is to
+select a registered configuration and remove the sample/global page bindings.
+
 - Build `/payroll/setup` as the primary CTA.
 - Preview immutable rules, Testnet funding and gas before wallet signing.
-- Verify the finalized transaction server-side before registration.
+- Verify the finalized transaction server-side before registration. **Complete locally.**
 - Make registration idempotent and recoverable without creating a second mandate.
+  **Complete locally.**
 - Replace sample employee data across payroll, proof and earnings screens.
 
 Acceptance: an authorized employer can create and reopen the registered payroll;

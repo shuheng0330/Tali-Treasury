@@ -38,6 +38,10 @@ resubmission are pending; the current UI directs the member to their treasurer.
 
 Owner: frontend + backend, with Sui integration support.
 
+Steps 1–4 and the write-role checks in step 6 are complete locally. Step 5,
+registered-payroll selection and page binding, is the next development increment;
+the final Testnet proof remains step 7.
+
 1. Add `/payroll/setup` with employer, employee, scaled wage, budget, maximum per
    run, expiry and statutory-recipient configuration.
 2. Preview Testnet funding and immutable rules, then use the existing
