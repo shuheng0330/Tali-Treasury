@@ -120,3 +120,23 @@ commands. The TypeScript integration exports these IDs as `taliUsdcDemo`.
 After both rejected transactions, the mandate still held `17 USDC`, the member
 still held `3 USDC`, and neither transaction emitted `PaymentMade`. Only the
 agent's SUI gas balance changed, by `0.002095 SUI` in total.
+
+## 3 September: separate single-wallet demo mandate
+
+The original mandate above is retained. A separate mandate was created for the
+local browser demo, using the same package and Circle Testnet USDC type:
+
+| Object / evidence | Identifier |
+| --- | --- |
+| Creation | `HC81t2fynCeqm2dgnfRVcpqXMA6j1crHbzhXRCwH2fng` |
+| Mandate | `0x1cc179098026a7a8f323ee926ee4e81d1805ed4cc512f195a91e6b925ee5cd34` |
+| AdminCap (original CLI treasurer) | `0xdbf079d1964dda4b558a2fcf9888430869de8c7a816afd9c9929f00a2100250a` |
+| AgentCap (existing backend agent) | `0x9adcf422eee1660adec815b91bff64c6fa0fc28401e36de24143fdd1a77322b1` |
+| Approved Slush recipient | `0xc49326adb506e0716c8beaf69885f4e008d34e116d277da49e253a72e82647b7` |
+| Browser-approved MYR payment | `J6fWBNa7RQXiLaVVK4ZhZSNphggNLq312HKRyhRbZQq` |
+
+Budget 10 USDC; cap 5 USDC; expiry 7 September 2026, 00:00 Singapore time.
+The RM6 receipt paid 1.484561 USDC, leaving 8.515439 USDC at checkpoint 379316730.
+The original mandate retained 16 USDC after its separate native-USDC recovery test.
+Refresh chain state for current balances. Full local event/role details:
+[single-wallet demo](../../docs/LOCAL_SINGLE_WALLET_DEMO.md).

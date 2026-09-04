@@ -16,8 +16,14 @@ whole product flow is live.
   Budget was 16 USDC afterward. [Evidence](LOCAL_PAYMENT_RECONCILIATION_SMOKE.md).
 - [MYR live-reference quotes](MYR_USDC_QUOTES.md) are implemented locally with
   quote-bound approval, integer rounding, expiry checks and shared provider cache.
-  App ID/provider verification passed; no MYR-quoted payment was sent.
-- Hosted migration/deployment, browser payment verification and the gas-fee
+  Browser payment verified: RM6 → 1.484561 USDC to Slush, transaction
+  `J6fWBNa7RQXiLaVVK4ZhZSNphggNLq312HKRyhRbZQq`. The separate 10 USDC
+  demo mandate had 8.515439 USDC remaining. [Demo evidence](LOCAL_SINGLE_WALLET_DEMO.md).
+- Paid tab now includes Auto-paid / Paid after review chips based on recorded
+  approval history; Rejected has its own tab and displays the recorded reason.
+- Correction and rejection reasons are visible in Treasury and My Claims.
+  Status and next action come first; policy checks and FX metadata expand on demand.
+- Hosted migration/deployment and the gas-fee
   reporting correction remain pending. Historical phase notes below retain the
   earlier milestones, not a claim of current hosted completeness.
 
@@ -26,30 +32,32 @@ whole product flow is live.
 | Sui Move | ✅ Live | Package, 17 tests, USDC mandate, valid payment, two rejected safety attempts | Live revoke/withdraw evidence only if needed for the demo |
 | Sui TypeScript boundary | ✅ Ready | Reads, builders, config, USDC helpers, abort mapping, backend signer and native-USDC payment/recovery smoke | Hosted end-to-end verification |
 | Shared contracts | ✅ Ready | Claim, event, policy, audit, mandate and endpoint types | Evolve only with team agreement |
-| Web dashboard | ✅ Live read-only | Current mandate state comes from Sui Testnet | Signed actions and backend claim totals |
+| Web dashboard | ✅ Complete locally; live chain data | Mandate reads, review actions, paid/rejected views, reasons and payment evidence | Hosted verification and backend claim totals |
 | Receipt and claim backend | ✅ Complete locally | Wallet sessions, one-time analysis drafts, private storage, deterministic policy, atomic review/payment states, and safe exact-digest reconciliation | Apply latest migrations and configure hosted API/origin/signer |
-| Claim and review UX | ✅ Complete locally | Wallet sessions, real analyze/create/list/review, payment-status polling and explicit MYR quote approval | Hosted quote/payment verification and member resubmission |
+| Claim and review UX | ✅ Complete locally | Browser MYR reimbursement verified, readable outcomes and reasons, exact quote approval, payment-status polling | Hosted verification and member correction/resubmission |
+| Treasurer Create event | ⬜ Pending | Existing Move builder and manual/local event setup | Authenticated form, wallet signing, verified event registration and recovery |
 | Safety Test UI | 🟡 Mocked with live evidence links | Local preview plus links to two real rejected transactions | Interactive signed attempts and revocation scenario |
 | Deployment | ✅ Live reads; auth rollout pending | Vercel production and live Sui dashboard verified | Push wallet migration, configure exact HTTPS origin, verify protected writes |
 | Submission | ⬜ Pending | — | Landing content, videos, deck, disclosure and rehearsal |
 
 ## Real versus simulated
 
-- **Real:** package, USDC mandate, live read-only dashboard, one payment, overspend rejection, unauthorized-recipient rejection.
+- **Real:** package, two funded USDC mandates, dashboard reads, native-USDC payments,
+  browser MYR-quoted reimbursement, overspend rejection and unauthorized-recipient rejection.
 - **Real when authenticated/demo identity and server payment credentials are
   enabled:** receipt analysis, private storage, event-scoped duplicate checks,
   claim persistence/listing, treasurer-triggered deterministic policy, and
   race-safe testnet backend payment for USDC automatic or human-approved claims. The payment code is
-  verified with fakes; no new transaction was broadcast in this increment.
+  covered by automated tests and the recorded local Testnet payment checks.
 - **Simulated in the current UI:** revoke preview and interactive safety controls.
 - **Never simulated without a label:** digests, checkpoints, gas, finality, wallet signatures, or chain state.
 
 ## Frontend phase history
 
 The sections below preserve UI design decisions made during the Xiang-UI work.
-References to signing, payment, gas, or chain outcomes describe the intended
-live experience, not current functionality. The integrated app labels those
-interactions as simulations and links separately to genuine Testnet evidence.
+These notes are historical. Use the current subsystem table and dated evidence
+above for today's functionality; payment and review now work locally, while
+revocation and the interactive safety screens remain previews.
 
 | # | Phase | Status | Landed |
 |---|---|---|---|
@@ -59,7 +67,7 @@ interactions as simulations and links separately to genuine Testnet evidence.
 | 3 | Treasurer dashboard and review queue | ✅ Real review actions complete locally | 1 Sep |
 | 4 | Safety Test panel | 🟡 Mock flow; live refusals linked | 29 Aug |
 | 5 | Landing page | ✅ Done, rebuilt 31 Aug | 30 Aug |
-| 6 | Wire to live contract and backend | 🟡 Authenticated local flow and reconciliation complete; hosted rollout and live smoke pending | 2 Sep |
+| 6 | Wire to live contract and backend | 🟡 Local browser MYR payment and reconciliation verified; hosted rollout pending | 3 Sep |
 | 7 | Submission pack | ⬜ Not started | — |
 
 Legend: ✅ done · 🟡 in progress · ⬜ not started · ⛔ cut
@@ -68,17 +76,21 @@ Legend: ✅ done · 🟡 in progress · ⬜ not started · ⛔ cut
 
 ## Current remaining gaps
 
-Updated 2 September and ordered by the risk of leaving each item unfinished:
+Updated 3 September. See [product next steps](PRODUCT_NEXT_STEPS.md) for acceptance criteria:
 
 1. Push the wallet/draft migration, configure `TALI_APP_ORIGIN`, and verify member
    and treasurer browser wallets on the hosted app.
 2. Coordinate and roll out the locally implemented MYR-to-USDC quote, then
    verify the hosted browser flow with a separately authorized payment.
-3. Member correction and resubmission after a treasurer request.
+3. Member correction and resubmission after a treasurer request. Reasons now show
+   on both screens; editing/resubmission still needs implementation.
 4. Native-USDC smoke payment and reconciliation passed locally on 3 September;
    verify the hosted path separately and fix the recorded gas metric discrepancy.
-5. Interactive on-chain safety attempts and live revocation.
-6. Submission video, deck, AI disclosure and rehearsal.
+5. Authenticated Create event: wallet-signed mandate funding followed by verified,
+   idempotent backend registration of event, categories and members.
+6. Further usability rehearsal on mobile/projector; interactive safety and live
+   revocation only if included in the pitch.
+7. Submission video, deck, AI disclosure and rehearsal.
 
 ---
 

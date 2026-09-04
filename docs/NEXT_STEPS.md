@@ -1,9 +1,16 @@
 # Next implementation plan
 
+3 September update: local wallet authentication, MYR quotes, browser-approved
+Testnet payment and payment recovery are verified. Paid/rejected views and visible
+review reasons are now implemented. Hosted rollout remains separate. See
+[current progress](PROGRESS.md) and [product acceptance criteria](PRODUCT_NEXT_STEPS.md)
+for member correction/resubmission and the authenticated Create event workflow.
+
 The current safe boundary is: an authenticated member can submit a receipt, the
 treasurer can process and review it, eligible USDC approval can start payment, and
 an uncertain payment can be reconciled by its stored digest without retrying.
-Non-USDC receipts cannot auto-pay until a conversion quote exists.
+MYR receipts always require explicit approval of a saved quote. Other non-USDC
+currencies remain unsupported.
 
 ## 1. Authenticated identity and analysis binding — complete locally
 
@@ -18,7 +25,7 @@ member/treasurer access is checked from the session; invalid cookies cannot fall
 back; and atomic claim failure leaves the draft usable. Rollout still requires the
 hosted migration, exact HTTPS origin configuration, and manual two-role testing.
 
-## 2. MYR-to-USDC quote — teammate-owned parallel plan
+## 2. MYR-to-USDC quote — complete locally; hosted verification pending
 
 - Add original amount/currency and payout amount/currency as separate fields.
 - Store rate, provider, quoted time, expiry and integer rounding result.

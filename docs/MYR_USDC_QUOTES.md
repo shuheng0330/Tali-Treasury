@@ -1,8 +1,8 @@
 # MYR reimbursement quotes
 
-Implemented locally on `test_main`, 3 September 2026. **Hosted rollout and a
-real MYR-quoted payment are not verified yet.** No new payment was sent while
-implementing this feature.
+Implemented locally on `test_main`, 3 September 2026. A browser-approved MYR
+reimbursement is verified on Sui Testnet; hosted rollout remains unverified.
+See the dated payment evidence below.
 
 ## Meaning of the quote
 
@@ -81,6 +81,15 @@ Failed refreshes have a five-minute cooldown. Normal continuous use is about
 Retries and separate local/preview/production databases consume additional quota.
 Do not assume one App ID shared across all environments will remain below 1,000
 requests. Monitor usage, keep inactive environments idle, and upgrade if needed.
+
+## Browser payment verified — 3 September
+
+The local single-wallet demo paid RM6 as **1.484561 Testnet USDC**, using the saved
+1 USD = 4.0416 MYR reference quote and explicit treasurer approval. Transaction:
+`J6fWBNa7RQXiLaVVK4ZhZSNphggNLq312HKRyhRbZQq`.
+See [the evidence](LOCAL_SINGLE_WALLET_DEMO.md). Hosted verification remains pending.
+The UI keeps the exact payout visible and puts provider timestamps, parity and
+rounding details in an expandable section.
 
 ## Rollout and checks
 

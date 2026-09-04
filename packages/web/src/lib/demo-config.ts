@@ -1,7 +1,9 @@
 import { taliUsdcDemo } from '@tali/treasury-sui';
 
-export const DEMO_EVENT_ID = 'ba7e50e2-7e7b-4a67-a505-9e3a329739ae';
-export const DEMO_EVENT_NAME = 'Orientation Week';
+// Public event selection only; backend membership and treasurer checks still apply.
+export const DEMO_EVENT_ID = process.env.NEXT_PUBLIC_DEMO_EVENT_ID || 'ba7e50e2-7e7b-4a67-a505-9e3a329739ae';
+export const DEMO_EVENT_NAME = process.env.NEXT_PUBLIC_DEMO_EVENT_NAME || 'Orientation Week';
+export const SINGLE_WALLET_DEMO = process.env.NEXT_PUBLIC_SINGLE_WALLET_DEMO === 'true';
 export const DEMO_SUBMITTER = taliUsdcDemo.approvedMember;
 export const DEMO_TREASURER = taliUsdcDemo.treasurer;
 

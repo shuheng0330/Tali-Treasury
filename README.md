@@ -31,15 +31,19 @@ Status words are intentionally precise:
 | Claim policy processing | **Complete locally** | Treasurer action invokes the server evaluator and persists the decision |
 | Treasurer review actions | **Complete locally** | Real approve/reject/correction API and UI; eligible USDC approval enters the guarded testnet signer |
 | Safe payment reconciliation | **Complete locally** | Digest stored before broadcast; explicit status checks never sign or resubmit |
-| MYR → USDC reimbursement quotes | **Complete locally** | Live Open Exchange Rates free-plan check passed; bound quotes and explicit approval; hosted rollout and quoted payment pending |
+| MYR → USDC reimbursement quotes | **Live via local app** | RM6 → 1.484561 USDC browser payment verified; hosted rollout pending |
+| Claim outcomes | **Complete locally** | Paid with Auto-paid / Paid after review chips; Rejected tab; correction/rejection reasons on both screens |
+| Treasurer Create event screen | **Pending** | Mandates and events currently created through setup tools; see [next steps](docs/PRODUCT_NEXT_STEPS.md) |
 | Revoke and Safety Test interactions | **Mocked** | Clearly labelled previews; no browser signing or state changes |
 | Gemini receipt analysis and Supabase claims | **Complete locally; rollout pending** | Private drafts, authenticated access and 91 pgTAP assertions |
-| Deterministic policy and backend agent signing | **Complete locally** | Testnet-only, treasurer-triggered, race-safe and fake-operation verified; no transaction broadcast in this increment |
+| Deterministic policy and backend agent signing | **Live via local app** | Native USDC payment/recovery and manually approved MYR reimbursement verified on Testnet |
 | Wallet connection and live UI writes | **Complete locally** | Testnet connect, explicit sign-in, one-hour HTTP-only session and sign-out |
 | Web hosting | **Live** | [`tali-treasury.vercel.app`](https://tali-treasury.vercel.app) |
 | Submission pack | **Pending** | Final hackathon phase |
 
 The detailed team checklist lives in [`docs/PROGRESS.md`](docs/PROGRESS.md).
+Upcoming correction/resubmission and authenticated event creation are specified in
+[`docs/PRODUCT_NEXT_STEPS.md`](docs/PRODUCT_NEXT_STEPS.md).
 
 ## Live Testnet proof
 
@@ -51,10 +55,16 @@ The detailed team checklist lives in [`docs/PROGRESS.md`](docs/PROGRESS.md).
 | Rejected 15 USDC overspend | [`5fMDNz…2PNpU`](https://suiscan.xyz/testnet/tx/5fMDNz9dAxJFiamg5Bi5iXnPjnHv2HTUB3hv2wJ2PNpU) |
 | Rejected unknown recipient | [`2htVB5…GDnk5e`](https://suiscan.xyz/testnet/tx/2htVB5NJCxhz1QXQtLGDjJ6kLVAwit6MLqzghzGDnk5e) |
 
-The current mandate began with `20 USDC`, allows at most `5 USDC` per claim,
+The original mandate began with `20 USDC`, allows at most `5 USDC` per claim,
 had paid `4 USDC`, and had `16 USDC` remaining after the 3 September payment
 recovery test. Refresh on-chain state for the current balance. See the
 [reconciliation evidence](docs/LOCAL_PAYMENT_RECONCILIATION_SMOKE.md).
+
+The separate [single-wallet local demo](docs/LOCAL_SINGLE_WALLET_DEMO.md) began with
+10 USDC and paid 1.484561 USDC for an RM6 receipt through the browser, leaving
+8.515439 USDC. Payment: `J6fWBNa7RQXiLaVVK4ZhZSNphggNLq312HKRyhRbZQq`.
+The same Slush wallet submits and reviews in this demo. This does not establish
+separation of duties or completion of the hosted flow.
 
 ## How the pieces fit
 
@@ -243,7 +253,7 @@ Backend:
 - Re-run deterministic policy checks before building and signing a payment.
 - Store receipt hashes and private receipt objects outside the chain.
 
-Immediate next vertical slice:
+Immediate hosted rollout (the local payment flow is already verified):
 
 1. Apply migration `20260901030000`, configure the hosted origin and verify both
    wallet roles manually.
@@ -259,6 +269,8 @@ Immediate next vertical slice:
 - [`docs/API.md`](docs/API.md) — authenticated session, receipt draft and claim endpoint contracts.
 - [`docs/MYR_USDC_QUOTES.md`](docs/MYR_USDC_QUOTES.md) — live-reference valuation, free-plan setup, safeguards and rollout.
 - [`docs/PROGRESS.md`](docs/PROGRESS.md) — authoritative team status and next work.
+- [`docs/PRODUCT_NEXT_STEPS.md`](docs/PRODUCT_NEXT_STEPS.md) — claim clarity, correction/resubmission and authenticated Create event acceptance criteria.
+- [`docs/LOCAL_SINGLE_WALLET_DEMO.md`](docs/LOCAL_SINGLE_WALLET_DEMO.md) — separate demo mandate and verified browser MYR payment.
 - [`docs/NEXT_STEPS.md`](docs/NEXT_STEPS.md) — production implementation order and acceptance criteria.
 - [`docs/HOSTED_SUPABASE_VERIFICATION.md`](docs/HOSTED_SUPABASE_VERIFICATION.md) — hosted schema verification scope and reproducible checks.
 - [`docs/OWNERSHIP.md`](docs/OWNERSHIP.md) — path ownership and coordination rules.

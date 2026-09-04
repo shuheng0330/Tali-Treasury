@@ -738,7 +738,6 @@ export function createSupabaseClaimRepository(
      * claim came back, and the next review overwrites it anyway.
      */
     async resubmit(input) {
-  
       const { data, error } = await query(client, 'claims')
         .update({
           merchant: input.corrections.merchant,
