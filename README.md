@@ -48,7 +48,7 @@ Status words are intentionally precise:
 | Payroll MYR → USDC valuation | **Complete locally** | RM statutory calculation is converted leg-by-leg with one approved live-reference rate; hosted proof pending |
 | Authenticated Set Up Payroll | **Complete locally; binding pending** | Employer wallet funds, then the server verifies and idempotently registers the exact transaction; payroll pages still need explicit registered-payroll selection |
 | Live payroll run and salary stream | **Pending** | Requires published package, funded mandate, real employee wiring, authorization and Testnet evidence |
-| Create Expense Treasury | **Pending** | Separate reimbursement setup backed by the existing `Mandate`; not part of payroll setup |
+| Create Expense Treasury | **Screen complete locally; registration pending** | Wallet-funded reimbursement setup is separate from payroll; protected event registration and selection remain |
 | Revoke and Safety Test interactions | **Mocked** | Clearly labelled previews; no browser signing or state changes |
 | Gemini receipt analysis and Supabase claims | **Complete locally; rollout pending** | Private drafts, authenticated access and 141 pgTAP assertions across the current schema |
 | Deterministic policy and backend agent signing | **Live via local app** | Native USDC payment/recovery and manually approved MYR reimbursement verified on Testnet |
@@ -323,7 +323,8 @@ convention, not concealment. Tool use is disclosed here as MUBA's rules require
 and does not affect judging.
 
 The submission pack — verified evidence, the three-minute demo script and the
-Q and A preparation — is in [docs/SUBMISSION.md](docs/SUBMISSION.md).
+Q and A preparation — is in [docs/SUBMISSION.md](docs/SUBMISSION.md), and the
+slides that bookend the demo are in [docs/DECK.md](docs/DECK.md).
 
 ## What's new this increment
 

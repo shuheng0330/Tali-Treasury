@@ -74,11 +74,11 @@ the submission time against the organiser channel; older notes used 23:59.
 | Payroll contract and chain boundary | ✅ Complete locally | `PayrollMandate`, payroll execution, contribution rules, salary streams, readers and builders | Publish/upgrade, fund, configure and record real evidence |
 | Payroll application | 🟡 Built against incomplete live configuration | Payroll, earnings, history and enforcement screens; RM30 preview converts every leg through the configured MYR/USD rate; write RBAC is enforced | Replace sample identity, connect one registered payroll and verify hosted flow |
 | Authenticated Set Up Payroll | 🟡 Registration complete locally | `/payroll/setup`: employer form, live-quote approval, wallet-signed funding, authenticated server verification and digest-only retry | Publish/apply configuration, register one funded mandate, then bind all payroll pages to the selected record |
-| Create Expense Treasury | ⬜ Pending | Existing reimbursement builder and manual/local event setup | Separate authenticated form, wallet signing, verified registration and event-aware capability mapping |
+| Create Expense Treasury | 🟡 Screen built and able to sign | `/treasury/setup`: treasurer form, USDC funding preview, wallet-signed creation against the published package, AdminCap retained and AgentCap issued, registration retry that never refunds | Add `POST /api/events`, then event selection/routing and event-aware capability mapping |
 | Safety Test UI | 🟡 Mocked with live evidence links | Local preview plus links to two real rejected transactions; API is employer-only | Interactive signed attempts and revocation scenario |
 | Deployment | ✅ Live reads; auth rollout pending | Vercel production and live Sui dashboard verified | Push wallet migration, configure exact HTTPS origin, verify protected writes |
 | Payroll and salary streams | 🟡 Complete locally | `payroll.move` (25 tests), EPF/SOCSO/EIS calculator, PayrollDesk/earnings UI, all wired to flip live once env vars exist | Package upgrade publish, mandate creation, funded stream — see `docs/PAYROLL_LAUNCH_PLAN.md` |
-| Submission | ⬜ Pending | — | Landing content, videos, deck, disclosure and rehearsal |
+| Submission | 🟡 Written, not recorded | `docs/SUBMISSION.md` (verified evidence, two demo scripts, Q and A) and `docs/DECK.md` (six slides with timings); AI tooling disclosed | Record the video, build the slides, rehearse on the projector |
 
 ## Real versus simulated
 
@@ -108,7 +108,7 @@ revocation and the interactive safety screens remain previews.
 | 4 | Safety Test panel | 🟡 Mock flow; live refusals linked | 29 Aug |
 | 5 | Landing page | ✅ Done, rebuilt 31 Aug | 30 Aug |
 | 6 | Wire to live contract and backend | 🟡 Local browser MYR payment and reconciliation verified; hosted rollout pending | 3 Sep |
-| 7 | Submission pack | ⬜ Not started | — |
+| 7 | Submission pack | 🟡 Scripts and deck written; recording pending | 4 Sep |
 
 Legend: ✅ done · 🟡 in progress · ⬜ not started · ⛔ cut
 
@@ -129,8 +129,8 @@ Updated 4 September. See [payroll launch plan](PAYROLL_LAUNCH_PLAN.md) and
    registered payroll; authorization is already enforced on write routes.
 5. Verify one successful payroll, one deficient-contribution refusal and one
    accrued-salary withdrawal from a fresh browser.
-6. Preserve the working expense-claim demo. Build **Create Expense Treasury** as a
-   separate follow-up rather than coupling it to payroll setup.
+6. Preserve the working expense-claim demo. Add protected registration and
+   selection behind the separate **Create Expense Treasury** screen.
 7. Deploy and verify the event-member roster API, including one new member who can
    sign in, analyze, create, and list a claim; complete authoritative roster UI.
 8. Update evidence, record a backup video, complete disclosures and rehearse.

@@ -27,10 +27,10 @@ export default function PayrollSetupPage() {
 
       <p className="text-caption text-ink-3">
         Reimbursing receipts is a separate mandate with its own rules.{' '}
-        <Link href="/treasury" className="link">
-          The expense treasury
+        <Link href="/treasury/setup" className="link">
+          Create an expense treasury
         </Link>{' '}
-        is not created here.
+        instead; it is not created here.
       </p>
     </div>
   );
