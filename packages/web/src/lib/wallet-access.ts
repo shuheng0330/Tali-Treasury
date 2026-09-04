@@ -68,6 +68,17 @@ export const EMPLOYER_COPY: AccessCopy = {
   holder: 'the employer wallet',
 };
 
+/**
+ * Separate from `EMPLOYER_COPY` because they are separate acts. Creating the
+ * mandate fixes the rules; running payroll spends inside them. Telling a
+ * visitor on the setup screen that they cannot "run payroll" would name the
+ * wrong thing.
+ */
+export const SETUP_COPY: AccessCopy = {
+  action: 'set up payroll',
+  holder: 'the employer wallet',
+};
+
 export const EMPLOYEE_COPY: AccessCopy = {
   action: 'withdraw from this stream',
   holder: "the employee's wallet",

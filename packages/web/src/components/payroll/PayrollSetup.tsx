@@ -5,10 +5,25 @@ import { buildCreatePayrollMandateTransaction } from '@tali/treasury-sui';
 import { toDisplay } from '@tali/shared';
 import { useEffect, useState } from 'react';
 
+import { RoleNotice } from '@/components/RoleNotice';
 import { useWalletSession } from '@/components/wallet/WalletSessionProvider';
+import { EMPLOYER_WALLET } from '@/lib/demo-config';
+import { SETUP_COPY, walletAccess } from '@/lib/wallet-access';
 import { previewPayrollSetup, registerPayrollSetup } from '@/lib/api/payroll-setup';
 import type { PayrollSetupPreview } from '@/server/payroll/setup';
 import type { PayrollSetupRegistration } from '@/server/payroll/setup-registration';
+
+/**
+ * Both fields carried `className="input"`, and no `.input` rule exists in the
+ * stylesheet or in Tailwind's output — so the two controls on the primary
+ * employer screen rendered with no border, padding or background at all.
+ *
+ * Matching Create Expense Treasury rather than adding an `.input` rule: the two
+ * setup screens link to each other from their own footers, and a reader who
+ * follows that link should not find a different form language on the other side.
+ */
+const FIELD = 'flex flex-col gap-1 rounded-control border border-rule bg-surface px-3 py-2';
+const INPUT = 'bg-transparent text-body outline-none disabled:opacity-60';
 
 function defaultExpiry(): string {
   const date = new Date();
@@ -27,6 +42,10 @@ function walletMessage(error: unknown): string {
 export function PayrollSetup() {
   const wallet = useWalletSession();
   const dapp = useDAppKit();
+  /* Advisory only — the preview and register endpoints refuse a wallet that is
+     not the employer regardless. It is here so the refusal arrives before the
+     form is filled in rather than after, where it reads as a malfunction. */
+  const access = walletAccess(wallet.address, EMPLOYER_WALLET, SETUP_COPY);
   const [employee, setEmployee] = useState('');
   const [expiry, setExpiry] = useState(defaultExpiry);
   const [preview, setPreview] = useState<PayrollSetupPreview | null>(null);
@@ -137,16 +156,18 @@ export function PayrollSetup() {
         </p>
       </div>
 
+      <RoleNotice access={access} />
+
       <div className="flex flex-col gap-4 rounded-card border border-rule bg-surface p-5">
-        <label className="flex flex-col gap-2 text-body">
-          Employee wallet
-          <input className="input font-mono" value={employee} onChange={(event) => {
+        <label className={FIELD}>
+          <span className="text-caption text-ink-2">Employee wallet</span>
+          <input className={`${INPUT} font-mono text-caption`} value={employee} onChange={(event) => {
             setEmployee(event.target.value.trim()); setPreview(null); setStatus('idle');
           }} />
         </label>
-        <label className="flex flex-col gap-2 text-body">
-          Payroll expires
-          <input className="input" type="date" value={expiry} onChange={(event) => {
+        <label className={FIELD}>
+          <span className="text-caption text-ink-2">Payroll expires</span>
+          <input className={INPUT} type="date" value={expiry} onChange={(event) => {
             setExpiry(event.target.value); setPreview(null); setStatus('idle');
           }} />
         </label>
@@ -155,7 +176,7 @@ export function PayrollSetup() {
           <div><p className="eyebrow">Total budget</p><p className="text-subhead">RM50 equivalent</p></div>
         </div>
         <button className="btn btn--primary btn--block" type="button" onClick={loadPreview}
-          disabled={status === 'previewing' || status === 'signing' || !employee || !expiry}>
+          disabled={!access.permitted || status === 'previewing' || status === 'signing' || !employee || !expiry}>
           {status === 'previewing' ? 'Getting live quote…' : 'Preview payroll setup'}
         </button>
       </div>
@@ -179,7 +200,7 @@ export function PayrollSetup() {
             Your wallet will spend Testnet USDC and gas. These rules and the employee allowlist are immutable for this mandate.
           </p>
           <button className="btn btn--primary btn--block" type="button" onClick={createPayroll}
-            disabled={status === 'signing' || status === 'verifying' || status === 'registered'}>
+            disabled={!access.permitted || status === 'signing' || status === 'verifying' || status === 'registered'}>
             {status === 'signing' ? 'Check your wallet…' : status === 'verifying' ? 'Verifying and registering…' : status === 'registered' ? 'Payroll registered' : 'Create and fund PayrollMandate'}
           </button>
         </div>
