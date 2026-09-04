@@ -33,8 +33,11 @@ the submission time against the organiser channel; older notes used 23:59.
   `TALI_EMPLOYER_WALLET` authorization.
 - Integrated the latest role-aware navigation, treasury action gates and
   submission corrections from `main` through `c20925d`.
-- Fresh verification: 42 Move tests, 45 Sui integration tests, 608 web tests
-  (607 passing and one intentional skip), 132 pgTAP assertions, root typecheck,
+- Fixed the payroll preview route to use the authenticated employer session
+  instead of the disabled insecure-demo identity gate, allowing the live USDC
+  calculation while keeping wrong-wallet and cross-origin requests blocked.
+- Fresh verification: 42 Move tests, 45 Sui integration tests, 612 web tests
+  (611 passing and one intentional skip), 132 pgTAP assertions, root typecheck,
   and the production build all passed.
 - Fast-forwarded to `main` at `9f6a07f`; wallet sign-in now surfaces sanitized
   backend failures before applying wallet/network heuristics.
