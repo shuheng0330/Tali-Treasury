@@ -108,9 +108,11 @@ in the README.
 
 ## Demo script — 3 minutes
 
-Two versions. Use A only if the payroll module is published and a mandate,
-stream and statutory recipients exist. Otherwise use B, which needs nothing that
-is not already on chain.
+Two versions. The module is published and the statutory recipients are
+configured, so the remaining condition for A is a **funded mandate, its
+`PayrollCap` and an open salary stream**. Those do not exist as of 5 September,
+so B is the script unless that changes before the pitch. B needs nothing that is
+not already on chain.
 
 ### A — payroll published
 
@@ -128,7 +130,7 @@ is not already on chain.
 | Time | Screen | Say and do |
 |---|---|---|
 | 0:00–0:20 | Landing | Same opening. |
-| 0:20–0:55 | Landing evidence | Three real Testnet transactions: one allowed, two refused. Open a refusal in the explorer. Stress that the agent had a valid capability and was still refused. |
+| 0:20–0:55 | Landing evidence | Five real Testnet transactions: two allowed, two refused, one package publication. Open a refusal in the explorer. Stress that the agent had a valid capability and was still refused. |
 | 0:55–1:45 | `/claim` | Photograph an RM receipt. Agent reads it, quotes MYR to USDC, treasurer approves the exact payout. Show the payment digest. |
 | 1:45–2:25 | `/payroll` + `/payroll/proof` | The statutory split against the EPF Third Schedule. **Say clearly that the module is published but no funded payroll mandate or execution proof exists yet.** |
 | 2:25–2:45 | `/payroll/setup` | The employer flow that will create, fund, verify and register that mandate once hosted configuration is complete. |
