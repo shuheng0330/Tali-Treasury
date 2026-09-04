@@ -25,7 +25,7 @@ export async function POST(request: Request): Promise<Response> {
       );
     }
 
-    return Response.json(getPayrollService().preview(parsed.data));
+    return Response.json(await getPayrollService().preview(parsed.data));
   } catch (error) {
     const { body, status } = toApiError(error);
     return Response.json(body, { status });

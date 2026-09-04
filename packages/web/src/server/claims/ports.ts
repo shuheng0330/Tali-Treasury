@@ -4,6 +4,7 @@ import type {
   ClaimReview,
   CreateClaimRequest,
   ExpenseCategory,
+  FxQuote,
   MandateView,
   ObjectId,
   PaymentResult,
@@ -131,6 +132,7 @@ export interface ClaimRepository {
   listByEvent(eventId: string): Promise<StoredClaim[]>;
   getProcessContext(claimId: string): Promise<ClaimProcessContext>;
   saveDecision(input: {
+    quoteId?: string;
     claimId: string;
     decision: PolicyDecision;
     state: ProcessedClaimState;
@@ -140,9 +142,14 @@ export interface ClaimRepository {
     corrections: ClaimCorrections;
   }): Promise<ResubmitResult>;
   applyReview(input: {
+    quoteId?: string;
     claimId: string;
     review: ClaimReview;
   }): Promise<ReviewMutationResult>;
+  saveFxQuote?(input: {
+    claim: Claim;
+    quote: FxQuote;
+  }): Promise<PaymentMutationResult>;
   /**
    * Takes the claim for a payment attempt.
    *

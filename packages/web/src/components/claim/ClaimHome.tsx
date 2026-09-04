@@ -1,7 +1,8 @@
 import type { Claim } from '@tali/shared';
-import { CLAIM_CHIP, EXPLORER, ratioBps, toDisplay } from '@tali/shared';
-import { Money } from '@/components/Money';
-import { StatusChip } from '@/components/StatusChip';
+import { EXPLORER, ratioBps, toDisplay } from '@tali/shared';
+import { Money } from '../Money';
+import { ClaimStatusSummary } from './ClaimStatusSummary';
+import { FxQuoteSummary } from './FxQuoteSummary';
 
 interface Props {
   eventName: string;
@@ -128,53 +129,26 @@ export function ClaimHome({
         ) : (
           <ul className="flex flex-col divide-y divide-rule overflow-hidden rounded-card border border-rule bg-surface">
             {listedClaims.map((claim) => (
-              <li key={claim.id} className="flex flex-col gap-2 px-4 py-3">
-                <div className="flex items-center gap-3">
-                  <div className="flex min-w-0 flex-1 flex-col gap-1">
-                    <span className="truncate text-body">{claim.merchant}</span>
-                    <span className="flex items-center gap-2">
-                      <StatusChip status={CLAIM_CHIP[claim.state]} />
-                      <span className="text-caption text-ink-3" suppressHydrationWarning>
-                        {relative(claim.updatedAtMs)}
-                      </span>
-                    </span>
-                  </div>
-                  <Money
-                    amount={claim.amount}
-                    unit={claim.analysis?.currency ?? 'USDC'}
-                    size="row"
-                  />
+              <li key={claim.id} className="flex flex-col gap-3 px-4 py-4">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <span className="break-words text-body font-medium">{claim.merchant}</span>
+                  <Money amount={claim.amount} unit={claim.analysis?.currency ?? 'USDC'} size="row" />
                 </div>
-
-                {claim.state === 'paid' && claim.payment?.digest ? (
-                  <a
-                    className="link self-start text-caption"
-                    href={EXPLORER.tx(claim.payment.digest).suiscan}
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    View the transaction that paid you
-                  </a>
-                ) : null}
-
-                {claim.state === 'payment_failed' && claim.payment ? (
-                  <p className="text-caption text-no">
-                    Nothing was paid. {claim.payment.message}
-                  </p>
-                ) : null}
-
-                {claim.state === 'rejected' && claim.review?.reason ? (
-                  <p className="text-caption text-ink-2">
-                    Rejected: {claim.review.reason}
-                  </p>
-                ) : null}
-
-                {claim.state === 'paying' ? (
-                  <p className="text-caption text-wait">
-                    The payment has been sent and is waiting to confirm.
-                  </p>
-                ) : null}
-              </li>
+                <div className="flex min-w-0 flex-1 flex-col gap-2">
+                  <ClaimStatusSummary claim={claim} />
+                  <FxQuoteSummary claim={claim} />
+                  <span className="text-caption text-ink-3" suppressHydrationWarning>
+                    Updated {relative(claim.updatedAtMs)}
+                  </span>
+                </div>
+                  {claim.state === 'paid' && claim.payment?.digest ? (
+                    <a className="link self-start text-caption"
+                      href={EXPLORER.tx(claim.payment.digest).suiscan}
+                      target="_blank" rel="noreferrer">
+                      View payment transaction
+                    </a>
+                  ) : null}
+                </li>
             ))}
           </ul>
         )}

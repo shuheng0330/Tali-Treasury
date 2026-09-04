@@ -21,6 +21,9 @@ import { createSupabaseReceiptStore } from './supabase/receipt-store';
 import { createSupabaseWalletAuthRepository } from './supabase/wallet-auth-repository';
 import { createSuiMandateReader } from './sui/mandate-reader';
 import { createSuiPaymentExecutor } from './sui/payment-executor';
+import { createSupabaseRateCache } from './fx/cache';
+import { createOpenExchangeRateReader } from './fx/rates';
+import { createClaimQuoter } from './fx/quotes';
 
 export interface BackendServices {
   analyzeReceipt: ReturnType<typeof createAnalyzeReceiptService>;
@@ -47,7 +50,7 @@ export function getBackendServices(): BackendServices {
   >[0] &
     Parameters<typeof createSupabaseReceiptStore>[0] &
     Parameters<typeof createSupabaseWalletAuthRepository>[0] &
-    Parameters<typeof createSupabaseAnalysisDraftRepository>[0];
+    Parameters<typeof createSupabaseAnalysisDraftRepository>[0] & Parameters<typeof createSupabaseRateCache>[0];
   const claims = createSupabaseClaimRepository(client);
   const receipts = createSupabaseReceiptStore(client);
   const drafts = createSupabaseAnalysisDraftRepository(client);
@@ -59,12 +62,16 @@ export function getBackendServices(): BackendServices {
   const payments = createSuiPaymentExecutor();
   const auth = createSupabaseWalletAuthRepository(client);
   const appOrigin = requireAppOrigin();
+  const quotes = createClaimQuoter({ rates: createOpenExchangeRateReader({
+    appId: () => process.env.OPEN_EXCHANGE_RATES_APP_ID,
+    cache: createSupabaseRateCache(client),
+  }) });
 
   services = {
     analyzeReceipt: createAnalyzeReceiptService({ analyzer, claims, receipts, drafts }),
     createClaim: createClaimService({ drafts }),
     listClaims: createListClaimsService({ claims, receipts }),
-    processClaim: createProcessClaimService({ claims, mandates, payments }),
+    processClaim: createProcessClaimService({ claims, mandates, payments, quotes }),
     reconcileClaim: createReconcileClaimService({ claims, payments }),
     reviewClaim: createReviewClaimService({ claims, mandates, payments }),
     resubmitClaim: createResubmitClaimService({ claims }),

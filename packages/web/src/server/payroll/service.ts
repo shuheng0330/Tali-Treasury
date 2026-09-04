@@ -2,6 +2,8 @@ import type { PayrollBreakdown, PayrollRunView, StatutoryBody } from '@tali/shar
 import { STATUTORY_BODIES } from '@tali/shared';
 
 import { ServerError } from '../errors';
+import type { FxRate } from '../fx/rates';
+import { quotePayrollSplit } from './fx';
 import { computeStatutory, type StatutoryInput } from './statutory';
 import type {
   PayrollChainPort,
@@ -11,7 +13,7 @@ import type {
 import type { PayrollRequest } from './validation';
 
 export interface PayrollService {
-  preview(request: PayrollRequest): PayrollBreakdown;
+  preview(request: PayrollRequest): Promise<PayrollBreakdown>;
   run(request: PayrollRequest): Promise<PayrollRunView>;
   listRecent(limit?: number): Promise<PayrollRunView[]>;
 }
@@ -28,10 +30,14 @@ export function createPayrollService(deps: {
   runs: PayrollRunRepository;
   chain: PayrollChainPort;
   recipients: StatutoryRecipientConfig;
+  rates: () => Promise<FxRate>;
+  now?: () => number;
 }): PayrollService {
-  function build(request: PayrollRequest): PayrollBreakdown {
+  async function build(request: PayrollRequest): Promise<PayrollBreakdown> {
+    const source = computeStatutory(toInput(request));
+    const rate = await deps.rates();
     return {
-      ...computeStatutory(toInput(request)),
+      ...quotePayrollSplit(source, rate, (deps.now ?? Date.now)()),
       employee: request.employee,
       recipients: deps.recipients,
     };
@@ -56,7 +62,20 @@ export function createPayrollService(deps: {
 
       deps.chain.assertReady();
 
-      const breakdown = build(request);
+      const breakdown = await build(request);
+      const quoted = breakdown.fxConversion;
+      if (
+        !request.fxApproval ||
+        !quoted ||
+        request.fxApproval.myrPerUsd !== quoted.myrPerUsd ||
+        request.fxApproval.rateTimestampMs !== quoted.rateTimestampMs
+      ) {
+        throw new ServerError(
+          'fx_quote_invalid',
+          409,
+          'The payroll quote changed or was not approved. Preview it again before running payroll.',
+        );
+      }
 
       /* Persisted before anything is signed. A run that vanishes because the
          process died mid-submission is worse than one recorded as failed. */

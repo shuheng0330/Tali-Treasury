@@ -97,7 +97,7 @@ export interface ProcessClaimResponse {
 
 /** POST /api/claims/:id/review */
 export type ReviewClaimRequest =
-  | { action: 'approve'; reviewer?: Address; reason?: string }
+  | { action: 'approve'; reviewer?: Address; reason?: string; quoteId?: string }
   | { action: 'reject'; reviewer?: Address; reason: string }
   | { action: 'request_correction'; reviewer?: Address; reason: string };
 

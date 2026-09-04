@@ -4,11 +4,11 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useMemo, useState, useTransition } from 'react';
 import type { ClaimReviewAction, MandateView } from '@tali/shared';
-import { CLAIM_CHIP, EXPLORER } from '@tali/shared';
 import { Money } from '@/components/Money';
-import { StatusChip } from '@/components/StatusChip';
 import { COMMITTED, event } from '@/lib/mock/data';
-import { DEMO_TREASURER } from '@/lib/demo-config';
+import { ClaimStatusSummary } from '../claim/ClaimStatusSummary';
+import { FxQuoteSummary } from '../claim/FxQuoteSummary';
+import { DEMO_EVENT_NAME, DEMO_TREASURER, SINGLE_WALLET_DEMO } from '@/lib/demo-config';
 import { reviewQueue, settledClaims } from '@/lib/mock/api';
 import { committedFrom, settledFrom, toReviewQueue } from '@/lib/queue';
 import { useClaims } from '@/lib/api/useClaims';
@@ -22,12 +22,14 @@ import { RevokeDialog } from './RevokeDialog';
 import { ReviewActionDialog } from './ReviewActionDialog';
 import { PaymentReconciliationStatus } from './PaymentReconciliationStatus';
 import { useWalletSession } from '@/components/wallet/WalletSessionProvider';
+import { reviewRequestForClaim } from '@/lib/review-actions';
 
-type Tab = 'review' | 'paid' | 'all';
+type Tab = 'review' | 'paid' | 'rejected' | 'all';
 
 const TABS: { id: Tab; label: string }[] = [
   { id: 'review', label: 'Needs review' },
-  { id: 'paid', label: 'Settled' },
+  { id: 'paid', label: 'Paid' },
+  { id: 'rejected', label: 'Rejected' },
   { id: 'all', label: 'All' },
 ];
 
@@ -102,7 +104,14 @@ export function TreasuryDashboard({
     [live.source, live.claims],
   );
 
-  const counts = { review: queue.length, paid: paid.length, all: everything.length };
+  const rejected = everything.filter((claim) => claim.state === 'rejected');
+  const history = tab === 'paid' ? paid : tab === 'rejected' ? rejected : everything;
+  const counts = {
+    review: queue.length,
+    paid: paid.length,
+    rejected: rejected.length,
+    all: everything.length,
+  };
   const reviewingClaim = reviewing
     ? everything.find((claim) => claim.id === reviewing.claimId) ?? null
     : null;
@@ -166,13 +175,14 @@ export function TreasuryDashboard({
   }
 
   async function submitReview(reason?: string) {
-    if (!reviewing) return;
+    if (!reviewing || !reviewingClaim) return;
     setReviewPending(true);
     setReviewError(null);
-    const request =
-      reviewing.action === 'approve'
-        ? { action: 'approve' as const }
-        : { action: reviewing.action, reason: reason ?? '' };
+    const request = reviewRequestForClaim(
+      reviewingClaim,
+      reviewing.action,
+      reason,
+    );
     const result = await tryReviewClaim(reviewing.claimId, request);
     setReviewPending(false);
     if (result.data === null) {
@@ -272,8 +282,14 @@ export function TreasuryDashboard({
 
   return (
     <div className="mx-auto flex w-full max-w-4xl flex-col gap-6 px-5 py-8">
+      {SINGLE_WALLET_DEMO ? (
+        <p className="text-body text-ink-2">
+          Single-wallet Testnet demo: the same person submits and reviews claims.
+          This demonstrates the workflow, not separation of duties. Payments use test tokens.
+        </p>
+      ) : null}
       <MandateHeader
-        eventName={event.name}
+        eventName={DEMO_EVENT_NAME}
         organisation={event.organisation}
         mandate={mandate}
         committed={committed}
@@ -343,6 +359,7 @@ export function TreasuryDashboard({
               key={entry.id}
               type="button"
               onClick={() => setTab(entry.id)}
+              aria-pressed={tab === entry.id}
               className={`rounded-badge px-4 py-2 font-display text-label uppercase transition-colors duration-150 ${
                 tab === entry.id ? 'bg-ink text-canvas' : 'text-ink-3 hover:bg-raised hover:text-ink'
               }`}
@@ -401,50 +418,37 @@ export function TreasuryDashboard({
         ) : null}
 
         {tab !== 'review' ? (
-          (tab === 'paid' ? paid : everything).length === 0 ? (
-            <p className="px-6 py-14 text-center text-caption text-ink-3">
-              {tab === 'paid'
-                ? 'Nothing has settled yet. A claim lands here once it is paid, refused or rejected.'
-                : 'No claim has been submitted against this mandate yet.'}
-            </p>
-          ) : (
-            <ul className="flex flex-col divide-y divide-rule">
-              {(tab === 'paid' ? paid : everything).map((claim) => (
-                <li key={claim.id} className="flex flex-col gap-1.5 px-4 py-3">
-                  <div className="flex items-center gap-3">
-                    <div className="flex min-w-0 flex-1 flex-col gap-1">
-                      <span className="truncate text-body">{claim.merchant}</span>
-                      <span className="flex items-center gap-2">
-                        <StatusChip status={CLAIM_CHIP[claim.state]} />
-                        <span className="text-caption text-ink-3">{claim.submitterName}</span>
-                      </span>
-                    </div>
-                    <Money amount={claim.amount} unit={claim.analysis?.currency ?? 'USDC'} size="row" />
-                  </div>
-                  {/* Why a claim ended the way it did is the part worth keeping.
-                      A settled row that shows only its state makes the treasurer
-                      reconstruct their own decision from memory. */}
-                  {claim.state === 'rejected' && claim.review?.reason ? (
-                    <p className="text-caption text-ink-3">Rejected: {claim.review.reason}</p>
-                  ) : null}
-                  {claim.state === 'payment_failed' && claim.payment ? (
-                    <p className="text-caption text-no">{claim.payment.message}</p>
-                  ) : null}
-                  <PaymentReconciliationStatus
-                    claim={claim}
-                    pending={reconcilingId === claim.id}
-                    onCheck={checkPayment}
-                  />
-                </li>
-              ))}
-            </ul>
-          )
+          <ul className="flex flex-col divide-y divide-rule">
+            {history.length === 0 ? (
+              <li className="px-6 py-10 text-center text-body text-ink-2">
+                {tab === 'rejected' ? 'No rejected claims.' : tab === 'paid' ? 'No payments yet.' : 'No claims yet.'}
+              </li>
+            ) : null}
+            {history.map((claim) => (
+              <li key={claim.id} className="flex flex-col gap-3 px-4 py-4">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <span className="break-words text-body font-medium">{claim.merchant}</span>
+                  <Money amount={claim.amount} unit={claim.analysis?.currency ?? 'USDC'} size="row" />
+                </div>
+                <div className="flex min-w-0 flex-1 flex-col gap-1">
+                  <ClaimStatusSummary claim={claim} />
+                  <span className="text-body text-ink-3">{claim.submitterName}</span>
+                  <FxQuoteSummary claim={claim} />
+                </div>
+                <PaymentReconciliationStatus
+                  claim={claim}
+                  pending={reconcilingId === claim.id}
+                  onCheck={checkPayment}
+                />
+              </li>
+            ))}
+          </ul>
         ) : null}
       </section>
 
       {confirming ? (
         <RevokeDialog
-          eventName={event.name}
+          eventName={DEMO_EVENT_NAME}
           remaining={mandate.remainingBudget}
           pendingCount={queue.length}
           onCancel={() => setConfirming(false)}

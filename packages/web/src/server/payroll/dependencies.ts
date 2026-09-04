@@ -2,6 +2,8 @@ import type { PayrollBreakdown, PayrollRunView } from '@tali/shared';
 
 import { ServerError } from '../errors';
 import type { EnvLike } from '../env';
+import { createSupabaseRateCache } from '../fx/cache';
+import { createOpenExchangeRateReader } from '../fx/rates';
 import { createSuiPayrollExecutor } from '../sui/payroll-executor';
 import { createServerSupabaseClient } from '../supabase/client';
 import { createSupabasePayrollRunRepository } from '../supabase/payroll-run-repository';
@@ -113,6 +115,7 @@ function unconfiguredChain(): PayrollChainPort {
 export function payrollIsLive(env: EnvLike = process.env): boolean {
   return Boolean(
     env.AGENT_PRIVATE_KEY?.trim() &&
+      env.PAYROLL_PACKAGE_ID?.trim() &&
       env.PAYROLL_CAP_ID?.trim() &&
       env.PAYROLL_MANDATE_ID?.trim() &&
       env.PAYROLL_EPF_ADDRESS?.trim() &&
@@ -147,10 +150,15 @@ let store: PayrollRunStore | undefined;
 export function getPayrollService(): PayrollService {
   if (!service) {
     store = runStore();
+    const client = createServerSupabaseClient() as never;
     service = createPayrollService({
       runs: store,
       chain: payrollIsLive() ? createSuiPayrollExecutor() : unconfiguredChain(),
       recipients: recipients(),
+      rates: createOpenExchangeRateReader({
+        appId: () => process.env.OPEN_EXCHANGE_RATES_APP_ID,
+        cache: createSupabaseRateCache(client),
+      }),
     });
   }
   return service;

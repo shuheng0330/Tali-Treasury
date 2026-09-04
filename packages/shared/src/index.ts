@@ -4,6 +4,8 @@ export {
   EXPENSE_CATEGORIES,
   ON_CHAIN_RULES,
 } from './claims.js';
+export { convertMyrToUsdc, claimPaymentAmount, isFxQuote, FX_MAX_RATE_AGE_MS, FX_QUOTE_LIFETIME_MS } from './fx.js';
+export type { FxQuote } from './fx.js';
 export type {
   Address,
   Amount,
@@ -54,6 +56,7 @@ export {
 } from './payroll.js';
 export type {
   PayrollBreakdown,
+  PayrollFxConversion,
   PayrollRunStatus,
   PayrollRunView,
   SalaryStreamView,

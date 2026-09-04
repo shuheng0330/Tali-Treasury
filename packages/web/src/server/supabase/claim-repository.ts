@@ -5,6 +5,7 @@ import type {
   ClaimReviewAction,
   ClaimState,
   ExpenseCategory,
+  FxQuote,
   PaymentResult,
   PolicyDecision,
   ReceiptAnalysis,
@@ -46,6 +47,7 @@ interface SupabaseDataClient {
 }
 
 interface ClaimRow {
+  fx_quote: FxQuote | null;
   id: string;
   event_id: string;
   submitter_wallet: string;
@@ -99,6 +101,7 @@ const CLAIM_COLUMNS_BASE = `
   description,
   receipt_analysis,
   decision,
+  fx_quote,
   payment,
   created_at,
   updated_at,
@@ -226,6 +229,7 @@ export function mapClaimRow(input: unknown): StoredClaim {
   }
 
   const claim: Claim = {
+    fxQuote: row.fx_quote ?? null,
     id: row.id,
     eventId: row.event_id,
     submitter: row.submitter_wallet,
@@ -384,7 +388,16 @@ export function createSupabaseClaimRepository(
   }): Promise<PaymentMutationResult> {
     const update = input.payment
       ? { state: input.nextState, payment: input.payment }
-      : { state: input.nextState };
+      : input.replacingResult
+        ? {
+            state: input.nextState,
+            payment: null,
+            payment_attempt_digest: null,
+            payment_attempt_budget_before: null,
+            payment_attempt_prepared_at: null,
+            payment_attempt_last_checked_at: null,
+          }
+        : { state: input.nextState };
     let update_ = query(client, 'claims')
       .update(update)
       .eq('id', input.claimId)
@@ -572,6 +585,29 @@ export function createSupabaseClaimRepository(
 
     getProcessContext,
 
+    async saveFxQuote({ claim, quote }) {
+      let builder = query(client, 'claims')
+        .update({ fx_quote: quote, decision: null, state: 'submitted' })
+        .eq('id', claim.id)
+        .eq('state', claim.state)
+        .eq('amount', claim.amount)
+        .is('review_action', null)
+        .is('payment', null)
+        .is('payment_attempt_digest', null);
+      builder = claim.fxQuote
+        ? builder.eq('fx_quote->>id', claim.fxQuote.id)
+        : builder.is('fx_quote', null);
+      const { data, error } = await builder
+        .select(claimColumns())
+        .maybeSingle();
+      if (error && error.code !== 'PGRST116') throw databaseFailure(error);
+      if (data) return { status: 'saved', claim: mapClaimRow(data).claim };
+      return {
+        status: 'lost_race',
+        claim: (await getProcessContext(claim.id)).claim,
+      };
+    },
+
     async applyReview(input) {
       await ensureReviewColumns();
 
@@ -591,7 +627,7 @@ export function createSupabaseClaimRepository(
         reject: 'rejected',
         request_correction: 'needs_correction',
       } as const;
-      const { data, error } = await query(client, 'claims')
+      let reviewQuery = query(client, 'claims')
         .update({
           state: nextStateByAction[input.review.action],
           review_action: input.review.action,
@@ -602,7 +638,11 @@ export function createSupabaseClaimRepository(
         .eq('id', input.claimId)
         .eq('state', 'awaiting_review')
         .is('review_action', null)
-        .is('payment', null)
+        .is('payment', null);
+      if (input.quoteId) {
+        reviewQuery = reviewQuery.eq('fx_quote->>id', input.quoteId);
+      }
+      const { data, error } = await reviewQuery
         .select(claimColumns())
         .maybeSingle();
 
@@ -698,7 +738,6 @@ export function createSupabaseClaimRepository(
      * claim came back, and the next review overwrites it anyway.
      */
     async resubmit(input) {
-  
       const { data, error } = await query(client, 'claims')
         .update({
           merchant: input.corrections.merchant,
@@ -708,6 +747,11 @@ export function createSupabaseClaimRepository(
           description: input.corrections.description,
           state: 'submitted',
           decision: null,
+          fx_quote: null,
+          review_action: null,
+          reviewer_wallet: null,
+          review_reason: null,
+          reviewed_at: null,
         })
         .eq('id', input.claimId)
         .eq('state', 'needs_correction')
@@ -729,11 +773,15 @@ export function createSupabaseClaimRepository(
     },
 
     async saveDecision(input) {
-        const { data, error } = await query(client, 'claims')
+      let decisionQuery = query(client, 'claims')
         .update({ decision: input.decision, state: input.state })
         .eq('id', input.claimId)
         .eq('state', 'submitted')
-        .is('decision', null)
+        .is('decision', null);
+      if (input.quoteId) {
+        decisionQuery = decisionQuery.eq('fx_quote->>id', input.quoteId);
+      }
+      const { data, error } = await decisionQuery
         .select(claimColumns())
         .maybeSingle();
 

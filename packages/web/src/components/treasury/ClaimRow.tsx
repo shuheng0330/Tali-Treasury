@@ -2,7 +2,28 @@ import { Money } from '@/components/Money';
 import { EXPLORER } from '@tali/shared';
 import type { ClaimReviewAction, ReviewQueueItem } from '@tali/shared';
 import { approvalBlockReason } from '@/lib/review-actions';
-import { ChecklistSummary, type AnnotatedCheck } from './ChecklistSummary';
+import { FxQuoteSummary } from '../claim/FxQuoteSummary';
+import { ClaimStatusSummary } from '../claim/ClaimStatusSummary';
+
+function Verdict({ passed, pending }: { passed: boolean; pending?: boolean }) {
+  if (pending) {
+    return (
+      <svg viewBox="0 0 12 12" width="11" height="11" className="text-ink-3" aria-hidden>
+        <path d="M2.5 6 H9.5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+      </svg>
+    );
+  }
+
+  return passed ? (
+    <svg viewBox="0 0 12 12" width="11" height="11" className="text-ok" aria-hidden>
+      <path d="M2 6.4 L4.8 9 L10 3" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  ) : (
+    <svg viewBox="0 0 12 12" width="11" height="11" className="text-no" aria-hidden>
+      <path d="M3 3 L9 9 M9 3 L3 9" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+    </svg>
+  );
+}
 
 function ReasonMark({ reason }: { reason: ReviewQueueItem['reason'] }) {
   if (reason === 'rule_failed') {
@@ -78,18 +99,6 @@ export function ClaimRow({
   const notEvaluated = (check: (typeof decision.checks)[number]) =>
     check.pending === true ||
     (unquoted && (check.rule === 'per_claim_max' || check.rule === 'total_budget'));
-  const annotatedChecks: AnnotatedCheck[] = decision.checks.map((check) => {
-    const pending = notEvaluated(check);
-    return {
-      rule: check.rule,
-      label: check.label,
-      passed: check.passed,
-      notEvaluated: pending,
-      detail: pending && !check.pending
-        ? 'Checked after an explicit USDC conversion quote is attached'
-        : check.detail,
-    };
-  });
   const awaitingPolicy = claim.state === 'submitted' && claim.decision === null;
   const reviewPending = pendingAction !== null;
   const verdictBlocked = actionsDisabled || reviewsBlocked;
@@ -118,14 +127,43 @@ export function ClaimRow({
         <Money amount={claim.amount} unit={claim.analysis?.currency ?? 'USDC'} size="row" className="shrink-0" />
       </div>
 
-      <div className="ml-7 rounded-card border border-rule bg-canvas p-4">
+      <div className="ml-7"><ClaimStatusSummary claim={{ ...claim, decision }} /></div>
+      <details className="ml-7 rounded-card border border-rule bg-canvas p-4">
+        <summary className="cursor-pointer rounded-control text-body text-ink focus-visible:outline-2 focus-visible:outline-offset-2">
+          {awaitingPolicy ? 'Evaluation details' : `Policy checks (${decision.checks.filter(check => check.passed).length}/${decision.checks.length} passed)`}
+        </summary>
         {awaitingPolicy ? (
           <p className="text-caption text-ink-2">Awaiting server policy evaluation.</p>
         ) : (
-          <ChecklistSummary checks={annotatedChecks} />
+          <ul className="grid gap-x-6 gap-y-1 sm:grid-cols-2">
+            {decision.checks.map((check) => (
+              <li key={check.rule} className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+                <span className="translate-y-0.5">
+                  <Verdict passed={check.passed} pending={notEvaluated(check)} />
+                </span>
+                <span
+                  className={`text-caption ${
+                    notEvaluated(check)
+                      ? 'text-ink-3'
+                      : check.passed
+                        ? 'text-ink-2'
+                        : 'font-medium text-no'
+                  }`}
+                >
+                  {check.label}
+                </span>
+                <span className="tnum ml-auto text-right text-caption text-ink-3">
+                  {notEvaluated(check) && !check.pending
+                    ? 'Checked after an explicit USDC conversion quote is attached'
+                    : check.detail}
+                </span>
+              </li>
+            ))}
+          </ul>
         )}
-      </div>
+      </details>
 
+      <FxQuoteSummary claim={claim} />
       {agentNote ? (
         <p className="ml-7 flex gap-2 text-caption italic text-ink-3">
           <span className="not-italic" aria-hidden>
@@ -136,6 +174,9 @@ export function ClaimRow({
       ) : null}
 
       <div className="ml-7 flex flex-wrap items-center gap-3">
+        {approvalBlocked && !awaitingPolicy ? (
+          <p className="w-full text-body text-ink-2">{approvalBlocked}</p>
+        ) : null}
         {claim.state === 'paying' ? (
           <div className="flex w-full flex-col gap-2">
             <p className="text-caption text-wait">
@@ -210,10 +251,16 @@ export function ClaimRow({
             className="btn btn--primary h-9 px-5 text-label"
             title={actionsDisabled ? disabledReason : undefined}
           >
-            {processing ? 'Evaluating…' : 'Evaluate claim'}
+            {processing ? 'Evaluating…' : claim.analysis?.currency === 'MYR' ? 'Get live quote & evaluate' : 'Evaluate claim'}
           </button>
         ) : (
           <>
+            {claim.analysis?.currency === 'MYR' ? (
+              <button type="button" className="btn btn--ghost h-9 px-5 text-label"
+                disabled={processing || reviewPending || actionsDisabled} onClick={() => onProcess(claim.id)}>
+                {processing ? 'Refreshing…' : 'Refresh quote & evaluate'}
+              </button>
+            ) : null}
             <button
               type="button"
               disabled={approvalBlocked !== null || reviewPending || verdictBlocked}

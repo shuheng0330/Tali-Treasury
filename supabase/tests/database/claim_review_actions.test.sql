@@ -1,6 +1,6 @@
 begin;
 
-select plan(16);
+select plan(17);
 
 create or replace function pg_temp.capture_sqlstate(statement text)
 returns text
@@ -150,6 +150,24 @@ select is(
   (select count(*)::bigint from public.claim_review_events where claim_id = '22222222-2222-4222-8222-222222222222'),
   1::bigint,
   'later updates do not duplicate the review event'
+);
+
+update public.claims set
+  state = 'submitted', decision = null, review_action = null,
+  reviewer_wallet = null, review_reason = null, reviewed_at = null
+where id = '22222222-2222-4222-8222-222222222222';
+update public.claims set state = 'awaiting_review', decision = '{"outcome":"review"}'::jsonb
+where id = '22222222-2222-4222-8222-222222222222';
+update public.claims set
+  state = 'approved', review_action = 'approve',
+  reviewer_wallet = '0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+  review_reason = null, reviewed_at = '2026-09-01T13:00:00Z'
+where id = '22222222-2222-4222-8222-222222222222';
+
+select is(
+  (select count(*)::bigint from public.claim_review_events where claim_id = '22222222-2222-4222-8222-222222222222'),
+  2::bigint,
+  'a corrected and resubmitted claim records a second append-only review event'
 );
 
 select * from finish();
