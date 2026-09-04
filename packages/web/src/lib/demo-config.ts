@@ -28,6 +28,15 @@ export const DEMO_EMPLOYER = process.env.NEXT_PUBLIC_PAYROLL_EMPLOYER ?? '';
 export const PAYROLL_PACKAGE_ID = process.env.NEXT_PUBLIC_PAYROLL_PACKAGE_ID ?? '';
 
 /**
+ * The wallet the registered payroll is allowed to pay.
+ *
+ * Empty until the mandate exists. The payroll screens fall back to the sample
+ * employee, which is fine while nothing can be signed, but a run addressed to
+ * the sample wallet aborts once a mandate approving a different one is live.
+ */
+export const PAYROLL_EMPLOYEE = process.env.NEXT_PUBLIC_PAYROLL_EMPLOYEE ?? '';
+
+/**
  * The backend signer. It is the default holder of the PayrollCap because the
  * server runs payroll on a schedule; the employer can send the capability
  * somewhere else, and the setup screen says what that would mean.

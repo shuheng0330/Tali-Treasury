@@ -177,6 +177,9 @@ export function PayrollSetup({ defaultEmployee }: Props) {
   const coverage = amounts ? coverageProblem(amounts.budget, employerCost) : null;
   const cap = amounts ? capProblem(amounts.maxPerRun, employerCost) : null;
 
+  /* Named on the closed summary so a required field is never merely hidden. */
+  const outstanding = STATUTORY_BODIES.filter((body) => !form.recipients[body].trim()).length;
+
   const authenticated = status === 'authenticated' && address !== null;
   const sameAccount = address !== null && address === connectedAddress;
 
@@ -324,66 +327,88 @@ export function PayrollSetup({ defaultEmployee }: Props) {
             className={`${INPUT} tnum`}
           />
         </Field>
-        <Field
-          label="Expires in (days)"
-          problem={ifFilled(problems.expiryDays, form.expiryDays)}
-          hint="After this the mandate stops paying, whatever is left in it."
-        >
-          <input
-            value={form.expiryDays}
-            inputMode="numeric"
-            disabled={funded}
-            onChange={(event) => setForm({ ...form, expiryDays: event.target.value })}
-            className={`${INPUT} tnum`}
-          />
-        </Field>
       </section>
 
-      <section className="flex flex-col gap-3">
-        <h2 className="eyebrow">Where the contributions go</h2>
-        <p className="text-caption text-ink-3">
-          Testnet stand-ins for the real bodies. Each address is paired with its floor by
-          position, so they cannot be reordered or shared afterwards.
-        </p>
-        {STATUTORY_BODIES.map((body: StatutoryBody) => (
+      <details className="group rounded-card border border-rule bg-surface p-4">
+        <summary className="flex cursor-pointer items-center gap-3 rounded-control text-body focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-ink">
+          <span className="min-w-0 flex-1">Contributions, expiry and who may run it</span>
+          <span className={`shrink-0 text-caption ${outstanding > 0 ? 'text-wait' : 'text-ink-3'}`}>
+            {outstanding > 0
+              ? `${outstanding} address${outstanding === 1 ? '' : 'es'} still needed`
+              : 'All set'}
+          </span>
+          <svg
+            viewBox="0 0 24 24"
+            width="16"
+            height="16"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.8"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden
+            className="shrink-0 text-ink-3 transition-transform duration-150 group-open:rotate-180"
+          >
+            <path d="M6 9l6 6 6-6" />
+          </svg>
+        </summary>
+
+        <div className="mt-4 flex flex-col gap-3">
+          <p className="text-caption text-ink-3">
+            Testnet stand-ins for the real bodies. Each address is paired with its floor by
+            position, so they cannot be reordered or shared afterwards.
+          </p>
+          {STATUTORY_BODIES.map((body: StatutoryBody) => (
+            <Field
+              key={body}
+              label={`${STATUTORY_BODY_LABEL[body]} recipient`}
+              problem={ifFilled(problems[body], form.recipients[body])}
+            >
+              <input
+                value={form.recipients[body]}
+                disabled={funded}
+                spellCheck={false}
+                placeholder="0x…"
+                onChange={(event) =>
+                  setForm({
+                    ...form,
+                    recipients: { ...form.recipients, [body]: event.target.value },
+                  })
+                }
+                className={ADDRESS_INPUT}
+              />
+            </Field>
+          ))}
+
           <Field
-            key={body}
-            label={`${STATUTORY_BODY_LABEL[body]} recipient`}
-            problem={ifFilled(problems[body], form.recipients[body])}
+            label="Expires in (days)"
+            problem={ifFilled(problems.expiryDays, form.expiryDays)}
+            hint="After this the mandate stops paying, whatever is left in it."
           >
             <input
-              value={form.recipients[body]}
+              value={form.expiryDays}
+              inputMode="numeric"
+              disabled={funded}
+              onChange={(event) => setForm({ ...form, expiryDays: event.target.value })}
+              className={`${INPUT} tnum`}
+            />
+          </Field>
+
+          <Field
+            label="PayrollCap recipient"
+            problem={ifFilled(problems.capRecipient, form.capRecipient)}
+            hint="Whoever holds it can both run this payroll and revoke it. It defaults to the backend signer, because the server sends the runs."
+          >
+            <input
+              value={form.capRecipient}
               disabled={funded}
               spellCheck={false}
-              placeholder="0x…"
-              onChange={(event) =>
-                setForm({
-                  ...form,
-                  recipients: { ...form.recipients, [body]: event.target.value },
-                })
-              }
+              onChange={(event) => setForm({ ...form, capRecipient: event.target.value })}
               className={ADDRESS_INPUT}
             />
           </Field>
-        ))}
-      </section>
-
-      <section className="flex flex-col gap-3">
-        <h2 className="eyebrow">Who may run this payroll</h2>
-        <Field label="PayrollCap recipient" problem={ifFilled(problems.capRecipient, form.capRecipient)}>
-          <input
-            value={form.capRecipient}
-            disabled={funded}
-            spellCheck={false}
-            onChange={(event) => setForm({ ...form, capRecipient: event.target.value })}
-            className={ADDRESS_INPUT}
-          />
-        </Field>
-        <p className="text-caption text-ink-3">
-          Payroll has one capability, so whoever holds it can both run this payroll and
-          revoke it. It defaults to the backend signer because the server sends the runs.
-        </p>
-      </section>
+        </div>
+      </details>
 
       {quote && amounts ? (
         <section className="flex flex-col gap-3 rounded-card border border-rule bg-surface p-4">
