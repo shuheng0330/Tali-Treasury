@@ -14,6 +14,7 @@ import type { PayrollChainPort, PayrollSubmission } from '../payroll/ports';
 import {
   moveAbortCode,
   signTransaction,
+  signTransactionForRecordedRefusal,
   submitTransaction,
   type ConfirmedTransaction,
   type PreparedTransaction,
@@ -45,6 +46,7 @@ export interface PayrollOperations {
     gross: bigint;
     net: bigint;
     statutoryAmounts: bigint[];
+    recordRefusal?: boolean;
   }): Promise<PreparedTransaction>;
   submit(prepared: PreparedTransaction): Promise<ConfirmedTransaction>;
 }
@@ -73,7 +75,8 @@ function createDefaultOperations(input: {
 
   return {
     async prepare(run) {
-      return signTransaction({
+      const sign = run.recordRefusal ? signTransactionForRecordedRefusal : signTransaction;
+      return sign({
         transaction: buildRunPayrollTransaction(input.config, run),
         keypair: input.keypair,
         client,
@@ -151,6 +154,7 @@ export function createSuiPayrollExecutor(options: ExecutorOptions = {}): Payroll
           gross: BigInt(input.gross),
           net: BigInt(input.net),
           statutoryAmounts: input.statutoryAmounts.map((amount) => BigInt(amount)),
+          recordRefusal: input.recordRefusal,
         });
       } catch (error) {
         /* Nothing was signed, so nothing can have been paid. Recorded as a
@@ -186,6 +190,7 @@ export function createSuiPayrollExecutor(options: ExecutorOptions = {}): Payroll
           status: 'refused',
           abortCode: failure.code,
           message: failure.message,
+          digest: confirmed.digest,
         };
       }
 

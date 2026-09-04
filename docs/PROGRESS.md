@@ -45,8 +45,12 @@ the submission time against the organiser channel; older notes used 23:59.
   Transaction `HpUwPspN9QgoXBmLARh8iJDFSxEACSwZNxhzz3zXr27y` paid the employee
   and all three statutory stand-ins atomically, leaving `3.317095 USDC` with
   `run_count = 1`. [Evidence](PAYROLL_TESTNET_EVIDENCE.md).
-- Fresh verification: 42 Move tests, 45 Sui integration tests, 613 web tests
-  (612 passing and one intentional skip), 132 pgTAP assertions, root typecheck,
+- Safety payrolls now bypass execution preflight only when an explicit
+  underpayment is requested, allowing Sui to record the failed transaction.
+  Failed digests and abort codes persist and link to the explorer; normal
+  payrolls retain checked preparation.
+- Fresh verification: 42 Move tests, 45 Sui integration tests, 614 web tests
+  (613 passing and one intentional skip), 132 pgTAP assertions, root typecheck,
   and the production build all passed.
 - Fast-forwarded to `main` at `9f6a07f`; wallet sign-in now surfaces sanitized
   backend failures before applying wallet/network heuristics.

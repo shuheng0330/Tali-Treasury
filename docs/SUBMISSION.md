@@ -92,7 +92,7 @@ Testnet USDC. Gemini for receipt reading. Open Exchange Rates for MYR quotes.
 Wallet sign-in over a signed challenge, including Slush zkLogin.
 
 **Tests:** 42 Move contract tests (25 payroll, 17 treasury), 45 Sui integration
-tests, and 613 web tests (612 passing, one intentional skip) on the current
+tests, and 614 web tests (613 passing, one intentional skip) on the current
 `main`. The local database suite has 132 passing pgTAP assertions.
 
 ## AI tooling disclosure
