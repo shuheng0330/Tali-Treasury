@@ -8,6 +8,10 @@ import { COMMITTED, MEMBER, STRANGER, mandate } from '@/lib/mock/data';
 import { fireAttack, simulateAttack } from '@/lib/mock/api';
 import { canBroadcast, tryAttack } from '@/lib/api/safety';
 import { AttackResult } from './AttackResult';
+import { RoleNotice } from '@/components/RoleNotice';
+import { useWalletSession } from '@/components/wallet/WalletSessionProvider';
+import { DEMO_EMPLOYER } from '@/lib/demo-config';
+import { ATTACK_COPY, walletAccess } from '@/lib/wallet-access';
 
 type Phase = 'armed' | 'firing' | 'result';
 
@@ -26,6 +30,7 @@ function defaultsFor(attack: SafetyAttackId): { amount: string; recipient: strin
 }
 
 export function SafetyTest() {
+  const { address } = useWalletSession();
   const [attack, setAttack] = useState<SafetyAttackId>('overspend');
   const [delivery, setDelivery] = useState<Delivery>({ broadcast: false, reason: '' });
   const [amount, setAmount] = useState('15.00');
@@ -56,6 +61,14 @@ export function SafetyTest() {
       live = false;
     };
   }, [attack, amount, recipient, revokedFirst, phase]);
+
+  /* Only the attempts that reach Sui need authorising, and the notice explains
+     rather than blocks. An unauthorised shot falls back to the local
+     prediction and is labelled as one, which is a real outcome worth showing;
+     disabling the control would remove the demonstration to prevent a request
+     the server already refuses. */
+  const broadcasting = canBroadcast(attack);
+  const access = walletAccess(address, DEMO_EMPLOYER, ATTACK_COPY);
 
   const choose = useCallback((next: SafetyAttackId) => {
     setAttack(next);
@@ -321,12 +334,14 @@ export function SafetyTest() {
         </div>
       ) : null}
 
+      {broadcasting ? <RoleNotice access={access} /> : null}
+
       <button
         type="button"
         onClick={() => fire()}
         className="btn btn--accent btn--block h-14"
       >
-        {canBroadcast(attack) ? 'Send it' : 'Predict it'} — {amount || '0.00'}
+        {broadcasting ? 'Send it' : 'Predict it'} — {amount || '0.00'}
       </button>
 
       <p className="tnum text-center text-caption text-ink-3">
