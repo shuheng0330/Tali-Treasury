@@ -10,7 +10,7 @@ import { canBroadcast, tryAttack } from '@/lib/api/safety';
 import { AttackResult } from './AttackResult';
 import { RoleNotice } from '@/components/RoleNotice';
 import { useWalletSession } from '@/components/wallet/WalletSessionProvider';
-import { DEMO_EMPLOYER } from '@/lib/demo-config';
+import { EMPLOYER_WALLET } from '@/lib/demo-config';
 import { ATTACK_COPY, walletAccess } from '@/lib/wallet-access';
 
 type Phase = 'armed' | 'firing' | 'result';
@@ -68,7 +68,7 @@ export function SafetyTest() {
      disabling the control would remove the demonstration to prevent a request
      the server already refuses. */
   const broadcasting = canBroadcast(attack);
-  const access = walletAccess(address, DEMO_EMPLOYER, ATTACK_COPY);
+  const access = walletAccess(address, EMPLOYER_WALLET, ATTACK_COPY);
 
   const choose = useCallback((next: SafetyAttackId) => {
     setAttack(next);

@@ -1,4 +1,4 @@
-import { DEMO_EMPLOYER, DEMO_TREASURER, SINGLE_WALLET_DEMO } from './demo-config';
+import { DEMO_TREASURER, EMPLOYER_WALLET, SINGLE_WALLET_DEMO } from './demo-config';
 
 export type ViewerRole = 'treasurer' | 'employer' | 'member';
 
@@ -19,11 +19,22 @@ export const ROLE_LABEL: Record<ViewerRole, string> = {
  * treasurer-only controls from it after a mandate recreation moves that
  * address and nobody's updated the constant yet.
  */
-export function viewerRole(address: string | null): ViewerRole | null {
+export function viewerRole(
+  address: string | null,
+  /**
+   * The treasurer recorded on the event being looked at. This is the authority
+   * the server checks, so it wins wherever a screen has read an event.
+   * `DEMO_TREASURER` is a build-time constant recorded when the original
+   * mandate was created, and an event whose treasurer is anybody else would
+   * otherwise have its real treasurer labelled a member.
+   */
+  eventTreasurer?: string | null,
+): ViewerRole | null {
   if (!address) return null;
   if (SINGLE_WALLET_DEMO) return 'treasurer';
   const lower = address.toLowerCase();
-  if (DEMO_TREASURER && lower === DEMO_TREASURER.toLowerCase()) return 'treasurer';
-  if (DEMO_EMPLOYER && lower === DEMO_EMPLOYER.toLowerCase()) return 'employer';
+  const treasurer = eventTreasurer?.trim() || DEMO_TREASURER;
+  if (treasurer && lower === treasurer.toLowerCase()) return 'treasurer';
+  if (EMPLOYER_WALLET && lower === EMPLOYER_WALLET.toLowerCase()) return 'employer';
   return 'member';
 }

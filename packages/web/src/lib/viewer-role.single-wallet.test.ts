@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 vi.mock('./demo-config', () => ({
   DEMO_TREASURER: '0xTREASURER',
-  DEMO_EMPLOYER: '0xEMPLOYER',
+  EMPLOYER_WALLET: '0xEMPLOYER',
   SINGLE_WALLET_DEMO: true,
 }));
 
