@@ -1,8 +1,9 @@
-import { TaliApiError, responseJson } from '@/lib/api/client';
+import type { RegisterPayrollRequest, RegisterPayrollResponse } from '@tali/shared';
+
+import { TaliApiError, responseJson } from './client';
 
 export type RegistrationOutcome =
   | { kind: 'registered'; mandateId: string; capId: string }
-  | { kind: 'refused'; message: string }
   | { kind: 'unavailable'; reason: string };
 
 function describe(error: unknown): string {
@@ -34,18 +35,14 @@ function describe(error: unknown): string {
  */
 export async function tryRegisterPayroll(digest: string): Promise<RegistrationOutcome> {
   try {
+    const request: RegisterPayrollRequest = { digest };
     const response = await fetch('/api/payroll/register', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ digest }),
+      body: JSON.stringify(request),
     });
-    const result = await responseJson<
-      | { status: 'registered'; mandateId: string; capId: string }
-      | { status: 'refused'; message: string }
-    >(response);
-    return result.status === 'registered'
-      ? { kind: 'registered', mandateId: result.mandateId, capId: result.capId }
-      : { kind: 'refused', message: result.message };
+    const result = await responseJson<RegisterPayrollResponse>(response);
+    return { kind: 'registered', mandateId: result.mandateId, capId: result.capId };
   } catch (error) {
     return { kind: 'unavailable', reason: describe(error) };
   }

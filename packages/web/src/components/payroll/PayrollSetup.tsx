@@ -250,7 +250,7 @@ export function PayrollSetup({ defaultEmployee }: Props) {
       kind: 'funded',
       digest,
       registering: false,
-      reason: result.kind === 'refused' ? result.message : result.reason,
+      reason: result.reason,
     });
   }
 
