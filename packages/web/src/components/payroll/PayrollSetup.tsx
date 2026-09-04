@@ -8,7 +8,7 @@ import { useEffect, useState } from 'react';
 import { useWalletSession } from '@/components/wallet/WalletSessionProvider';
 import { previewPayrollSetup, registerPayrollSetup } from '@/lib/api/payroll-setup';
 import { PAYROLL_EMPLOYEE } from '@/lib/demo-config';
-import { initialPayrollEmployee } from '@/lib/payroll-setup';
+import { initialPayrollEmployee } from '@/lib/payroll-setup-defaults';
 import type { PayrollSetupPreview } from '@/server/payroll/setup';
 import type { PayrollSetupRegistration } from '@/server/payroll/setup-registration';
 
