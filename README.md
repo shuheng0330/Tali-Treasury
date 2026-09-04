@@ -51,7 +51,7 @@ Status words are intentionally precise:
 | Gemini receipt analysis and Supabase claims | **Complete locally; rollout pending** | Private drafts, authenticated access and 91 pgTAP assertions |
 | Deterministic policy and backend agent signing | **Live via local app** | Native USDC payment/recovery and manually approved MYR reimbursement verified on Testnet |
 | Wallet connection and live UI writes | **Complete locally** | Testnet connect, explicit sign-in, one-hour HTTP-only session and sign-out |
-| Statutory payroll enforcement | **Complete locally** | `payroll.move`, 29 contract tests; EPF Third Schedule bands and SOCSO/EIS ceilings enforced as an on-chain basis-point floor. Not yet published to Testnet |
+| Statutory payroll enforcement | **Complete locally** | `payroll.move`, 25 contract tests; EPF Third Schedule bands and SOCSO/EIS ceilings enforced as an on-chain basis-point floor. Not yet published to Testnet |
 | Per-second salary accrual | **Complete locally** | `SalaryStream` open/accrue/withdraw, tested against the same integer arithmetic the UI displays. Not yet published to Testnet |
 | Web hosting | **Live** | [`tali-treasury.vercel.app`](https://tali-treasury.vercel.app) |
 | Submission pack | **Pending** | Final hackathon phase |
@@ -298,6 +298,9 @@ primarily Claude (Anthropic) and Codex (OpenAI). Git history and PR descriptions
 carry no AI attribution by design (see `CLAUDE.md`); that is a commit-metadata
 convention, not concealment. Tool use is disclosed here as MUBA's rules require
 and does not affect judging.
+
+The submission pack — verified evidence, the three-minute demo script and the
+Q and A preparation — is in [docs/SUBMISSION.md](docs/SUBMISSION.md).
 
 ## What's new this increment
 
