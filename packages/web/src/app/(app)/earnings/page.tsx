@@ -1,5 +1,6 @@
 import { DataNotice } from '@/components/DataNotice';
 import { LiveBalance } from '@/components/earnings/LiveBalance';
+import { payrollStage, streamFallbackReason } from '@/lib/chain-status';
 import {
   DEMO_STREAM_ID,
   getStreamService,
@@ -20,7 +21,7 @@ export default async function EarningsPage() {
     <div className="mx-auto flex w-full max-w-md flex-col gap-6 px-5 py-6">
       <DataNotice
         source={live ? 'live' : 'mock'}
-        reason={live ? null : 'the payroll module is not on chain yet'}
+        reason={live ? null : streamFallbackReason(payrollStage())}
         live="Salary accrual and withdrawal"
         simulated="Accrual is computed with the same arithmetic the contract uses, so the figure will not move when this is wired to Sui."
       />
