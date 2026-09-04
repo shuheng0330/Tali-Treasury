@@ -5,7 +5,8 @@ import { sampleStaff } from '@/lib/mock/payroll';
 import { TALI_TESTNET_PACKAGE_ID } from '@tali/treasury-sui';
 import { SPEND_CHECKS } from '@/lib/checks';
 import { RUN_TALLY } from '@/lib/evidence';
-import { PAYROLL_CONFIGURED, PAYROLL_MANDATE_ID } from '@/lib/demo-config';
+import { PAYROLL_CONFIGURED } from '@/lib/demo-config';
+import { payrollStage } from '@/lib/chain-status';
 import { CheckMarquee } from '@/components/landing/CheckMarquee';
 import { Evidence } from '@/components/landing/Evidence';
 import { PhoneCode } from '@/components/landing/PhoneCode';
@@ -16,6 +17,8 @@ const PACKAGE_SHORT = `${TALI_TESTNET_PACKAGE_ID.slice(0, 6)}…${TALI_TESTNET_P
 const PACKAGE_LINK = EXPLORER.object(TALI_TESTNET_PACKAGE_ID).suivision;
 
 export default function Page() {
+  const stage = payrollStage();
+
   return (
     <main className="flex min-h-dvh flex-col">
       <header className="sticky top-0 z-30 border-b border-rule bg-canvas/85 backdrop-blur-md">
@@ -78,7 +81,7 @@ export default function Page() {
 
         <PayrollSplit />
 
-        {PAYROLL_MANDATE_ID ? null : (
+        {stage === 'mandated' ? null : (
           <p className="max-w-3xl rounded-card border border-wait-line bg-wait-soft p-4 text-body text-wait">
             <span className="font-medium">Published, not yet funded.</span> The payroll
             module is on chain in package v2 — that upgrade is the last transaction in the
@@ -232,7 +235,7 @@ export default function Page() {
             reads them straight off the chain rather than from a copy we keep.{' '}
             {PAYROLL_CONFIGURED
               ? 'The payroll module is published, and its mandate and salary stream are read from the chain.'
-              : PAYROLL_MANDATE_ID
+              : stage === 'mandated'
                 ? 'The payroll module is published and its mandate is read from the chain, but no salary stream has been opened against it yet.'
                 : 'The payroll module is published in package v2, but no mandate has been funded from it yet, so payroll screens compute the split the contract will enforce and say so on every screen.'}{' '}
             Receipt submission and server policy
