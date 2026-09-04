@@ -56,7 +56,7 @@ the submission time against the organiser channel; older notes used 23:59.
 | Create Expense Treasury | ⬜ Pending | Existing reimbursement builder and manual/local event setup | Separate authenticated form, wallet signing, verified registration and event-aware capability mapping |
 | Safety Test UI | 🟡 Mocked with live evidence links | Local preview plus links to two real rejected transactions | Interactive signed attempts and revocation scenario |
 | Deployment | ✅ Live reads; auth rollout pending | Vercel production and live Sui dashboard verified | Push wallet migration, configure exact HTTPS origin, verify protected writes |
-| Payroll and salary streams | 🟡 Complete locally | `payroll.move` (29 tests), EPF/SOCSO/EIS calculator, PayrollDesk/earnings UI, all wired to flip live once env vars exist | Package upgrade publish, mandate creation, funded stream — see `docs/PAYROLL_LAUNCH_PLAN.md` |
+| Payroll and salary streams | 🟡 Complete locally | `payroll.move` (25 tests), EPF/SOCSO/EIS calculator, PayrollDesk/earnings UI, all wired to flip live once env vars exist | Package upgrade publish, mandate creation, funded stream — see `docs/PAYROLL_LAUNCH_PLAN.md` |
 | Submission | ⬜ Pending | — | Landing content, videos, deck, disclosure and rehearsal |
 
 ## Real versus simulated
