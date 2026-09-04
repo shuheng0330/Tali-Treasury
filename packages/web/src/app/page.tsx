@@ -4,7 +4,9 @@ import { mandate } from '@/lib/mock/data';
 import { sampleStaff } from '@/lib/mock/payroll';
 import { TALI_TESTNET_PACKAGE_ID } from '@tali/treasury-sui';
 import { SPEND_CHECKS } from '@/lib/checks';
+import { RUN_TALLY } from '@/lib/evidence';
 import { PAYROLL_CONFIGURED } from '@/lib/demo-config';
+import { payrollStage } from '@/lib/chain-status';
 import { CheckMarquee } from '@/components/landing/CheckMarquee';
 import { Evidence } from '@/components/landing/Evidence';
 import { PhoneCode } from '@/components/landing/PhoneCode';
@@ -15,6 +17,8 @@ const PACKAGE_SHORT = `${TALI_TESTNET_PACKAGE_ID.slice(0, 6)}…${TALI_TESTNET_P
 const PACKAGE_LINK = EXPLORER.object(TALI_TESTNET_PACKAGE_ID).suivision;
 
 export default function Page() {
+  const stage = payrollStage();
+
   return (
     <main className="flex min-h-dvh flex-col">
       <header className="sticky top-0 z-30 border-b border-rule bg-canvas/85 backdrop-blur-md">
@@ -77,12 +81,13 @@ export default function Page() {
 
         <PayrollSplit />
 
-        {PAYROLL_CONFIGURED ? null : (
+        {stage === 'mandated' ? null : (
           <p className="max-w-3xl rounded-card border border-wait-line bg-wait-soft p-4 text-body text-wait">
-            <span className="font-medium">Not yet on chain.</span> The payroll module is
-            written and tested, but not published to Testnet — so these figures are what the
-            contract will enforce, not a transaction you can look up. The claims contract
-            further down is live, and its refusals are real.
+            <span className="font-medium">Published, not yet funded.</span> The payroll
+            module is on chain in package v2 — that upgrade is the last transaction in the
+            list below. Nothing has funded a mandate against it yet, so these figures are what
+            the contract will enforce, not a run you can look up. The claims contract further
+            down is funded, and its refusals are real.
           </p>
         )}
 
@@ -110,7 +115,7 @@ export default function Page() {
           <p className="max-w-2xl text-body-lg text-ink-2">
             Staff claim expenses against the same treasury, and an agent reads the receipt and
             pays it. Either claim below, whenever you like. This one is a drawing of the rules —
-            the three transactions under it are not.
+            the <span className="tnum">{RUN_TALLY.total}</span> transactions under it are not.
           </p>
         </div>
         <Wire />
@@ -120,12 +125,16 @@ export default function Page() {
         <div className="flex flex-col gap-4">
           <p className="eyebrow">On chain</p>
           <h2 className="max-w-3xl text-title">
-            The drawing above is a drawing. These three are not.
+            The drawing above is a drawing. These <span className="tnum">{RUN_TALLY.total}</span>{' '}
+            are not.
           </h2>
           <p className="max-w-2xl text-body-lg text-ink-2">
-            Three transactions submitted to Sui testnet against the deployed package. One was
-            allowed and two were refused, and every digest below opens in an explorer that has
-            nothing to do with us.
+            <span className="tnum">{RUN_TALLY.total}</span> transactions submitted to Sui
+            testnet against the deployed package:{' '}
+            <span className="tnum">{RUN_TALLY.allowed}</span> payments that a mandate allowed,{' '}
+            <span className="tnum">{RUN_TALLY.refused}</span> that a mandate refused, and the
+            upgrade that published payroll. Every digest below opens in an explorer that has nothing to do
+            with us.
           </p>
         </div>
         <Evidence />
@@ -226,7 +235,9 @@ export default function Page() {
             reads them straight off the chain rather than from a copy we keep.{' '}
             {PAYROLL_CONFIGURED
               ? 'The payroll module is published, and its mandate and salary stream are read from the chain.'
-              : 'The payroll module is written and tested but not yet published, so payroll screens compute the split the contract will enforce and say so on every screen.'}{' '}
+              : stage === 'mandated'
+                ? 'The payroll module is published and its mandate is read from the chain, but no salary stream has been opened against it yet.'
+                : 'The payroll module is published in package v2, but no mandate has been funded from it yet, so payroll screens compute the split the contract will enforce and say so on every screen.'}{' '}
             Receipt submission and server policy
             processing are connected when demo identity is enabled; review, safety controls, and
             payment are not yet signed transactions. No mainnet, no real funds, and nothing here
