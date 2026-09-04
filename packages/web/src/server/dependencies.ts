@@ -29,6 +29,9 @@ import { createSupabaseEventMemberRepository } from './supabase/event-member-rep
 import { createSupabaseRateCache } from './fx/cache';
 import { createOpenExchangeRateReader } from './fx/rates';
 import { createClaimQuoter } from './fx/quotes';
+import { createRegisterPayrollService } from './payroll/registration';
+import { createSuiPayrollRegistrationVerifier } from './sui/payroll-registration-verifier';
+import { createSupabasePayrollConfigurationRepository } from './supabase/payroll-configuration-repository';
 
 export interface BackendServices {
   analyzeReceipt: ReturnType<typeof createAnalyzeReceiptService>;
@@ -44,6 +47,7 @@ export interface BackendServices {
   completeWalletSession: ReturnType<typeof createCompleteWalletSessionService>;
   addEventMember: ReturnType<typeof createAddEventMemberService>;
   listEventMembers: ReturnType<typeof createListEventMembersService>;
+  registerPayroll: ReturnType<typeof createRegisterPayrollService>;
   appOrigin: string;
 }
 
@@ -59,6 +63,7 @@ export function getBackendServices(): BackendServices {
     Parameters<typeof createSupabaseWalletAuthRepository>[0] &
     Parameters<typeof createSupabaseAnalysisDraftRepository>[0] &
     Parameters<typeof createSupabaseEventMemberRepository>[0] &
+    Parameters<typeof createSupabasePayrollConfigurationRepository>[0] &
     Parameters<typeof createSupabaseRateCache>[0];
   const claims = createSupabaseClaimRepository(client);
   const receipts = createSupabaseReceiptStore(client);
@@ -71,6 +76,7 @@ export function getBackendServices(): BackendServices {
   const payments = createSuiPaymentExecutor();
   const auth = createSupabaseWalletAuthRepository(client);
   const members = createSupabaseEventMemberRepository(client);
+  const payrollConfigurations = createSupabasePayrollConfigurationRepository(client);
   const appOrigin = requireAppOrigin();
   const quotes = createClaimQuoter({ rates: createOpenExchangeRateReader({
     appId: () => process.env.OPEN_EXCHANGE_RATES_APP_ID,
@@ -91,6 +97,10 @@ export function getBackendServices(): BackendServices {
     completeWalletSession: createCompleteWalletSessionService({ auth }),
     addEventMember: createAddEventMemberService({ members }),
     listEventMembers: createListEventMembersService({ members }),
+    registerPayroll: createRegisterPayrollService({
+      chain: createSuiPayrollRegistrationVerifier(),
+      configurations: payrollConfigurations,
+    }),
     appOrigin,
   };
   return services;

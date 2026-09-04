@@ -42,6 +42,10 @@ phone, not the feature.
 
 Owner: frontend + backend, with Sui integration support.
 
+Steps 1–4 and the write-role checks in step 6 are complete locally. Step 5,
+registered-payroll selection and page binding, is the next development increment;
+the final Testnet proof remains step 7.
+
 1. ✅ Add employer-only `/payroll/setup`. The authenticated employer supplies the
    employee and expiry; the server supplies the agreed RM30/RM50 demo amounts,
    current FX quote, agent cap owner and configured statutory recipients.

@@ -90,6 +90,8 @@ export type {
   ReconcileClaimRequest,
   ReconcileClaimResponse,
   ReconciliationStatus,
+  RegisterPayrollRequest,
+  RegisterPayrollResponse,
   ReviewClaimRequest,
   PayClaimResponse,
   ReviewClaimResponse,

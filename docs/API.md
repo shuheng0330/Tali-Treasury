@@ -120,6 +120,30 @@ session. It observes only the durable payment digest and returns:
 `status` is `pending`, `paid`, or `payment_failed`. A pending response never signs
 or broadcasts. Terminal claims replay their stored payment result.
 
+## Payroll registration
+
+`POST /api/payroll/register` requires the exact configured `Origin`, an active
+wallet session, and the configured employer. It accepts only:
+
+```json
+{ "digest": "base58 Sui transaction digest" }
+```
+
+The server waits for finality and independently discovers and verifies the new
+Testnet USDC `PayrollMandate` and `PayrollCap`. A new immutable registration
+returns HTTP `201`; an exact retry returns HTTP `200`:
+
+```json
+{
+  "status": "registered",
+  "mandateId": "0x…64 lowercase hex digits…",
+  "capId": "0x…64 lowercase hex digits…"
+}
+```
+
+Registration never signs or broadcasts. The client retains the funded digest
+after failure, so retrying registration cannot fund a second mandate.
+
 ## Safe errors
 
 - `401 authentication_required` / `authentication_failed`: sign in again; no
@@ -136,6 +160,13 @@ or broadcasts. Terminal claims replay their stored payment result.
   durable digest and will not be retried automatically.
 - `502 payment_reconciliation_failed`: the chain result could not be determined;
   the claim remains `paying` and may be checked again later.
+- `409 payroll_registration_pending`: the digest is not finalized; retry the same
+  digest shortly. `payroll_registration_conflict` means an identifier is already
+  bound to a different verified snapshot.
+- `422 payroll_registration_refused`: the finalized transaction or objects do not
+  match the supported payroll. `502 payroll_registration_failed` is sanitized RPC
+  uncertainty; `503 payroll_registration_configuration_failed` is missing or
+  invalid server-only configuration.
 
 Database, RPC, signature, token, key and private storage details are never part of
 API errors.
@@ -162,8 +193,11 @@ transaction sender, configured package and coin type, the single created mandate
 every immutable rule, and the created `PayrollCap` owner. It returns the verified
 mandate and cap IDs. It never signs, rebuilds or resubmits a transaction.
 
-Verification is complete locally. Durable idempotent registration of this verified
-result is performed by `POST /api/payroll/setup/register`. It accepts only the
-digest, repeats the same server-side verification, and stores the verified fields
-in `payroll_configurations`. Replaying a stored digest returns the existing record
-without another chain transaction; conflicting mandate or capability IDs return 409.
+Durable idempotent registration is performed by the canonical
+`POST /api/payroll/register` endpoint. It accepts only the digest, applies the
+strict server-side verification, and stores the immutable verified snapshot in
+`payroll_configurations`. A new registration returns 201 and an exact replay
+returns 200, both as `{ "status": "registered", "mandateId": "0x…", "capId": "0x…" }`.
+Replaying a stored digest never creates another chain transaction; conflicting
+mandate or capability IDs return 409. `/api/payroll/setup/register` is retained
+as a compatibility alias to the same handler.

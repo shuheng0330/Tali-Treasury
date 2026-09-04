@@ -2,7 +2,7 @@
 
 import { useDAppKit } from '@mysten/dapp-kit-react';
 import { buildCreatePayrollMandateTransaction } from '@tali/treasury-sui';
-import { toDisplay } from '@tali/shared';
+import { toDisplay, type RegisterPayrollResponse } from '@tali/shared';
 import { useEffect, useState } from 'react';
 
 import { RoleNotice } from '@/components/RoleNotice';
@@ -12,7 +12,6 @@ import { SETUP_COPY, walletAccess } from '@/lib/wallet-access';
 import { previewPayrollSetup, registerPayrollSetup } from '@/lib/api/payroll-setup';
 import { initialPayrollEmployee } from '@/lib/payroll-setup-defaults';
 import type { PayrollSetupPreview } from '@/server/payroll/setup';
-import type { PayrollSetupRegistration } from '@/server/payroll/setup-registration';
 
 /**
  * Both fields carried `className="input"`, and no `.input` rule exists in the
@@ -55,7 +54,7 @@ export function PayrollSetup() {
   const [status, setStatus] = useState<'idle' | 'previewing' | 'ready' | 'signing' | 'verifying' | 'registered'>('idle');
   const [error, setError] = useState<string | null>(null);
   const [digest, setDigest] = useState<string | null>(null);
-  const [registration, setRegistration] = useState<PayrollSetupRegistration | null>(null);
+  const [registration, setRegistration] = useState<RegisterPayrollResponse | null>(null);
 
   useEffect(() => {
     if (!employee && wallet.address) {

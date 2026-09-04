@@ -87,6 +87,11 @@ cannot reach chain-signing code. Payroll-history GET behavior remains unchanged.
 - `receipt_analysis_drafts` privately binds event, wallet, object path, hash and
   immutable extraction for 15 minutes. A row lock consumes it and inserts one
   claim in the same transaction; an insertion failure rolls back consumption.
+- `payroll_configurations` is an append-only registry of verified creation
+  transactions. Unique digest, mandate and cap identifiers make concurrent
+  registration idempotent while allowing multiple configurations per employer.
+  It stores policy and ownership snapshots as decimal strings/JSON, has RLS with
+  no browser policies, and grants the service role only `select` and `insert`.
 - `(event_id, receipt_sha256)` is unique. Receipt object paths are globally unique.
 - A composite membership foreign key preserves ownership history, while an insert
   trigger rejects claims by inactive members without preventing later member
@@ -120,6 +125,23 @@ mapped to `member_already_exists`; no upsert can rename or reactivate an existin
 row. Provider details remain only on the internal error cause. The existing
 Treasury form adapts its local `walletAddress` field to this shared transport
 contract; authoritative roster rendering remains a frontend handoff.
+
+## Payroll registration design
+
+`POST /api/payroll/register` applies origin, session and configured-employer
+authorization before JSON parsing. The service accepts only `{ digest }` and an
+injected verifier reads the finalized Testnet transaction with effects, sender
+and object types. It requires exactly one newly created configured-package USDC
+payroll mandate and one payroll capability, then rereads both objects to prove
+their `previousTransaction` is the submitted digest.
+
+The verifier compares the mandate with the supported one-employee statutory
+template, checks that it is unused and unrevoked, and requires the capability to
+reference that mandate and be owned by the address derived from
+`AGENT_PRIVATE_KEY`. The repository inserts the resulting immutable snapshot.
+On a uniqueness race it reloads by digest and returns an idempotent replay only
+when every stored field matches; other collisions fail closed. Automated tests
+inject all chain operations and cannot broadcast.
 
 ## Deterministic policy design
 
@@ -318,6 +340,11 @@ applied after the wallet/draft migration during hosted rollout.
 The event-member roster increment adds no migration. It reuses the existing
 service-role-only `events` and `event_members` tables and therefore requires only
 application deployment plus hosted treasurer/non-treasurer verification.
+
+Migration `20260904020000_payroll_configurations.sql` adds the private immutable
+payroll registry. After deployment it must be applied before registration is
+used; the published package, employer, signer and statutory recipient variables
+must match the mandate created by `/payroll/setup`.
 
 Local Logflare analytics and its Vector collector are intentionally disabled. On
 Windows the collector otherwise requires Docker Desktop's unauthenticated TCP API

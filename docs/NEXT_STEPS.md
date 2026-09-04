@@ -40,6 +40,10 @@ budget, capability ownership and stream state.
 
 ## 3. Authenticated Set Up Payroll
 
+The setup screen, wallet funding, employer authorization and idempotent
+digest-only backend registration are complete locally. The remaining work is to
+select a registered configuration and remove the sample/global page bindings.
+
 - ✅ Build `/payroll/setup` as the primary CTA.
 - ✅ Require the configured employer session, fetch the current MYR/USD rate and
   preview the immutable rules and exact Testnet USDC funding before wallet signing.
@@ -48,7 +52,7 @@ budget, capability ownership and stream state.
 - ✅ Verify finality, sender, package, coin type, all mandate rules and the
   `PayrollCap` owner server-side. Failed verification never rebuilds or resubmits.
 - ✅ Persist only server-verified fields. Unique digest, mandate and capability IDs
-  make registration idempotent; retry checks storage before chain/FX and never funds again.
+  make registration idempotent; retry never funds again.
 - Replace sample employee data across payroll, proof and earnings screens.
 
 Acceptance: an authorized employer can create and reopen the registered payroll;
