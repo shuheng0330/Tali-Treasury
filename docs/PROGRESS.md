@@ -23,7 +23,7 @@ the submission time against the organiser channel; older notes used 23:59.
 
 ## Current status by subsystem
 
-### 4 September `main` integration verification
+### 5 September `main` integration verification
 
 - Integrated the 43 incoming commits through `fa490fb`, including payroll write
   RBAC, role-aware screens, expense-treasury setup, event roster APIs, the purple
@@ -31,8 +31,10 @@ the submission time against the organiser channel; older notes used 23:59.
 - Preserved the branch's authenticated payroll preview, finalized-object checks
   and idempotent Supabase registration while adopting `main`'s centralized
   `TALI_EMPLOYER_WALLET` authorization.
-- Fresh verification: 42 Move tests, 45 Sui integration tests, 573 web tests
-  (572 passing and one intentional skip), 132 pgTAP assertions, root typecheck,
+- Integrated the latest role-aware navigation, treasury action gates and
+  submission corrections from `main` through `c20925d`.
+- Fresh verification: 42 Move tests, 45 Sui integration tests, 608 web tests
+  (607 passing and one intentional skip), 132 pgTAP assertions, root typecheck,
   and the production build all passed.
 - Fast-forwarded to `main` at `9f6a07f`; wallet sign-in now surfaces sanitized
   backend failures before applying wallet/network heuristics.
