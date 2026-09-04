@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { sampleStaff } from './payroll';
+import { payrollStaff, sampleStaff } from './payroll';
 
 /** What S5 registers on the mandate. A run below any of these aborts on 24. */
 const FLOOR_BPS = { epf: 2300n, socso: 225n, eis: 40n } as const;
@@ -59,5 +59,34 @@ describe.each(sampleStaff)('$name', (staff) => {
       expect(typeof value).toBe('string');
       expect(BigInt(value)).toBeGreaterThan(0n);
     }
+  });
+});
+
+describe('payrollStaff', () => {
+  const EMPLOYEE = '0x939194a716226335b1089c5b36088ebc0b57a928c206d63c9ddcad70ff76b471';
+
+  it('keeps the sample employee while no wallet is configured', () => {
+    expect(payrollStaff('')).toBe(sampleStaff);
+    expect(payrollStaff('   ')).toBe(sampleStaff);
+  });
+
+  it('addresses the sample split to the configured wallet', () => {
+    const [person] = payrollStaff(EMPLOYEE);
+    expect(person!.address).toBe(EMPLOYEE);
+    expect(person!.breakdown.employee).toBe(EMPLOYEE);
+  });
+
+  it('changes nothing but the address', () => {
+    const [configured] = payrollStaff(EMPLOYEE);
+    const [sample] = sampleStaff;
+    expect(configured!.name).toBe(sample!.name);
+    expect(configured!.breakdown.gross).toBe(sample!.breakdown.gross);
+    expect(configured!.breakdown.net).toBe(sample!.breakdown.net);
+    expect(configured!.breakdown.bodies).toEqual(sample!.breakdown.bodies);
+  });
+
+  it('leaves the sample untouched', () => {
+    payrollStaff(EMPLOYEE);
+    expect(sampleStaff[0]!.address).not.toBe(EMPLOYEE);
   });
 });

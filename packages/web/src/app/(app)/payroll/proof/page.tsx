@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { EnforcementProof } from '@/components/payroll/EnforcementProof';
-import { sampleStaff } from '@/lib/mock/payroll';
+import { payrollStaff } from '@/lib/mock/payroll';
 import { readEpfFloor } from '@/server/payroll/floors';
 
 export const metadata = {
@@ -24,7 +24,7 @@ export default async function PayrollProofPage() {
       </header>
 
       <EnforcementProof
-        person={sampleStaff[0]}
+        person={payrollStaff()[0]!}
         epfFloorBps={floor.epfBps.toString()}
       />
 

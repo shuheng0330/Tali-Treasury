@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { PayrollSetup } from '@/components/payroll/PayrollSetup';
+import { PAYROLL_EMPLOYEE } from '@/lib/demo-config';
 import { sampleStaff } from '@/lib/mock/payroll';
 
 export const metadata = {
@@ -22,7 +23,7 @@ export default function PayrollSetupPage() {
         </p>
       </header>
 
-      <PayrollSetup defaultEmployee={sampleStaff[0]!.address} />
+      <PayrollSetup defaultEmployee={PAYROLL_EMPLOYEE || sampleStaff[0]!.address} />
 
       <p className="text-caption text-ink-3">
         Reimbursing receipts is a separate mandate with its own rules.{' '}
