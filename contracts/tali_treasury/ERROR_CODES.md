@@ -19,6 +19,34 @@ message for the user.
 | 10 | `E_WRONG_ADMIN_CAP` | This administrator is not authorized for the selected mandate. |
 | 11 | `E_NO_FUNDS_TO_WITHDRAW` | The mandate has no remaining funds to withdraw. |
 
+## Payroll module
+
+`payroll.move` numbers its aborts from 20 so that a single lookup covers both
+modules — Sui reports the code without saying which module raised it, and
+overlapping numbers would silently mislabel a refusal. Codes 12–19 are reserved
+and unused.
+
+| Code | Move constant | Suggested user message |
+| ---: | --- | --- |
+| 20 | `E_WRONG_PAYROLL_CAP` | This capability is not authorized for the selected payroll mandate. |
+| 21 | `E_PAYROLL_REVOKED` | This payroll mandate has been revoked. |
+| 22 | `E_LENGTH_MISMATCH` | The statutory amounts do not line up with the recipients this mandate was created with. |
+| 23 | `E_PAYROLL_ZERO_AMOUNT` | Every amount in a payroll run must be greater than zero. |
+| 24 | `E_STATUTORY_SHORT` | A statutory contribution is below the minimum this mandate enforces. Nobody was paid. |
+| 25 | `E_ABOVE_RUN_LIMIT` | This payroll run exceeds the mandate's per-run limit. |
+| 26 | `E_PAYROLL_INSUFFICIENT` | The payroll mandate does not have enough unreserved funds. |
+| 27 | `E_PAYROLL_EXPIRED` | This payroll mandate has expired. |
+| 28 | `E_NOTHING_ACCRUED` | Nothing has accrued on this salary stream since the last withdrawal. |
+| 29 | `E_WRONG_STREAM_MANDATE` | This salary stream belongs to a different payroll mandate. |
+| 30 | `E_INVALID_STREAM_PERIOD` | A salary stream must end after it starts. |
+| 31 | `E_EMPLOYEE_NOT_APPROVED` | This mandate is not allowed to pay that address. |
+| 32 | `E_NET_ABOVE_GROSS` | Take-home pay cannot be larger than the wage it comes from. |
+| 33 | `E_INVALID_PAYROLL_TERMS` | These mandate terms would not enforce anything. Check the floors, the run limit and the staff list. |
+| 34 | `E_NO_PAYROLL_FUNDS` | Every remaining ringgit is already promised to an open salary stream. |
+
+The TypeScript map lives in `packages/sui-integration/src/errors.ts` and must
+stay in lockstep with both modules' Move constants.
+
 An aborted transaction is atomic: its requested payment and state changes are
 rolled back together. If it was submitted to the network rather than only dry
 run, the sender still pays gas because validators performed the checks.

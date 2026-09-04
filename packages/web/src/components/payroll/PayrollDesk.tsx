@@ -11,6 +11,10 @@ import { Breakdown } from './Breakdown';
 import { ClassNote } from './ClassNote';
 import { grossProblem, grossToBaseUnits, type WageClassValue } from '@/lib/payroll-wage';
 import { WageClass } from './WageClass';
+import { RoleNotice } from '@/components/RoleNotice';
+import { useWalletSession } from '@/components/wallet/WalletSessionProvider';
+import { DEMO_EMPLOYER } from '@/lib/demo-config';
+import { EMPLOYER_COPY, walletAccess } from '@/lib/wallet-access';
 
 interface RunState {
   status: 'idle' | 'running' | 'paid' | 'refused' | 'unknown';
@@ -25,6 +29,9 @@ export function PayrollDesk({
   staff: SampleEmployee[];
   runsAreLive: boolean;
 }) {
+  const { address } = useWalletSession();
+  const access = walletAccess(address, DEMO_EMPLOYER, EMPLOYER_COPY);
+
   const [selected, setSelected] = useState(staff[0]);
   const [wage, setWage] = useState<WageClassValue>({
     gross: toDisplay(staff[0].breakdown.gross),
@@ -44,7 +51,8 @@ export function PayrollDesk({
     wage.age === 30 &&
     wage.citizenship === 'local' &&
     base !== null &&
-    base.toString() === selected.breakdown.gross;
+    base.toString() ===
+      (selected.breakdown.fxConversion?.source.gross ?? selected.breakdown.gross);
   const invalid =
     grossProblem(wage.gross) !== null || wage.age < 16 || wage.age > 100 || base === null;
 
@@ -105,6 +113,14 @@ export function PayrollDesk({
       gross: base.toString(),
       age: wage.age,
       citizenship: wage.citizenship,
+      ...(breakdown?.fxConversion
+        ? {
+            fxApproval: {
+              myrPerUsd: breakdown.fxConversion.myrPerUsd,
+              rateTimestampMs: breakdown.fxConversion.rateTimestampMs,
+            },
+          }
+        : {}),
     });
 
     if (result.data === null) {
@@ -209,18 +225,28 @@ export function PayrollDesk({
           <span className="flex flex-col">
             <span className="text-body text-ink-2">This run costs the employer</span>
             <span className="text-caption text-ink-3">
-              {toDisplay(monthlyCost.toString())} for all {staff.length} at their listed wages
+              RM {toDisplay(monthlyCost.toString())} source cost for {staff.length}{' '}
+              {staff.length === 1 ? 'employee' : 'employees'}
             </span>
           </span>
           <span className="tnum text-title">
-            {breakdown ? toDisplay(breakdown.employerCost) : '—'}
+            {breakdown ? `${toDisplay(breakdown.employerCost, 6)} ${breakdown.currency ?? 'MYR'}` : '—'}
           </span>
         </div>
+
+        <RoleNotice access={access} />
 
         <button
           type="button"
           className="btn btn--primary btn--block"
-          disabled={run.status === 'running' || invalid || breakdown === null}
+          disabled={
+            !access.permitted ||
+            run.status === 'running' ||
+            invalid ||
+            breakdown === null ||
+            breakdown.currency !== 'USDC' ||
+            !breakdown.fxConversion
+          }
           onClick={onRun}
         >
           {run.status === 'running' ? 'Running…' : 'Run payroll'}
@@ -256,7 +282,9 @@ export function PayrollDesk({
 
         {run.status === 'idle' ? (
           <p className="text-caption text-ink-3">
-            The wage and all three statutory payments leave together, or not at all.
+            {breakdown?.fxConversion
+              ? 'Approve the displayed MYR-to-USDC quote. The wage and all three statutory payments then leave together, or not at all.'
+              : 'A live MYR-to-USDC quote is required before payroll can be submitted.'}
           </p>
         ) : null}
       </div>

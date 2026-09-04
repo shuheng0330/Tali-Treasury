@@ -2,6 +2,8 @@ import { Money } from '@/components/Money';
 import { EXPLORER } from '@tali/shared';
 import type { ClaimReviewAction, ReviewQueueItem } from '@tali/shared';
 import { approvalBlockReason } from '@/lib/review-actions';
+import { FxQuoteSummary } from '../claim/FxQuoteSummary';
+import { ClaimStatusSummary } from '../claim/ClaimStatusSummary';
 
 function Verdict({ passed, pending }: { passed: boolean; pending?: boolean }) {
   if (pending) {
@@ -125,7 +127,11 @@ export function ClaimRow({
         <Money amount={claim.amount} unit={claim.analysis?.currency ?? 'USDC'} size="row" className="shrink-0" />
       </div>
 
-      <div className="ml-7 flex flex-col gap-2 rounded-card border border-rule bg-canvas p-4">
+      <div className="ml-7"><ClaimStatusSummary claim={{ ...claim, decision }} /></div>
+      <details className="ml-7 rounded-card border border-rule bg-canvas p-4">
+        <summary className="cursor-pointer rounded-control text-body text-ink focus-visible:outline-2 focus-visible:outline-offset-2">
+          {awaitingPolicy ? 'Evaluation details' : `Policy checks (${decision.checks.filter(check => check.passed).length}/${decision.checks.length} passed)`}
+        </summary>
         {awaitingPolicy ? (
           <p className="text-caption text-ink-2">Awaiting server policy evaluation.</p>
         ) : (
@@ -155,8 +161,9 @@ export function ClaimRow({
             ))}
           </ul>
         )}
-      </div>
+      </details>
 
+      <FxQuoteSummary claim={claim} />
       {agentNote ? (
         <p className="ml-7 flex gap-2 text-caption italic text-ink-3">
           <span className="not-italic" aria-hidden>
@@ -167,6 +174,9 @@ export function ClaimRow({
       ) : null}
 
       <div className="ml-7 flex flex-wrap items-center gap-3">
+        {approvalBlocked && !awaitingPolicy ? (
+          <p className="w-full text-body text-ink-2">{approvalBlocked}</p>
+        ) : null}
         {claim.state === 'paying' ? (
           <div className="flex w-full flex-col gap-2">
             <p className="text-caption text-wait">
@@ -241,10 +251,16 @@ export function ClaimRow({
             className="btn btn--primary h-9 px-5 text-label"
             title={actionsDisabled ? disabledReason : undefined}
           >
-            {processing ? 'Evaluating…' : 'Evaluate claim'}
+            {processing ? 'Evaluating…' : claim.analysis?.currency === 'MYR' ? 'Get live quote & evaluate' : 'Evaluate claim'}
           </button>
         ) : (
           <>
+            {claim.analysis?.currency === 'MYR' ? (
+              <button type="button" className="btn btn--ghost h-9 px-5 text-label"
+                disabled={processing || reviewPending || actionsDisabled} onClick={() => onProcess(claim.id)}>
+                {processing ? 'Refreshing…' : 'Refresh quote & evaluate'}
+              </button>
+            ) : null}
             <button
               type="button"
               disabled={approvalBlocked !== null || reviewPending || verdictBlocked}

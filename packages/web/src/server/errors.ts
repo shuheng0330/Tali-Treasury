@@ -1,6 +1,8 @@
 import type { ApiError } from '@tali/shared';
 
 export type ServerErrorCode =
+  | 'fx_unavailable'
+  | 'fx_quote_invalid'
   | 'authentication_required'
   | 'authentication_failed'
   | 'origin_forbidden'

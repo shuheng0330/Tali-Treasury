@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { PayrollDesk } from '@/components/payroll/PayrollDesk';
-import { sampleStaff } from '@/lib/mock/payroll';
+import { payrollStaff } from '@/lib/mock/payroll';
 import { payrollIsLive } from '@/server/payroll/dependencies';
 
 export const metadata = {
@@ -22,7 +22,7 @@ export default function PayrollPage() {
         </p>
       </header>
 
-      <PayrollDesk staff={sampleStaff} runsAreLive={payrollIsLive()} />
+      <PayrollDesk staff={payrollStaff()} runsAreLive={payrollIsLive()} />
 
       <div className="flex flex-col gap-3">
         <Link href="/payroll/proof" className="btn btn--ghost btn--block">
@@ -30,6 +30,9 @@ export default function PayrollPage() {
         </Link>
         <Link href="/payroll/history" className="link self-start">
           What has been run
+        </Link>
+        <Link href="/payroll/setup" className="link self-start">
+          Set up a payroll mandate
         </Link>
       </div>
     </div>

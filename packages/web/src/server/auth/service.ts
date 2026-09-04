@@ -1,6 +1,7 @@
 import { createHash, randomBytes } from 'node:crypto';
 
 import { verifyPersonalMessageSignature } from '@mysten/sui/verify';
+import { createTestnetClient } from '@tali/treasury-sui';
 import { z } from 'zod';
 
 import { ServerError, isServerError } from '../errors';
@@ -107,6 +108,9 @@ export function createCompleteWalletSessionService(deps: {
 }) {
   const now = deps.now ?? Date.now;
   const sessionToken = deps.sessionToken ?? (() => randomBytes(32).toString('base64url'));
+  // zkLogin proofs need a chain-backed verifier; ordinary signatures still
+  // verify locally. Use the same Testnet client factory as treasury reads.
+  const verificationClient = createTestnetClient(process.env.SUI_GRPC_URL);
 
   return async (input: unknown): Promise<{
     session: { address: string; expiresAt: string };
@@ -137,7 +141,7 @@ export function createCompleteWalletSessionService(deps: {
       await verifyPersonalMessageSignature(
         new TextEncoder().encode(challenge.message),
         parsed.data.signature,
-        { address: challenge.address },
+        { address: challenge.address, client: verificationClient },
       );
     } catch (error) {
       throw authenticationFailed(error);

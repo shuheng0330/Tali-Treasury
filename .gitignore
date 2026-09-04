@@ -14,3 +14,5 @@ next-env.d.ts
 supabase/.branches/
 supabase/.temp/
 supabase/snippets/
+.npm-cache/
+tools/

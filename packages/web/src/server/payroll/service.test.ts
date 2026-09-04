@@ -6,13 +6,17 @@ import type { PayrollChainPort, PayrollRunRepository, PayrollSubmission } from '
 import type { PayrollRequest } from './validation';
 
 const RECIPIENTS = { epf: '0xepf', socso: '0xsocso', eis: '0xeis' } as const;
+const RATE = { myrPerUsd: '4', rateTimestampMs: 1_000, fetchedAtMs: 2_000 };
 
 const request: PayrollRequest = {
   employee: '0xworker',
   gross: '3000000000',
   age: 30,
   citizenship: 'local',
+  fxApproval: { myrPerUsd: RATE.myrPerUsd, rateTimestampMs: RATE.rateTimestampMs },
 };
+
+const fx = { rates: async () => RATE, now: () => 3_000 };
 
 function repo() {
   const runs: PayrollRunView[] = [];
@@ -59,12 +63,12 @@ function chain(submission: PayrollSubmission, ready = true) {
 }
 
 describe('createPayrollService', () => {
-  it('previews without touching the chain or the database', () => {
+  it('previews without touching the chain or the database', async () => {
     const runs = repo();
     const { port, run } = chain({ status: 'paid', digest: '0xd' });
-    const service = createPayrollService({ runs: runs.impl, chain: port, recipients: RECIPIENTS });
+    const service = createPayrollService({ runs: runs.impl, chain: port, recipients: RECIPIENTS, ...fx });
 
-    const breakdown = service.preview(request);
+    const breakdown = await service.preview(request);
 
     expect(breakdown.recipients).toEqual(RECIPIENTS);
     expect(breakdown.employee).toBe('0xworker');
@@ -75,7 +79,7 @@ describe('createPayrollService', () => {
   it('records the run before submitting it', async () => {
     const runs = repo();
     const { port } = chain({ status: 'paid', digest: '0xdigest' });
-    const service = createPayrollService({ runs: runs.impl, chain: port, recipients: RECIPIENTS });
+    const service = createPayrollService({ runs: runs.impl, chain: port, recipients: RECIPIENTS, ...fx });
 
     const result = await service.run(request);
 
@@ -87,19 +91,19 @@ describe('createPayrollService', () => {
   it('sends the three statutory amounts in the order the contract expects', async () => {
     const runs = repo();
     const { port, run } = chain({ status: 'paid', digest: '0xd' });
-    const service = createPayrollService({ runs: runs.impl, chain: port, recipients: RECIPIENTS });
+    const service = createPayrollService({ runs: runs.impl, chain: port, recipients: RECIPIENTS, ...fx });
 
     await service.run(request);
 
     const sent = run.mock.calls[0]![0];
-    const preview = service.preview(request);
+    const preview = await service.preview(request);
     expect(sent.statutoryAmounts).toEqual(preview.bodies.map((b) => b.total));
   });
 
   it('sends one base unit for the body the caller asked to underpay', async () => {
     const runs = repo();
     const { port, run } = chain({ status: 'refused', abortCode: 24, message: 'short' });
-    const service = createPayrollService({ runs: runs.impl, chain: port, recipients: RECIPIENTS });
+    const service = createPayrollService({ runs: runs.impl, chain: port, recipients: RECIPIENTS, ...fx });
 
     await service.run({ ...request, underpay: 'epf' });
 
@@ -111,7 +115,7 @@ describe('createPayrollService', () => {
   it('records a refusal with its abort code instead of throwing', async () => {
     const runs = repo();
     const { port } = chain({ status: 'refused', abortCode: 24, message: 'statutory short' });
-    const service = createPayrollService({ runs: runs.impl, chain: port, recipients: RECIPIENTS });
+    const service = createPayrollService({ runs: runs.impl, chain: port, recipients: RECIPIENTS, ...fx });
 
     const result = await service.run({ ...request, underpay: 'epf' });
 
@@ -123,7 +127,7 @@ describe('createPayrollService', () => {
   it('never retries a submission', async () => {
     const runs = repo();
     const { port, run } = chain({ status: 'refused', abortCode: 26, message: 'no funds' });
-    const service = createPayrollService({ runs: runs.impl, chain: port, recipients: RECIPIENTS });
+    const service = createPayrollService({ runs: runs.impl, chain: port, recipients: RECIPIENTS, ...fx });
 
     await service.run(request);
 
@@ -136,7 +140,7 @@ describe('createPayrollService', () => {
     // the mandate covers.
     const runs = repo();
     const { port, run } = chain({ status: 'paid', digest: '0xd' });
-    const service = createPayrollService({ runs: runs.impl, chain: port, recipients: RECIPIENTS });
+    const service = createPayrollService({ runs: runs.impl, chain: port, recipients: RECIPIENTS, ...fx });
 
     await expect(service.run({ ...request, age: 61 })).rejects.toThrow('under 60');
     await expect(service.run({ ...request, citizenship: 'foreign' })).rejects.toThrow(
@@ -147,20 +151,36 @@ describe('createPayrollService', () => {
     expect(runs.impl.create).not.toHaveBeenCalled();
   });
 
-  it('still previews any worker class, because the arithmetic is not in doubt', () => {
+  it('still previews any worker class, because the arithmetic is not in doubt', async () => {
     const runs = repo();
     const { port } = chain({ status: 'paid', digest: '0xd' });
-    const service = createPayrollService({ runs: runs.impl, chain: port, recipients: RECIPIENTS });
+    const service = createPayrollService({ runs: runs.impl, chain: port, recipients: RECIPIENTS, ...fx });
 
-    expect(() => service.preview({ ...request, age: 61 })).not.toThrow();
+    await expect(service.preview({ ...request, age: 61 })).resolves.toBeDefined();
   });
 
   it('refuses to run at all when the payroll module is not configured', async () => {
     const runs = repo();
     const { port } = chain({ status: 'paid', digest: '0xd' }, false);
-    const service = createPayrollService({ runs: runs.impl, chain: port, recipients: RECIPIENTS });
+    const service = createPayrollService({ runs: runs.impl, chain: port, recipients: RECIPIENTS, ...fx });
 
     await expect(service.run(request)).rejects.toThrow('not configured');
+    expect(runs.impl.create).not.toHaveBeenCalled();
+  });
+
+  it('requires the run to approve the exact rate shown by preview', async () => {
+    const runs = repo();
+    const { port, run } = chain({ status: 'paid', digest: '0xd' });
+    const service = createPayrollService({ runs: runs.impl, chain: port, recipients: RECIPIENTS, ...fx });
+
+    await expect(service.run({ ...request, fxApproval: undefined })).rejects.toMatchObject({
+      status: 409,
+    });
+    await expect(service.run({
+      ...request,
+      fxApproval: { ...request.fxApproval!, myrPerUsd: '4.1' },
+    })).rejects.toMatchObject({ status: 409 });
+    expect(run).not.toHaveBeenCalled();
     expect(runs.impl.create).not.toHaveBeenCalled();
   });
 });

@@ -4,11 +4,17 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useMemo, useState, useTransition } from 'react';
 import type { ClaimReviewAction, MandateView } from '@tali/shared';
-import { CLAIM_CHIP, EXPLORER } from '@tali/shared';
 import { Money } from '@/components/Money';
-import { StatusChip } from '@/components/StatusChip';
-import { COMMITTED, event } from '@/lib/mock/data';
-import { DEMO_TREASURER } from '@/lib/demo-config';
+import { event } from '@/lib/mock/data';
+import { ClaimStatusSummary } from '../claim/ClaimStatusSummary';
+import { FxQuoteSummary } from '../claim/FxQuoteSummary';
+import {
+  DEMO_EVENT_ID,
+  DEMO_EVENT_NAME,
+  DEMO_TREASURER,
+  SINGLE_WALLET_DEMO,
+} from '@/lib/demo-config';
+import { viewerRole } from '@/lib/viewer-role';
 import { reviewQueue, settledClaims } from '@/lib/mock/api';
 import { committedFrom, settledFrom, toReviewQueue } from '@/lib/queue';
 import { useClaims } from '@/lib/api/useClaims';
@@ -17,17 +23,20 @@ import { reconcileClaim, TaliApiError } from '@/lib/api/client';
 import { pollPaymentReconciliation } from '@/lib/api/reconciliation';
 import { DataNotice } from '@/components/DataNotice';
 import { ClaimRow } from './ClaimRow';
+import { AddMemberForm } from './AddMemberForm';
 import { MandateHeader } from './MandateHeader';
 import { RevokeDialog } from './RevokeDialog';
 import { ReviewActionDialog } from './ReviewActionDialog';
 import { PaymentReconciliationStatus } from './PaymentReconciliationStatus';
 import { useWalletSession } from '@/components/wallet/WalletSessionProvider';
+import { reviewRequestForClaim } from '@/lib/review-actions';
 
-type Tab = 'review' | 'paid' | 'all';
+type Tab = 'review' | 'paid' | 'rejected' | 'all';
 
 const TABS: { id: Tab; label: string }[] = [
   { id: 'review', label: 'Needs review' },
-  { id: 'paid', label: 'Settled' },
+  { id: 'paid', label: 'Paid' },
+  { id: 'rejected', label: 'Rejected' },
   { id: 'all', label: 'All' },
 ];
 
@@ -96,13 +105,24 @@ export function TreasuryDashboard({
      budget still counts them as available, so subtracting them here is what
      stops the header inviting an approval the money cannot cover. */
   const committed = useMemo(
-    /* The sample evaluator measures the budget against COMMITTED, so the header
-       has to use the same figure or it contradicts the rows underneath it. */
-    () => (live.source === 'live' ? committedFrom(live.claims) : COMMITTED),
+    /* Only a real queue can say what is really spoken for. The mandate figures
+       above come from the chain, so subtracting the sample constant from them
+       produced an "available" that was neither real nor sample — a fabricated
+       number under a real mandate id, which is what the sample rows below are
+       labelled to avoid. When the queue is not live, nothing is known to be
+       committed and the header reports the chain balance alone. */
+    () => (live.source === 'live' ? committedFrom(live.claims) : '0'),
     [live.source, live.claims],
   );
 
-  const counts = { review: queue.length, paid: paid.length, all: everything.length };
+  const rejected = everything.filter((claim) => claim.state === 'rejected');
+  const history = tab === 'paid' ? paid : tab === 'rejected' ? rejected : everything;
+  const counts = {
+    review: queue.length,
+    paid: paid.length,
+    rejected: rejected.length,
+    all: everything.length,
+  };
   const reviewingClaim = reviewing
     ? everything.find((claim) => claim.id === reviewing.claimId) ?? null
     : null;
@@ -166,13 +186,14 @@ export function TreasuryDashboard({
   }
 
   async function submitReview(reason?: string) {
-    if (!reviewing) return;
+    if (!reviewing || !reviewingClaim) return;
     setReviewPending(true);
     setReviewError(null);
-    const request =
-      reviewing.action === 'approve'
-        ? { action: 'approve' as const }
-        : { action: reviewing.action, reason: reason ?? '' };
+    const request = reviewRequestForClaim(
+      reviewingClaim,
+      reviewing.action,
+      reason,
+    );
     const result = await tryReviewClaim(reviewing.claimId, request);
     setReviewPending(false);
     if (result.data === null) {
@@ -272,13 +293,23 @@ export function TreasuryDashboard({
 
   return (
     <div className="mx-auto flex w-full max-w-4xl flex-col gap-6 px-5 py-8">
+      {SINGLE_WALLET_DEMO ? (
+        <p className="text-body text-ink-2">
+          Single-wallet Testnet demo: the same person submits and reviews claims.
+          This demonstrates the workflow, not separation of duties. Payments use test tokens.
+        </p>
+      ) : null}
       <MandateHeader
-        eventName={event.name}
+        eventName={DEMO_EVENT_NAME}
         organisation={event.organisation}
         mandate={mandate}
         committed={committed}
         onRevoke={() => setConfirming(true)}
       />
+
+      {viewerRole(wallet.address) === 'treasurer' ? (
+        <AddMemberForm eventId={DEMO_EVENT_ID} onAdded={() => live.reload()} />
+      ) : null}
 
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-card border border-ok-line bg-ok-soft px-4 py-3 sm:px-6">
         <div>
@@ -300,35 +331,39 @@ export function TreasuryDashboard({
       </div>
 
       <section className="flex flex-col overflow-hidden rounded-panel border border-rule bg-surface">
-        <div className="border-b border-rule p-4">
-          <DataNotice
-            source={live.source}
-            reason={live.reason}
-            live="Claim loading, policy decisions, and review actions"
-            plural
-            simulated="Reviewing and paying a claim need the live queue, so on sample data their controls do nothing."
-          />
+        <div className="flex flex-col gap-3 border-b border-rule p-4 empty:hidden">
+          {/* Silent when the queue is live: the "Live from Sui Testnet" card
+              above and a populated, working queue below already say so. This
+              box only needs to speak up when something fell back, which is
+              the one time a treasurer needs to know. */}
+          {live.source !== 'live' ? (
+            <DataNotice
+              source={live.source}
+              reason={live.reason}
+              live="Claim loading, policy decisions, and review actions"
+              plural
+              simulated="Reviewing and paying a claim need the live queue, so on sample data their controls do nothing."
+            />
+          ) : null}
           {live.source === 'live' && !reviewsRecordable ? (
-            <p className="mt-3 rounded-control border border-wait-line bg-wait-soft p-3 text-caption text-wait">
-              A decision cannot be recorded: the database has no review columns, so there
-              would be nothing saying who decided or why. Apply migration{' '}
+            <p className="rounded-control border border-wait-line bg-wait-soft p-3 text-caption text-wait">
+              A decision can&rsquo;t be recorded yet — apply migration{' '}
               <span className="font-mono">20260901020000_claim_review_actions.sql</span>.
-              Evaluating a claim, releasing a payment and recording an outcome write none
-              of those columns, so they still work.
+              Evaluating, paying and reconciling still work.
             </p>
           ) : null}
           {actionError ? (
-            <p className="mt-3 rounded-control border border-no-line bg-no-soft p-3 text-caption text-no" role="alert">
+            <p className="rounded-control border border-no-line bg-no-soft p-3 text-caption text-no" role="alert">
               {actionError}
             </p>
           ) : null}
           {reconciliationNotice ? (
-            <p className="mt-3 rounded-control border border-wait-line bg-wait-soft p-3 text-caption text-ink-2" role="status">
+            <p className="rounded-control border border-wait-line bg-wait-soft p-3 text-caption text-ink-2" role="status">
               {reconciliationNotice}
             </p>
           ) : null}
           {reconciliationError ? (
-            <p className="mt-3 rounded-control border border-no-line bg-no-soft p-3 text-caption text-no" role="alert">
+            <p className="rounded-control border border-no-line bg-no-soft p-3 text-caption text-no" role="alert">
               Reconciliation failed: {reconciliationError}
             </p>
           ) : null}
@@ -339,6 +374,7 @@ export function TreasuryDashboard({
               key={entry.id}
               type="button"
               onClick={() => setTab(entry.id)}
+              aria-pressed={tab === entry.id}
               className={`rounded-badge px-4 py-2 font-display text-label uppercase transition-colors duration-150 ${
                 tab === entry.id ? 'bg-ink text-canvas' : 'text-ink-3 hover:bg-raised hover:text-ink'
               }`}
@@ -397,50 +433,37 @@ export function TreasuryDashboard({
         ) : null}
 
         {tab !== 'review' ? (
-          (tab === 'paid' ? paid : everything).length === 0 ? (
-            <p className="px-6 py-14 text-center text-caption text-ink-3">
-              {tab === 'paid'
-                ? 'Nothing has settled yet. A claim lands here once it is paid, refused or rejected.'
-                : 'No claim has been submitted against this mandate yet.'}
-            </p>
-          ) : (
-            <ul className="flex flex-col divide-y divide-rule">
-              {(tab === 'paid' ? paid : everything).map((claim) => (
-                <li key={claim.id} className="flex flex-col gap-1.5 px-4 py-3">
-                  <div className="flex items-center gap-3">
-                    <div className="flex min-w-0 flex-1 flex-col gap-1">
-                      <span className="truncate text-body">{claim.merchant}</span>
-                      <span className="flex items-center gap-2">
-                        <StatusChip status={CLAIM_CHIP[claim.state]} />
-                        <span className="text-caption text-ink-3">{claim.submitterName}</span>
-                      </span>
-                    </div>
-                    <Money amount={claim.amount} unit={claim.analysis?.currency ?? 'USDC'} size="row" />
-                  </div>
-                  {/* Why a claim ended the way it did is the part worth keeping.
-                      A settled row that shows only its state makes the treasurer
-                      reconstruct their own decision from memory. */}
-                  {claim.state === 'rejected' && claim.review?.reason ? (
-                    <p className="text-caption text-ink-3">Rejected: {claim.review.reason}</p>
-                  ) : null}
-                  {claim.state === 'payment_failed' && claim.payment ? (
-                    <p className="text-caption text-no">{claim.payment.message}</p>
-                  ) : null}
-                  <PaymentReconciliationStatus
-                    claim={claim}
-                    pending={reconcilingId === claim.id}
-                    onCheck={checkPayment}
-                  />
-                </li>
-              ))}
-            </ul>
-          )
+          <ul className="flex flex-col divide-y divide-rule">
+            {history.length === 0 ? (
+              <li className="px-6 py-10 text-center text-body text-ink-2">
+                {tab === 'rejected' ? 'No rejected claims.' : tab === 'paid' ? 'No payments yet.' : 'No claims yet.'}
+              </li>
+            ) : null}
+            {history.map((claim) => (
+              <li key={claim.id} className="flex flex-col gap-3 px-4 py-4">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <span className="break-words text-body font-medium">{claim.merchant}</span>
+                  <Money amount={claim.amount} unit={claim.analysis?.currency ?? 'USDC'} size="row" />
+                </div>
+                <div className="flex min-w-0 flex-1 flex-col gap-1">
+                  <ClaimStatusSummary claim={claim} />
+                  <span className="text-body text-ink-3">{claim.submitterName}</span>
+                  <FxQuoteSummary claim={claim} />
+                </div>
+                <PaymentReconciliationStatus
+                  claim={claim}
+                  pending={reconcilingId === claim.id}
+                  onCheck={checkPayment}
+                />
+              </li>
+            ))}
+          </ul>
         ) : null}
       </section>
 
       {confirming ? (
         <RevokeDialog
-          eventName={event.name}
+          eventName={DEMO_EVENT_NAME}
           remaining={mandate.remainingBudget}
           pendingCount={queue.length}
           onCancel={() => setConfirming(false)}

@@ -55,7 +55,12 @@ Last updated: 3 September 2026 (MYT)
 - employer-session authorization for payroll execution, mandate revocation, and
   safety-test broadcasts, with exact-origin checks before parsing or mutation;
 - employee-session ownership enforcement for salary-stream withdrawals, including
-  read-before-withdraw ordering and safe denial without signing.
+  read-before-withdraw ordering and safe denial without signing;
+- statutory payroll and salary-stream enforcement (`payroll.move`, 29 contract
+  tests), the EPF/SOCSO/EIS calculator, and the PayrollDesk/earnings UI — complete
+  locally, not yet published to Testnet. See `docs/PAYROLL_LAUNCH_PLAN.md` for the
+  remaining publish work before the pitch;
+- 394 web tests and 45 Sui integration tests passing as of this note.
 
 ## Hosted schema verified
 

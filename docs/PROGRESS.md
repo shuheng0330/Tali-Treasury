@@ -4,40 +4,80 @@ This is the authoritative implementation checklist. A UI phase marked complete
 means the UX works against its declared data source; it does not imply that the
 whole product flow is live.
 
-**Deadline:** submission 5 Sep 23:59 MYT · pitch 6 Sep at APU.
+**Planning deadline:** submission 5 Sep at noon MYT · pitch 6 Sep at APU. Confirm
+the submission time against the organiser channel; older notes used 23:59.
+
+### 4 September product direction
+
+- Tali is now payroll-first. The primary employer CTA will be **Set Up Payroll**.
+- Set Up Payroll creates and funds `PayrollMandate<USDC>`; it does not create a
+  reimbursement mandate.
+- **Create Expense Treasury** remains a separate flow backed by the existing
+  `Mandate<USDC>` and the proven receipt-claim system.
+- The immediate definition of done is one authorized payroll, one atomic policy
+  refusal and one employee stream withdrawal on Testnet. See
+  [PAYROLL_LAUNCH_PLAN.md](PAYROLL_LAUNCH_PLAN.md).
+- Demo funding is fixed at an RM30 source wage with an RM50-equivalent total
+  ceiling. The configured MYR/USD quote converts every amount to USDC; the app
+  must never submit RM base units as though they were micro-USDC.
 
 ## Current status by subsystem
+
+### 3 September local verification update (`test_main`)
+
+- Slush zkLogin sign-in fixed and covered by regression tests.
+- One authorized native 1 USDC payment and two reconciliation checks passed;
+  the synthetic database-write interruption was recovered without another payment.
+  Budget was 16 USDC afterward. [Evidence](LOCAL_PAYMENT_RECONCILIATION_SMOKE.md).
+- [MYR live-reference quotes](MYR_USDC_QUOTES.md) are implemented locally with
+  quote-bound approval, integer rounding, expiry checks and shared provider cache.
+  Browser payment verified: RM6 → 1.484561 USDC to Slush, transaction
+  `J6fWBNa7RQXiLaVVK4ZhZSNphggNLq312HKRyhRbZQq`. The separate 10 USDC
+  demo mandate had 8.515439 USDC remaining. [Demo evidence](LOCAL_SINGLE_WALLET_DEMO.md).
+- Paid tab now includes Auto-paid / Paid after review chips based on recorded
+  approval history; Rejected has its own tab and displays the recorded reason.
+- Correction and rejection reasons are visible in Treasury and My Claims.
+  Status and next action come first; policy checks and FX metadata expand on demand.
+- Hosted migration/deployment and the gas-fee
+  reporting correction remain pending. Historical phase notes below retain the
+  earlier milestones, not a claim of current hosted completeness.
 
 | Subsystem | Status | Completed | Pending |
 |---|---|---|---|
 | Sui Move | ✅ Live | Package, 17 tests, USDC mandate, valid payment, two rejected safety attempts | Live revoke/withdraw evidence only if needed for the demo |
-| Sui TypeScript boundary | ✅ Ready | Reads, builders, config, USDC helpers, abort mapping and backend testnet signer adapter | One separately authorized live smoke claim |
+| Sui TypeScript boundary | ✅ Ready | Reads, builders, config, USDC helpers, abort mapping, backend signer and native-USDC payment/recovery smoke | Hosted end-to-end verification |
 | Shared contracts | ✅ Ready | Claim, event, policy, audit, mandate and endpoint types | Evolve only with team agreement |
-| Web dashboard | ✅ Live read-only | Current mandate state comes from Sui Testnet | Signed actions and backend claim totals |
+| Web dashboard | ✅ Complete locally; live chain data | Mandate reads, review actions, paid/rejected views, reasons and payment evidence | Hosted verification and backend claim totals |
 | Receipt and claim backend | ✅ Complete locally | Wallet sessions, one-time analysis drafts, private storage, deterministic policy, atomic review/payment states, and safe exact-digest reconciliation | Apply latest migrations and configure hosted API/origin/signer |
-| Claim and review UX | ✅ Complete locally | Testnet wallet connect/sign-in/logout, real analyze/create/list/review, and bounded payment-status polling | Hosted wallet verification and member resubmission; FX is a teammate-owned increment |
+| Claim and review UX | ✅ Complete locally | Browser MYR reimbursement verified, readable outcomes and reasons, exact quote approval, payment-status polling | Hosted verification and member correction/resubmission |
 | Payroll and treasury write RBAC | ✅ Complete locally | Employer-only payroll/revoke/safety APIs and employee-only stream withdrawal | Configure hosted employer wallet and verify both roles |
+| Payroll contract and chain boundary | ✅ Complete locally | `PayrollMandate`, payroll execution, contribution rules, salary streams, readers and builders | Publish/upgrade, fund, configure and record real evidence |
+| Payroll application | 🟡 Built against incomplete live configuration | Payroll, earnings, history and enforcement screens; RM30 preview converts every leg through the configured MYR/USD rate; write RBAC is enforced | Replace sample identity, connect one registered payroll and verify hosted flow |
+| Authenticated Set Up Payroll | 🟡 Screen built, nothing to sign against | `/payroll/setup`: employer form, live-quote approval, wallet-signed funding through the existing builder, and a registration retry that never refunds | Publish the module, add `POST /api/payroll/register`, then verify idempotent registration and recovery |
+| Create Expense Treasury | ⬜ Pending | Existing reimbursement builder and manual/local event setup | Separate authenticated form, wallet signing, verified registration and event-aware capability mapping |
 | Safety Test UI | 🟡 Mocked with live evidence links | Local preview plus links to two real rejected transactions; API is employer-only | Interactive signed attempts and revocation scenario |
 | Deployment | ✅ Live reads; auth rollout pending | Vercel production and live Sui dashboard verified | Push wallet migration, configure exact HTTPS origin, verify protected writes |
+| Payroll and salary streams | 🟡 Complete locally | `payroll.move` (25 tests), EPF/SOCSO/EIS calculator, PayrollDesk/earnings UI, all wired to flip live once env vars exist | Package upgrade publish, mandate creation, funded stream — see `docs/PAYROLL_LAUNCH_PLAN.md` |
 | Submission | ⬜ Pending | — | Landing content, videos, deck, disclosure and rehearsal |
 
 ## Real versus simulated
 
-- **Real:** package, USDC mandate, live read-only dashboard, one payment, overspend rejection, unauthorized-recipient rejection.
+- **Real:** package, two funded USDC mandates, dashboard reads, native-USDC payments,
+  browser MYR-quoted reimbursement, overspend rejection and unauthorized-recipient rejection.
 - **Real when authenticated/demo identity and server payment credentials are
   enabled:** receipt analysis, private storage, event-scoped duplicate checks,
   claim persistence/listing, treasurer-triggered deterministic policy, and
   race-safe testnet backend payment for USDC automatic or human-approved claims. The payment code is
-  verified with fakes; no new transaction was broadcast in this increment.
+  covered by automated tests and the recorded local Testnet payment checks.
 - **Simulated in the current UI:** revoke preview and interactive safety controls.
 - **Never simulated without a label:** digests, checkpoints, gas, finality, wallet signatures, or chain state.
 
 ## Frontend phase history
 
 The sections below preserve UI design decisions made during the Xiang-UI work.
-References to signing, payment, gas, or chain outcomes describe the intended
-live experience, not current functionality. The integrated app labels those
-interactions as simulations and links separately to genuine Testnet evidence.
+These notes are historical. Use the current subsystem table and dated evidence
+above for today's functionality; payment and review now work locally, while
+revocation and the interactive safety screens remain previews.
 
 | # | Phase | Status | Landed |
 |---|---|---|---|
@@ -47,7 +87,7 @@ interactions as simulations and links separately to genuine Testnet evidence.
 | 3 | Treasurer dashboard and review queue | ✅ Real review actions complete locally | 1 Sep |
 | 4 | Safety Test panel | 🟡 Mock flow; live refusals linked | 29 Aug |
 | 5 | Landing page | ✅ Done, rebuilt 31 Aug | 30 Aug |
-| 6 | Wire to live contract and backend | 🟡 Authenticated local flow and reconciliation complete; hosted rollout and live smoke pending | 2 Sep |
+| 6 | Wire to live contract and backend | 🟡 Local browser MYR payment and reconciliation verified; hosted rollout pending | 3 Sep |
 | 7 | Submission pack | ⬜ Not started | — |
 
 Legend: ✅ done · 🟡 in progress · ⬜ not started · ⛔ cut
@@ -56,19 +96,22 @@ Legend: ✅ done · 🟡 in progress · ⬜ not started · ⛔ cut
 
 ## Current remaining gaps
 
-Updated 2 September and ordered by the risk of leaving each item unfinished:
+Updated 4 September. See [payroll launch plan](PAYROLL_LAUNCH_PLAN.md) and
+[product next steps](PRODUCT_NEXT_STEPS.md) for acceptance criteria:
 
-1. Push the wallet/draft migration, configure `TALI_APP_ORIGIN`, and verify member
-   and treasurer browser wallets on the hosted app; configure the canonical
-   server-only `TALI_EMPLOYER_WALLET` and verify employer/employee denial cases.
-2. Teammate-owned trusted MYR-to-USDC quote with source, timestamp, expiry,
-   rounding and payout amount.
-3. Member correction and resubmission after a treasurer request.
-4. One authorized funded testnet smoke payment and manual verification of the
-   completed exact-digest reconciliation path.
-5. Employer-managed payroll/member rosters as a separate API increment.
-6. Interactive on-chain safety attempts and live revocation.
-7. Submission video, deck, AI disclosure and rehearsal.
+1. Lock one employee wallet, supported employee class, scaled wage, payroll cap,
+   stream timing and total Testnet funding.
+2. Publish/upgrade payroll, create the funded mandate, open the demo stream and
+   record package, mandate, capability, stream and recipient identifiers.
+3. Implement authenticated **Set Up Payroll** with wallet signing and verified,
+   idempotent backend registration.
+4. Replace `sampleStaff` and global demo assumptions with the registered payroll;
+   enforce employer authorization and employee-only stream withdrawal.
+5. Verify one successful payroll, one deficient-contribution refusal and one
+   accrued-salary withdrawal from a fresh browser.
+6. Preserve the working expense-claim demo. Build **Create Expense Treasury** as a
+   separate follow-up rather than coupling it to payroll setup.
+7. Update evidence, record a backup video, complete disclosures and rehearse.
 
 ---
 

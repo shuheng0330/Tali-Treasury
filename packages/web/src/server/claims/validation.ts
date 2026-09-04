@@ -168,6 +168,7 @@ const reviewClaimInputSchema = z.discriminatedUnion('action', [
     .object({
       ...reviewBase,
       action: z.literal('approve'),
+      quoteId: z.string().uuid().optional(),
       reason: trimmedString(500).optional(),
     })
     .strict(),
@@ -188,7 +189,7 @@ const reviewClaimInputSchema = z.discriminatedUnion('action', [
 ]);
 
 export function parseReviewClaimInput(input: unknown):
-  | { claimId: string; action: 'approve'; reviewer: string; reason?: string }
+  | { claimId: string; action: 'approve'; reviewer: string; reason?: string; quoteId?: string }
   | { claimId: string; action: 'reject'; reviewer: string; reason: string }
   | { claimId: string; action: 'request_correction'; reviewer: string; reason: string } {
   return reviewClaimInputSchema.parse(input);
