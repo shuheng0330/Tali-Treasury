@@ -42,8 +42,9 @@ allocation, not a second payment of the same salary obligation.
 ## Minimum demo journey
 
 1. An authenticated employer opens **Set Up Payroll**.
-2. The employer enters the employee wallet, scaled demo wage, funding amount,
-   payment cap, expiry and the three Testnet statutory-recipient addresses.
+2. The employer enters the employee wallet and expiry. The server supplies the
+   agreed RM30 wage, RM50-equivalent ceiling, current FX quote, backend cap owner
+   and configured Testnet statutory-recipient addresses.
 3. The app previews the Testnet transaction and immutable rules. The connected
    employer wallet signs and funds the `PayrollMandate`; no private key enters the
    browser.
@@ -95,12 +96,14 @@ demo.
 
 ### Gate 3 — implement authenticated Set Up Payroll
 
-- Add an employer-only `/payroll/setup` screen and make it the primary CTA.
-- Use the existing Sui transaction builder; do not recreate transaction logic in
-  React components.
-- Add an authenticated, idempotent registration endpoint. Registration verifies a
-  finalized transaction instead of trusting browser-submitted object fields.
-- Recover safely if the chain transaction succeeds but database registration
+- ✅ Add an employer-only `/payroll/setup` screen and make it the primary CTA.
+- ✅ Preview the current MYR/USD conversion and exact USDC funding, then use the
+  existing Sui transaction builder for connected-wallet execution.
+- ✅ Verify the finalized transaction, sender, created mandate fields and
+  `PayrollCap` owner server-side instead of trusting browser-submitted object fields.
+- ✅ Add idempotent durable registration for that verified result, with unique
+  transaction, mandate and capability identifiers.
+- ✅ Recover safely if the chain transaction succeeds but database registration
   fails. A registration retry must never fund a second mandate.
 - **Implemented locally:** the endpoint accepts only the digest, verifies sender,
   package, USDC type, object lineage, supported terms and signer-owned cap, then

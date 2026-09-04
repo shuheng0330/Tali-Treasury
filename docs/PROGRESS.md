@@ -23,14 +23,18 @@ the submission time against the organiser channel; older notes used 23:59.
 
 ## Current status by subsystem
 
-### 4 September payroll-registration verification
+### 5 September `main` integration verification
 
-- Added employer-authenticated `POST /api/payroll/register`, finalized Testnet
-  transaction/object verification and immutable configuration persistence.
-- Registration accepts only a digest, returns `201` for a new snapshot and `200`
-  for an exact replay, and never signs or broadcasts.
-- Fresh verification: 48 Sui integration tests passed; 594 web tests passed with
-  one intentional skip; all 141 pgTAP assertions passed after a complete reset.
+- Integrated the 43 incoming commits through `fa490fb`, including payroll write
+  RBAC, role-aware screens, expense-treasury setup, event roster APIs, the purple
+  visual refresh, and the submission/deck documents.
+- Consolidated the parallel payroll-registration implementations around the
+  strict digest-only verifier, immutable registry and centralized
+  `TALI_EMPLOYER_WALLET` authorization while retaining the latest setup UI.
+- Post-merge verification passes 48 Sui integration tests, 609 web tests with one
+  intentional skip, root typecheck, production build and a zero-vulnerability
+  high-severity audit. Docker Desktop's Linux engine was unavailable for a fresh
+  database replay; all 141 pgTAP assertions passed immediately before this merge.
 
 ### 4 September roster-backend verification
 
@@ -73,7 +77,7 @@ the submission time against the organiser channel; older notes used 23:59.
 | Payroll registration backend | ✅ Complete locally | Employer-only digest registration, finalized Sui object verification, immutable service-role registry and idempotent recovery | Apply migration, register the funded digest, then implement explicit registered-payroll selection |
 | Payroll contract and chain boundary | ✅ Complete locally | `PayrollMandate`, payroll execution, contribution rules, salary streams, readers and builders | Publish/upgrade, fund, configure and record real evidence |
 | Payroll application | 🟡 Built against incomplete live configuration | Payroll, earnings, history and enforcement screens; RM30 preview converts every leg through the configured MYR/USD rate; write RBAC is enforced | Replace sample identity, connect one registered payroll and verify hosted flow |
-| Authenticated Set Up Payroll | 🟡 Registration complete locally | `/payroll/setup`: employer form, live-quote approval, wallet-signed funding, authenticated server verification and digest-only retry | Publish/apply configuration, register one funded mandate, then bind all payroll pages to the selected record |
+| Authenticated Set Up Payroll | 🟡 Registration complete locally | `/payroll/setup`: employer-only live-FX preview, wallet funding, strict mandate/cap verification and idempotent digest-only recovery | Apply the single payroll-registry migration, register one funded mandate, then bind all payroll pages to the selected record |
 | Create Expense Treasury | 🟡 Screen built and able to sign | `/treasury/setup`: treasurer form, USDC funding preview, wallet-signed creation against the published package, AdminCap retained and AgentCap issued, registration retry that never refunds | Add `POST /api/events`, then event selection/routing and event-aware capability mapping |
 | Safety Test UI | 🟡 Mocked with live evidence links | Local preview plus links to two real rejected transactions; API is employer-only | Interactive signed attempts and revocation scenario |
 | Deployment | ✅ Live reads; auth rollout pending | Vercel production and live Sui dashboard verified | Push wallet migration, configure exact HTTPS origin, verify protected writes |

@@ -22,6 +22,7 @@ export type ServerErrorCode =
   | 'payroll_registration_refused'
   | 'payroll_registration_failed'
   | 'payroll_registration_configuration_failed'
+  | 'payroll_setup_verification_failed'
   | 'stream_not_found'
   | 'processing_conflict'
   | 'mandate_read_failed'

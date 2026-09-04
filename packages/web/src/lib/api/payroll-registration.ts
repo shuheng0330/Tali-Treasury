@@ -13,7 +13,7 @@ function describe(error: unknown): string {
       : 'the backend is unreachable';
   }
   if (error.status === 404) {
-    return 'this deployment has no payroll registration endpoint yet';
+    return 'this deployment has not rolled out payroll registration yet';
   }
   if (error.code === 'authentication_required') {
     return 'the wallet session was not accepted';

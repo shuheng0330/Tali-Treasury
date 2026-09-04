@@ -25,6 +25,7 @@ import {
   TaliApiError,
 } from '@/lib/api/client';
 import { dAppKit } from '@/lib/wallet/dapp-kit';
+import { safeWalletError } from '@/lib/wallet-error';
 
 export type WalletSessionStatus =
   | 'loading'
@@ -48,29 +49,6 @@ interface WalletSessionContextValue {
 }
 
 const WalletSessionContext = createContext<WalletSessionContextValue | null>(null);
-
-function safeWalletError(error: unknown): {
-  status: 'expired' | 'wrong_network' | 'rejected' | 'error';
-  message: string;
-} {
-  if (error instanceof TaliApiError && error.code === 'authentication_required') {
-    return { status: 'expired', message: 'Your session expired. Sign in again.' };
-  }
-  const name = error instanceof Error ? error.name.toLowerCase() : '';
-  const message = error instanceof Error ? error.message.toLowerCase() : '';
-  if (name.includes('chain') || message.includes('network') || message.includes('chain')) {
-    return { status: 'wrong_network', message: 'Switch your wallet to Sui Testnet.' };
-  }
-  if (
-    name.includes('reject') ||
-    message.includes('reject') ||
-    message.includes('cancel') ||
-    message.includes('denied')
-  ) {
-    return { status: 'rejected', message: 'Signature request rejected. Try again when ready.' };
-  }
-  return { status: 'error', message: 'Wallet sign-in could not be completed.' };
-}
 
 function SessionController({ children }: { children: React.ReactNode }) {
   const dapp = useDAppKit();

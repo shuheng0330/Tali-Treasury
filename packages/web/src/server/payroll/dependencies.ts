@@ -146,19 +146,27 @@ function runStore(): PayrollRunStore {
 
 let service: PayrollService | undefined;
 let store: PayrollRunStore | undefined;
+let rates: ReturnType<typeof createOpenExchangeRateReader> | undefined;
+
+export function getPayrollRateReader(): ReturnType<typeof createOpenExchangeRateReader> {
+  if (!rates) {
+    const client = createServerSupabaseClient() as never;
+    rates = createOpenExchangeRateReader({
+      appId: () => process.env.OPEN_EXCHANGE_RATES_APP_ID,
+      cache: createSupabaseRateCache(client),
+    });
+  }
+  return rates;
+}
 
 export function getPayrollService(): PayrollService {
   if (!service) {
     store = runStore();
-    const client = createServerSupabaseClient() as never;
     service = createPayrollService({
       runs: store,
       chain: payrollIsLive() ? createSuiPayrollExecutor() : unconfiguredChain(),
       recipients: recipients(),
-      rates: createOpenExchangeRateReader({
-        appId: () => process.env.OPEN_EXCHANGE_RATES_APP_ID,
-        cache: createSupabaseRateCache(client),
-      }),
+      rates: getPayrollRateReader(),
     });
   }
   return service;
