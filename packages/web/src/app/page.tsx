@@ -29,7 +29,10 @@ export default function Page() {
           </span>
           <div className="flex items-center gap-5">
             <span className="eyebrow hidden sm:inline-flex">Sui testnet</span>
-            <Link href="/payroll/setup" className="btn btn--primary h-10 px-5">
+            {/* The generic way in cannot assume the visitor is the employer.
+                The hero button below is labelled "Set up payroll" and may go
+                straight there; this one says only "open the app". */}
+            <Link href="/start" className="btn btn--primary h-10 px-5">
               Open the app
             </Link>
           </div>

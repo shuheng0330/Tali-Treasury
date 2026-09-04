@@ -9,6 +9,14 @@ interface Props {
   mandate: MandateView;
   committed: string;
   onRevoke: () => void;
+  /**
+   * Whether the reader is the event treasurer. The button was previously
+   * enabled for anybody at all — not merely anybody signed in — on a control
+   * that pulls the agent's permission to spend.
+   */
+  canRevoke: boolean;
+  /** Why not, when they are not. Rendered beside the button, not instead. */
+  revokeNotice: string | null;
 }
 
 function Stat({ label, value, note }: { label: string; value: React.ReactNode; note: string }) {
@@ -25,7 +33,15 @@ function daysUntil(atMs: number) {
   return Math.max(0, Math.ceil((atMs - Date.now()) / 86_400_000));
 }
 
-export function MandateHeader({ eventName, organisation, mandate, committed, onRevoke }: Props) {
+export function MandateHeader({
+  eventName,
+  organisation,
+  mandate,
+  committed,
+  onRevoke,
+  canRevoke,
+  revokeNotice,
+}: Props) {
   const status = mandateStatus(mandate);
   const available = subtract(mandate.remainingBudget, committed);
   /* BigInt, not Number: these are base units, and 6 decimals of a large budget
@@ -52,16 +68,21 @@ export function MandateHeader({ eventName, organisation, mandate, committed, onR
           </a>
         </div>
 
-        <div className="flex items-center gap-3">
-          <StatusChip status={status} />
-          <button
-            type="button"
-            onClick={onRevoke}
-            disabled={status !== 'active'}
-            className="btn btn--danger h-9 px-4 text-label"
-          >
-            Revoke mandate
-          </button>
+        <div className="flex flex-col items-end gap-2">
+          <div className="flex items-center gap-3">
+            <StatusChip status={status} />
+            <button
+              type="button"
+              onClick={onRevoke}
+              disabled={status !== 'active' || !canRevoke}
+              className="btn btn--danger h-9 px-4 text-label"
+            >
+              Revoke mandate
+            </button>
+          </div>
+          {revokeNotice ? (
+            <p className="max-w-xs text-right text-caption text-ink-3">{revokeNotice}</p>
+          ) : null}
         </div>
       </div>
 

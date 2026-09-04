@@ -79,6 +79,25 @@ export const SETUP_COPY: AccessCopy = {
   holder: 'the employer wallet',
 };
 
+/**
+ * Reviewing and revoking are both the treasurer's, and both are named
+ * separately for the same reason setup is named apart from running payroll: a
+ * notice that says you cannot "review claims" on the button that pulls the
+ * agent's permission would describe the wrong act.
+ *
+ * The holder is the treasurer recorded on the *event*, not a global one. That
+ * is the authority the server checks, and it differs per event.
+ */
+export const REVIEW_COPY: AccessCopy = {
+  action: 'review claims',
+  holder: "the event treasurer's wallet",
+};
+
+export const REVOKE_COPY: AccessCopy = {
+  action: 'revoke this mandate',
+  holder: "the event treasurer's wallet",
+};
+
 export const EMPLOYEE_COPY: AccessCopy = {
   action: 'withdraw from this stream',
   holder: "the employee's wallet",
