@@ -72,7 +72,7 @@ Last updated: 4 September 2026 (MYT)
   remaining publish work before the pitch;
 - 535 web tests (534 passing, one intentional skip), 45 Sui integration tests,
   and 125 pgTAP assertions passing after the roster integration.
-- 580 web tests passing with one intentional skip, 48 Sui integration tests and
+- 594 web tests passing with one intentional skip, 48 Sui integration tests and
   141 pgTAP assertions passing at the payroll-registration checkpoint.
 
 ## Hosted schema verified

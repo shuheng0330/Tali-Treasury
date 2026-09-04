@@ -29,7 +29,7 @@ the submission time against the organiser channel; older notes used 23:59.
   transaction/object verification and immutable configuration persistence.
 - Registration accepts only a digest, returns `201` for a new snapshot and `200`
   for an exact replay, and never signs or broadcasts.
-- Fresh verification: 48 Sui integration tests passed; 580 web tests passed with
+- Fresh verification: 48 Sui integration tests passed; 594 web tests passed with
   one intentional skip; all 141 pgTAP assertions passed after a complete reset.
 
 ### 4 September roster-backend verification
