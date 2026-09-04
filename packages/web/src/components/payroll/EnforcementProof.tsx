@@ -15,7 +15,7 @@ type Outcome =
   | { kind: 'none' }
   | { kind: 'running' }
   | { kind: 'paid'; digest: string | null }
-  | { kind: 'refused'; abortCode: number | null; message: string }
+  | { kind: 'refused'; abortCode: number | null; message: string; digest: string | null }
   | { kind: 'unavailable'; reason: string };
 
 /**
@@ -91,6 +91,7 @@ export function EnforcementProof({
     setOutcome({
       kind: 'refused',
       abortCode: result.data.abortCode,
+      digest: result.data.digest,
       message:
         result.data.abortCode === 24
           ? `EPF must receive at least ${toDisplay(required.toString(), 6)} USDC on the quoted gross.`
@@ -171,9 +172,16 @@ export function EnforcementProof({
       {outcome.kind === 'refused' ? (
         <p className="rounded-card border border-stop-line bg-stop-soft p-4 text-caption text-stop">
           <span className="font-medium">
-            Refused on abort {outcome.abortCode ?? 24}.
+            {outcome.abortCode === null
+              ? 'Refused before submission.'
+              : `Refused on abort ${outcome.abortCode}.`}
           </span>{' '}
-          {outcome.message} No balance changed.
+          {outcome.message} No USDC balance changed.{' '}
+          {outcome.digest ? (
+            <a className="link" href={`https://suiscan.xyz/testnet/tx/${outcome.digest}`} target="_blank" rel="noreferrer">
+              View the failed transaction
+            </a>
+          ) : null}
         </p>
       ) : null}
 

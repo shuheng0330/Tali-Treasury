@@ -63,8 +63,8 @@ export function fallbackStore(
     create: (input) => attempt((repository) => repository.create(input), true),
     markPaid: (runId, digest) =>
       attempt((repository) => repository.markPaid(runId, digest), true),
-    markFailed: (runId, abortCode) =>
-      attempt((repository) => repository.markFailed(runId, abortCode), true),
+    markFailed: (runId, abortCode, digest) =>
+      attempt((repository) => repository.markFailed(runId, abortCode, digest), true),
     listRecent: (limit) => attempt((repository) => repository.listRecent(limit), false),
     persisted: () => proven && !latched && !usedBackup,
     reason: () => (latched || usedBackup ? missing : null),

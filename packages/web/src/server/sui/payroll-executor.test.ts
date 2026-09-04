@@ -96,7 +96,7 @@ describe('createSuiPayrollExecutor', () => {
     const executor = createSuiPayrollExecutor({ env, operations: ops });
 
     const result = await executor.run(run);
-    expect(result).toMatchObject({ status: 'refused', abortCode: 24 });
+    expect(result).toMatchObject({ status: 'refused', abortCode: 24, digest: '0xdigest' });
     if (result.status === 'refused') {
       expect(result.message).toContain('Nobody was paid');
     }

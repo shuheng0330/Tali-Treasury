@@ -4,15 +4,16 @@ Last updated: 5 September 2026 (MYT)
 
 ## Latest integrated verification
 
-The payroll-registration branch now includes `origin/main` through `a2cda1b`.
+The integration branch now includes `origin/main` through `a0fb6f2`.
 Parallel setup implementations were consolidated around one strict digest-only
 verifier, one immutable registry migration and the canonical
 `POST /api/payroll/register` handler while preserving the latest setup UI. The
-post-merge checks pass: 48 Sui integration tests, 644 web tests with one intentional
-skip, root typecheck, production build and a zero-vulnerability high-severity audit.
-The database replay could not be repeated because Docker Desktop's Linux engine
-was not running; the same 141 pgTAP assertions passed immediately before this
-merge. Payroll publication and hosted migration remain pending.
+post-merge checks pass: 42 Move tests, 48 Sui integration tests, 652 web tests
+(651 passing and one intentional skip), 141 pgTAP assertions, root typecheck,
+production build and a zero-vulnerability audit. A forward migration preserves
+the old local registration read-only and installs the strict registry without a
+database reset. Payroll package v2, setup, one successful run and one abort-24
+refusal are live; salary-stream and hosted-registry verification remain pending.
 
 ## Complete locally
 

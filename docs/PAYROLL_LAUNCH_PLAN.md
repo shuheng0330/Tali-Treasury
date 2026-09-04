@@ -32,7 +32,8 @@ mandate types must not share a creation wizard, capability or backend configurat
 
 At the previously recorded example rate of `1 USD = 4.0416 MYR`, RM30 gross is
 `7.422803 USDC`, the RM36.585 calculated employer cost is approximately
-`9.052109 USDC` after leg-by-leg rounding, and the RM50 budget is `12.371338 USDC`.
+`9.052110 USDC` after enforcing the on-chain rounding floors, and the RM50 budget
+is `12.371338 USDC`.
 These are examples only;
 creation must use the current validated quote. Reserve at most RM10 equivalent of
 the RM50 allocation for the stream demonstration, leaving the valid payroll and
@@ -88,11 +89,12 @@ demo.
 ### Gate 2 — publish and verify the chain configuration
 
 - ✅ Upgrade the payroll module and record package v2, the transaction and UpgradeCap.
-- Create a `PayrollMandate` with the approved employee and Testnet stand-in
+- ✅ Create a `PayrollMandate` with the approved employee and Testnet stand-in
   recipients. Deliver its `PayrollCap` to the intended server signer.
 - Open a salary stream whose accrual window overlaps rehearsal and presentation.
-- Record public object IDs and successful/refused transaction evidence. Never
-  commit a private key or recovery phrase.
+- Record public object IDs and successful/refused transaction evidence. Setup,
+  successful-run and abort-24 refusal evidence are complete; stream evidence remains.
+  Never commit a private key or recovery phrase.
 
 ### Gate 3 — implement authenticated Set Up Payroll
 
@@ -122,8 +124,8 @@ demo.
 
 ### Gate 5 — prove and freeze
 
-- Verify one successful payroll, one contribution refusal and one employee stream
-  withdrawal from a fresh browser.
+- ✅ Verify one successful payroll and one contribution refusal. One employee
+  stream withdrawal from a fresh browser remains.
 - Check database records, Sui balances and explorer links after finality.
 - Record a backup demo video and update deployment evidence.
 - Freeze nonessential features. Dynamic roster changes, OT, PCB/income tax, batch

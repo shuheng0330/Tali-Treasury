@@ -96,8 +96,12 @@ describe('createSupabasePayrollRunRepository', () => {
     expect(paid.calls['eq:id']).toBe(row.id);
 
     const failed = client({ data: { ...row, status: 'failed', abort_code: 24 }, error: null });
-    await createSupabasePayrollRunRepository(failed as never).markFailed(row.id, 24);
-    expect(failed.calls.update).toEqual({ status: 'failed', abort_code: 24 });
+    await createSupabasePayrollRunRepository(failed as never).markFailed(row.id, 24, '0xfailed');
+    expect(failed.calls.update).toEqual({
+      status: 'failed',
+      abort_code: 24,
+      digest: '0xfailed',
+    });
   });
 
   it('reads recent runs newest first', async () => {

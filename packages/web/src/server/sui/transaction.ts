@@ -1,7 +1,7 @@
 import type { SuiGrpcClient } from '@mysten/sui/grpc';
 import { TransactionError } from '@mysten/sui/client';
 import type { Ed25519Keypair } from '@mysten/sui/keypairs/ed25519';
-import type { Transaction } from '@mysten/sui/transactions';
+import { Transaction } from '@mysten/sui/transactions';
 
 /**
  * Signing, submitting and reading the outcome of a Move call.
@@ -74,6 +74,38 @@ export async function signTransaction(input: {
 }): Promise<PreparedTransaction> {
   input.transaction.setSenderIfNotSet(input.keypair.toSuiAddress());
   const bytes = await input.transaction.build({ client: input.client });
+  const { signature } = await input.keypair.signTransaction(bytes);
+  return { bytes, signature };
+}
+
+/**
+ * Builds an intentionally failing safety transaction without executing the
+ * gRPC resolver's preflight check. The kind is still resolved by Sui, but the
+ * complete transaction is built offline with a bounded gas budget so the
+ * actual Move refusal can be recorded on Testnet.
+ */
+export async function signTransactionForRecordedRefusal(input: {
+  transaction: Transaction;
+  keypair: Ed25519Keypair;
+  client: SuiGrpcClient;
+}): Promise<PreparedTransaction> {
+  const sender = input.keypair.toSuiAddress();
+  input.transaction.setSenderIfNotSet(sender);
+  const kind = await input.transaction.build({ client: input.client, onlyTransactionKind: true });
+  const transaction = Transaction.fromKind(kind);
+  const gasBudget = 50_000_000n;
+  const [gasPrice, coins] = await Promise.all([
+    input.client.getReferenceGasPrice(),
+    input.client.listCoins({ owner: sender, coinType: '0x2::sui::SUI', limit: 10 }),
+  ]);
+  const gas = coins.objects[0];
+  if (!gas) throw new Error('The backend signer has no SUI gas coin');
+
+  transaction.setSender(sender);
+  transaction.setGasBudget(gasBudget);
+  transaction.setGasPrice(BigInt(gasPrice.referenceGasPrice));
+  transaction.setGasPayment([{ objectId: gas.objectId, version: gas.version, digest: gas.digest }]);
+  const bytes = await transaction.build();
   const { signature } = await input.keypair.signTransaction(bytes);
   return { bytes, signature };
 }
