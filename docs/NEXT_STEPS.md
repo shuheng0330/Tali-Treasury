@@ -14,9 +14,11 @@ currencies remain unsupported.
 
 ## 1. Lock the payroll demo configuration
 
-- Choose one employee wallet, employer wallet and server signer.
+- ✅ Use the configured Slush employer, `tali-member` employee, server signer and
+  separate Testnet-only EPF/SOCSO/EIS stand-ins.
 - Support one employee class for the demo; do not imply universal statutory coverage.
-- Use the agreed RM30 source wage and RM50-equivalent total ceiling. Convert both
+- ✅ Fund the employer with 12.640845 Testnet USDC and 0.1 SUI. Use the agreed RM30
+  source wage and RM50-equivalent total ceiling. Convert both
   through one current configured MYR/USD quote; include statutory legs and a
   distinct stream allocation of at most RM10 equivalent.
 - Time the stream so visible accrual occurs during rehearsal and presentation.
