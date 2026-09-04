@@ -32,7 +32,8 @@ mandate types must not share a creation wizard, capability or backend configurat
 
 At the previously recorded example rate of `1 USD = 4.0416 MYR`, RM30 gross is
 `7.422803 USDC`, the RM36.585 calculated employer cost is approximately
-`9.052109 USDC` after leg-by-leg rounding, and the RM50 budget is `12.371338 USDC`.
+`9.052110 USDC` after enforcing the on-chain rounding floors, and the RM50 budget
+is `12.371338 USDC`.
 These are examples only;
 creation must use the current validated quote. Reserve at most RM10 equivalent of
 the RM50 allocation for the stream demonstration, leaving the valid payroll and

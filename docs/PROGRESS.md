@@ -36,8 +36,12 @@ the submission time against the organiser channel; older notes used 23:59.
 - Fixed the payroll preview route to use the authenticated employer session
   instead of the disabled insecure-demo identity gate, allowing the live USDC
   calculation while keeping wrong-wallet and cross-origin requests blocked.
-- Fresh verification: 42 Move tests, 45 Sui integration tests, 612 web tests
-  (611 passing and one intentional skip), 132 pgTAP assertions, root typecheck,
+- Fixed independent FX rounding that left the EIS transfer one micro-USDC below
+  its immutable floor. The quote now adds only the required rounding difference
+  to the employer contribution; the previously failing RM30 run passes a real
+  Testnet simulation without broadcasting a payment.
+- Fresh verification: 42 Move tests, 45 Sui integration tests, 613 web tests
+  (612 passing and one intentional skip), 132 pgTAP assertions, root typecheck,
   and the production build all passed.
 - Fast-forwarded to `main` at `9f6a07f`; wallet sign-in now surfaces sanitized
   backend failures before applying wallet/network heuristics.
