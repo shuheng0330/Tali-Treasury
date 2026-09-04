@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 import {
   approvalBlockReason,
   reviewDialogCopy,
+  reviewRequestForClaim,
   validateReviewReason,
 } from './review-actions';
 
@@ -27,6 +28,20 @@ const claim = {
 } as Claim;
 
 describe('treasurer review UI rules', () => {
+  it('submits the exact displayed quote ID when approving a MYR claim', () => {
+    const quoted = {
+      ...claim,
+      analysis: { ...claim.analysis!, currency: 'MYR' },
+      fxQuote: {
+        id: '33333333-3333-4333-8333-333333333333',
+      } as Claim['fxQuote'],
+    };
+
+    expect(reviewRequestForClaim(quoted, 'approve')).toEqual({
+      action: 'approve',
+      quoteId: '33333333-3333-4333-8333-333333333333',
+    });
+  });
   it('blocks approval for non-USDC claims', () => {
     expect(
       approvalBlockReason({

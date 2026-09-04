@@ -2,6 +2,7 @@ import type {
   Claim,
   ClaimReviewAction,
   PolicyDecision,
+  ReviewClaimRequest,
 } from '@tali/shared';
 import { claimPaymentAmount } from '@tali/shared';
 
@@ -34,6 +35,22 @@ export function validateReviewReason(
   if (reason !== reason.trim()) return 'Remove spaces from the start or end.';
   if (reason.length > 500) return 'Keep the reason to 500 characters or fewer.';
   return null;
+}
+
+/** Builds the exact payload sent by the treasury review screen. */
+export function reviewRequestForClaim(
+  claim: Claim,
+  action: ClaimReviewAction,
+  reason?: string,
+): ReviewClaimRequest {
+  return action === 'approve'
+    ? {
+        action: 'approve',
+        ...(claim.analysis?.currency === 'MYR' && claim.fxQuote?.id
+          ? { quoteId: claim.fxQuote.id }
+          : {}),
+      }
+    : { action, reason: reason ?? '' };
 }
 
 export function reviewDialogCopy(action: ClaimReviewAction): {

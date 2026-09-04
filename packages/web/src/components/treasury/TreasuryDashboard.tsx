@@ -22,6 +22,7 @@ import { RevokeDialog } from './RevokeDialog';
 import { ReviewActionDialog } from './ReviewActionDialog';
 import { PaymentReconciliationStatus } from './PaymentReconciliationStatus';
 import { useWalletSession } from '@/components/wallet/WalletSessionProvider';
+import { reviewRequestForClaim } from '@/lib/review-actions';
 
 type Tab = 'review' | 'paid' | 'rejected' | 'all';
 
@@ -174,13 +175,14 @@ export function TreasuryDashboard({
   }
 
   async function submitReview(reason?: string) {
-    if (!reviewing) return;
+    if (!reviewing || !reviewingClaim) return;
     setReviewPending(true);
     setReviewError(null);
-    const request =
-      reviewing.action === 'approve'
-        ? { action: 'approve' as const }
-        : { action: reviewing.action, reason: reason ?? '' };
+    const request = reviewRequestForClaim(
+      reviewingClaim,
+      reviewing.action,
+      reason,
+    );
     const result = await tryReviewClaim(reviewing.claimId, request);
     setReviewPending(false);
     if (result.data === null) {
