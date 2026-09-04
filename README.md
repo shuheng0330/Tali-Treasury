@@ -23,7 +23,7 @@ Status words are intentionally precise:
 | Move treasury and 17 contract tests | **Complete locally** | `sui move test` |
 | Published package | **Live** | Package `0x7be8…c523` on Testnet |
 | Official Testnet USDC mandate | **Live** | 20 USDC funded; 5 USDC maximum per claim |
-| Valid reimbursement | **Live** | 3 USDC paid; 17 USDC remains |
+| Valid reimbursement | **Live** | 4 USDC total paid; 16 USDC remained after the 3 September smoke test |
 | Overspend and recipient protections | **Live** | Both invalid transactions rejected on-chain |
 | TypeScript Sui integration | **Complete locally** | Reads, PTB builders, amount helpers, error mapping |
 | Treasurer mandate dashboard | **Live** (read-only) | Server reads the current mandate from Sui Testnet |
@@ -31,14 +31,19 @@ Status words are intentionally precise:
 | Claim policy processing | **Complete locally** | Treasurer action invokes the server evaluator and persists the decision |
 | Treasurer review actions | **Complete locally** | Real approve/reject/correction API and UI; eligible USDC approval enters the guarded testnet signer |
 | Safe payment reconciliation | **Complete locally** | Digest stored before broadcast; explicit status checks never sign or resubmit |
+| MYR → USDC reimbursement quotes | **Live via local app** | RM6 → 1.484561 USDC browser payment verified; hosted rollout pending |
+| Claim outcomes | **Complete locally** | Paid with Auto-paid / Paid after review chips; Rejected tab; correction/rejection reasons on both screens |
+| Treasurer Create event screen | **Pending** | Mandates and events currently created through setup tools; see [next steps](docs/PRODUCT_NEXT_STEPS.md) |
 | Revoke and Safety Test interactions | **Mocked** | Clearly labelled previews; no browser signing or state changes |
 | Gemini receipt analysis and Supabase claims | **Complete locally; rollout pending** | Private drafts, authenticated access and 91 pgTAP assertions |
-| Deterministic policy and backend agent signing | **Complete locally** | Testnet-only, treasurer-triggered, race-safe and fake-operation verified; no transaction broadcast in this increment |
+| Deterministic policy and backend agent signing | **Live via local app** | Native USDC payment/recovery and manually approved MYR reimbursement verified on Testnet |
 | Wallet connection and live UI writes | **Complete locally** | Testnet connect, explicit sign-in, one-hour HTTP-only session and sign-out |
 | Web hosting | **Live** | [`tali-treasury.vercel.app`](https://tali-treasury.vercel.app) |
 | Submission pack | **Pending** | Final hackathon phase |
 
 The detailed team checklist lives in [`docs/PROGRESS.md`](docs/PROGRESS.md).
+Upcoming correction/resubmission and authenticated event creation are specified in
+[`docs/PRODUCT_NEXT_STEPS.md`](docs/PRODUCT_NEXT_STEPS.md).
 
 ## Live Testnet proof
 
@@ -50,8 +55,16 @@ The detailed team checklist lives in [`docs/PROGRESS.md`](docs/PROGRESS.md).
 | Rejected 15 USDC overspend | [`5fMDNz…2PNpU`](https://suiscan.xyz/testnet/tx/5fMDNz9dAxJFiamg5Bi5iXnPjnHv2HTUB3hv2wJ2PNpU) |
 | Rejected unknown recipient | [`2htVB5…GDnk5e`](https://suiscan.xyz/testnet/tx/2htVB5NJCxhz1QXQtLGDjJ6kLVAwit6MLqzghzGDnk5e) |
 
-The current mandate began with `20 USDC`, allows at most `5 USDC` per claim,
-has paid `3 USDC`, and has `17 USDC` remaining.
+The original mandate began with `20 USDC`, allows at most `5 USDC` per claim,
+had paid `4 USDC`, and had `16 USDC` remaining after the 3 September payment
+recovery test. Refresh on-chain state for the current balance. See the
+[reconciliation evidence](docs/LOCAL_PAYMENT_RECONCILIATION_SMOKE.md).
+
+The separate [single-wallet local demo](docs/LOCAL_SINGLE_WALLET_DEMO.md) began with
+10 USDC and paid 1.484561 USDC for an RM6 receipt through the browser, leaving
+8.515439 USDC. Payment: `J6fWBNa7RQXiLaVVK4ZhZSNphggNLq312HKRyhRbZQq`.
+The same Slush wallet submits and reviews in this demo. This does not establish
+separation of duties or completion of the hosted flow.
 
 ## How the pieces fit
 
@@ -73,7 +86,8 @@ Server-only testnet signer (complete locally)
              v
 Sui Testnet Mandate<USDC> (live enforcement and audit events)
 
-Non-USDC receipts stay in review pending a trusted conversion quote. Eligible
+MYR receipts receive a saved live-reference quote and require explicit human
+approval of the USDC amount. Other non-USDC currencies remain unsupported. Eligible
 USDC review claims can be approved by the treasurer and enter the atomic payment
 flow; rejection and correction are durably audited.
 ```
@@ -239,13 +253,13 @@ Backend:
 - Re-run deterministic policy checks before building and signing a payment.
 - Store receipt hashes and private receipt objects outside the chain.
 
-Immediate next vertical slice:
+Immediate hosted rollout (the local payment flow is already verified):
 
 1. Apply migration `20260901030000`, configure the hosted origin and verify both
    wallet roles manually.
 2. Configure server-only Gemini and Supabase credentials in the deployment.
-3. Add member correction/resubmission; trusted MYR-to-USDC quotation remains the
-   teammate-owned parallel increment.
+3. Roll out and verify [MYR quotes](docs/MYR_USDC_QUOTES.md) with the backend/UI
+   teammates. Member correction/resubmission remains pending.
 4. Configure the testnet agent key and owned `AgentCap` server-side.
 5. With separate authorization, run one small funded smoke claim and record its
    real digest; automated tests intentionally never broadcast.
@@ -253,7 +267,10 @@ Immediate next vertical slice:
 ## Documentation index
 
 - [`docs/API.md`](docs/API.md) — authenticated session, receipt draft and claim endpoint contracts.
+- [`docs/MYR_USDC_QUOTES.md`](docs/MYR_USDC_QUOTES.md) — live-reference valuation, free-plan setup, safeguards and rollout.
 - [`docs/PROGRESS.md`](docs/PROGRESS.md) — authoritative team status and next work.
+- [`docs/PRODUCT_NEXT_STEPS.md`](docs/PRODUCT_NEXT_STEPS.md) — claim clarity, correction/resubmission and authenticated Create event acceptance criteria.
+- [`docs/LOCAL_SINGLE_WALLET_DEMO.md`](docs/LOCAL_SINGLE_WALLET_DEMO.md) — separate demo mandate and verified browser MYR payment.
 - [`docs/NEXT_STEPS.md`](docs/NEXT_STEPS.md) — production implementation order and acceptance criteria.
 - [`docs/HOSTED_SUPABASE_VERIFICATION.md`](docs/HOSTED_SUPABASE_VERIFICATION.md) — hosted schema verification scope and reproducible checks.
 - [`docs/OWNERSHIP.md`](docs/OWNERSHIP.md) — path ownership and coordination rules.

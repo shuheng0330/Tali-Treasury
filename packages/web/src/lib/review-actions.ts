@@ -2,17 +2,23 @@ import type {
   Claim,
   ClaimReviewAction,
   PolicyDecision,
+  ReviewClaimRequest,
 } from '@tali/shared';
+import { claimPaymentAmount } from '@tali/shared';
 
 export function approvalBlockReason(
-  claim: Pick<Claim, 'analysis'>,
+  claim: Pick<Claim, 'id' | 'eventId' | 'submitter' | 'amount' | 'analysis' | 'fxQuote'>,
   decision: PolicyDecision,
 ): string | null {
   /* Only when the currency is actually known and wrong. `analysis` being
      absent is a different problem, and naming this one puts a tooltip about
      currency beside a row that renders "USDC". */
-  if (claim.analysis && claim.analysis.currency !== 'USDC') {
-    return 'Only a USDC claim can be paid. This one needs a conversion quote first.';
+  if (claim.analysis?.currency === 'MYR') {
+    if (claimPaymentAmount(claim, Date.now()) === null) {
+      return 'The MYR-to-USDC quote expired. Refresh the quote and review again.';
+    }
+  } else if (claim.analysis && claim.analysis.currency !== 'USDC') {
+    return 'This claim needs an explicit conversion quote before it can be paid.';
   }
   if (decision.checks.some((check) => check.onChain && !check.passed)) {
     return 'This claim fails an immutable on-chain mandate check.';
@@ -29,6 +35,22 @@ export function validateReviewReason(
   if (reason !== reason.trim()) return 'Remove spaces from the start or end.';
   if (reason.length > 500) return 'Keep the reason to 500 characters or fewer.';
   return null;
+}
+
+/** Builds the exact payload sent by the treasury review screen. */
+export function reviewRequestForClaim(
+  claim: Claim,
+  action: ClaimReviewAction,
+  reason?: string,
+): ReviewClaimRequest {
+  return action === 'approve'
+    ? {
+        action: 'approve',
+        ...(claim.analysis?.currency === 'MYR' && claim.fxQuote?.id
+          ? { quoteId: claim.fxQuote.id }
+          : {}),
+      }
+    : { action, reason: reason ?? '' };
 }
 
 export function reviewDialogCopy(action: ClaimReviewAction): {

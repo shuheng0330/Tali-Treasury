@@ -4,7 +4,8 @@ import { useEffect, useRef, useState } from 'react';
 import type { Claim, ClaimReviewAction } from '@tali/shared';
 
 import { Money } from '../Money';
-import { reviewDialogCopy, validateReviewReason } from '../../lib/review-actions';
+import { approvalBlockReason, reviewDialogCopy, validateReviewReason } from '../../lib/review-actions';
+import { FxQuoteSummary } from '../claim/FxQuoteSummary';
 
 interface Props {
   action: ClaimReviewAction;
@@ -28,6 +29,12 @@ export function ReviewActionDialog({
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const copy = reviewDialogCopy(action);
   const needsReason = action !== 'approve';
+  const [, tick] = useState(0);
+  useEffect(() => {
+    const timer = setInterval(() => tick(value => value + 1), 1000);
+    return () => clearInterval(timer);
+  }, []);
+  const blocked = action === 'approve' && claim.decision ? approvalBlockReason(claim, claim.decision) : null;
 
   useEffect(() => {
     inputRef.current?.focus();
@@ -39,6 +46,7 @@ export function ReviewActionDialog({
   }, [onCancel, pending]);
 
   function confirm() {
+    if (blocked) return;
     const error = validateReviewReason(action, reason);
     setValidationError(error);
     if (error) return;
@@ -52,7 +60,7 @@ export function ReviewActionDialog({
       aria-labelledby="review-action-title"
       className="fixed inset-0 z-50 flex items-center justify-center bg-ink/40 p-5"
     >
-      <div className="flex w-full max-w-lg flex-col gap-5 rounded-modal border border-rule bg-surface p-6 shadow-float">
+      <div className="flex max-h-[90dvh] w-full max-w-lg flex-col gap-5 overflow-y-auto rounded-modal border border-rule bg-surface p-6 shadow-float">
         <div className="flex flex-col gap-1">
           <span className="eyebrow">Treasurer decision</span>
           <h2 id="review-action-title" className="text-heading">
@@ -73,6 +81,8 @@ export function ReviewActionDialog({
           />
         </div>
 
+        <FxQuoteSummary claim={claim} />
+        {blocked ? <p role="alert" className="text-body text-no">{blocked}</p> : null}
         <p
           className={`rounded-card border p-4 text-caption ${
             action === 'approve'
@@ -128,7 +138,7 @@ export function ReviewActionDialog({
           </button>
           <button
             type="button"
-            disabled={pending}
+            disabled={pending || blocked !== null}
             onClick={confirm}
             className={`btn h-10 px-5 text-label ${
               action === 'reject' ? 'btn--danger' : 'btn--primary'

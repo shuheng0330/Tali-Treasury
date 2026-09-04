@@ -89,6 +89,8 @@ export interface ReceiptAnalysis {
 }
 
 export type RuleId =
+  | 'fx_quote_valid'
+  | 'fx_quote_approval'
   | 'per_claim_max'
   | 'total_budget'
   | 'recipient_allowlist'
@@ -169,6 +171,8 @@ export interface ClaimReview {
 }
 
 export interface Claim {
+  /** Server-issued valuation; original receipt amount/currency remain unchanged. */
+  fxQuote?: import('./fx.js').FxQuote | null;
   id: string;
   eventId: string;
   submitter: Address;

@@ -84,7 +84,7 @@ function GlyphMark({ glyph }: { glyph: Glyph }) {
   );
 }
 
-export function StatusChip({ status, className = '' }: { status: ChipStatus; className?: string }) {
+export function StatusChip({ status, label, className = '' }: { status: ChipStatus; label?: string; className?: string }) {
   const style = STYLES[status];
 
   return (
@@ -94,7 +94,7 @@ export function StatusChip({ status, className = '' }: { status: ChipStatus; cla
       } ${style.className} ${className}`}
     >
       <GlyphMark glyph={style.glyph} />
-      {style.label}
+      {label ?? style.label}
     </span>
   );
 }

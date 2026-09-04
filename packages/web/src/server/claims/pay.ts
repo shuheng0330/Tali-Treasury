@@ -1,4 +1,4 @@
-import type { Claim, PaymentResult } from '@tali/shared';
+import { claimPaymentAmount, type Claim, type PaymentResult } from '@tali/shared';
 
 import { evaluatePolicy } from '../policy/evaluate';
 import { ServerError } from '../errors';
@@ -62,14 +62,17 @@ export function createPayApprovedClaimService(deps: {
       );
     }
 
-    if (context.claim.analysis?.currency !== 'USDC') {
-      /* The amount is denominated in something the mandate does not hold, and
-         no conversion quote exists anywhere in this codebase. Paying it would
-         send that many USDC for a receipt in another currency. */
+    const paymentAmount = claimPaymentAmount(context.claim);
+    if (
+      paymentAmount === null ||
+      (context.claim.analysis?.currency === 'MYR' &&
+        (context.claim.review?.action !== 'approve' ||
+          context.claim.fxQuote?.mandateId !== context.event.mandateId))
+    ) {
       throw new ServerError(
         'processing_conflict',
         409,
-        'Only a USDC claim can be paid. This one needs an explicit conversion quote first.',
+        'The claim needs an explicit conversion quote and approval before payment.',
       );
     }
 
@@ -88,7 +91,14 @@ export function createPayApprovedClaimService(deps: {
     }
 
     const decision = evaluatePolicy({
-      claim: context.claim,
+      claim: {
+        ...context.claim,
+        amount: paymentAmount,
+        analysis: context.claim.analysis
+          ? { ...context.claim.analysis, currency: 'USDC' }
+          : null,
+        fxQuote: null,
+      },
       event: context.event,
       mandate,
       exactDuplicate: false,
@@ -146,7 +156,7 @@ export function createPayApprovedClaimService(deps: {
           claimId: request.claimId,
           mandateId: context.event.mandateId,
           recipient: context.claim.submitter,
-          amount: context.claim.amount,
+          amount: paymentAmount,
           budgetBefore: mandate.remainingBudget,
         },
         /* Written down before the transaction is submitted. Without the digest
