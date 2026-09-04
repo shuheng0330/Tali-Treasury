@@ -2,13 +2,22 @@
 
 Status update: 3 September 2026 (MYT)
 
+> **4 September direction:** Tali is payroll-first. The launch target is an
+> authenticated **Set Up Payroll** flow backed by `PayrollMandate`, followed by one
+> real payroll, one atomic policy refusal and one employee stream withdrawal.
+> **Create Expense Treasury** remains a separate reimbursement flow backed by the
+> existing `Mandate`. See [PAYROLL_LAUNCH_PLAN.md](PAYROLL_LAUNCH_PLAN.md) and
+> [PROGRESS.md](PROGRESS.md). The percentages and task list below are retained only
+> as the historical 1 September assessment.
+
 The percentage estimates below are a historical 1 September snapshot, not current
 completion claims. The local browser flow now paid RM6 as 1.484561 Testnet USDC;
 wallet auth, live quotes, backend signing and reconciliation have been verified.
 Paid/rejected tabs, review reasons and compact claim summaries are implemented.
-Use [PROGRESS.md](PROGRESS.md) for current status and
-[PRODUCT_NEXT_STEPS.md](PRODUCT_NEXT_STEPS.md) for correction/resubmission,
-authenticated Create event, hosted verification and submission tasks.
+Use [PROGRESS.md](PROGRESS.md) for current status,
+[PAYROLL_LAUNCH_PLAN.md](PAYROLL_LAUNCH_PLAN.md) for the payroll release sequence,
+and [PRODUCT_NEXT_STEPS.md](PRODUCT_NEXT_STEPS.md) for the separate setup flows and
+deferred claim work.
 
 ## Historical 1 September assessment
 

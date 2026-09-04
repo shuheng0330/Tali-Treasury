@@ -1,10 +1,10 @@
-# Next implementation plan
+# Next implementation plan — payroll-first
 
-3 September update: local wallet authentication, MYR quotes, browser-approved
-Testnet payment and payment recovery are verified. Paid/rejected views and visible
-review reasons are now implemented. Hosted rollout remains separate. See
-[current progress](PROGRESS.md) and [product acceptance criteria](PRODUCT_NEXT_STEPS.md)
-for member correction/resubmission and the authenticated Create event workflow.
+4 September decision: the primary employer journey is **Set Up Payroll**. It creates
+and funds a `PayrollMandate`. **Create Expense Treasury** remains a separate journey
+using the existing reimbursement `Mandate`. See [current progress](PROGRESS.md),
+[payroll launch plan](PAYROLL_LAUNCH_PLAN.md) and
+[product acceptance criteria](PRODUCT_NEXT_STEPS.md).
 
 The current safe boundary is: an authenticated member can submit a receipt, the
 treasurer can process and review it, eligible USDC approval can start payment, and
@@ -12,7 +12,59 @@ an uncertain payment can be reconciled by its stored digest without retrying.
 MYR receipts always require explicit approval of a saved quote. Other non-USDC
 currencies remain unsupported.
 
-## 1. Authenticated identity and analysis binding — complete locally
+## 1. Lock the payroll demo configuration
+
+- Choose one employee wallet, employer wallet and server signer.
+- Support one employee class for the demo; do not imply universal statutory coverage.
+- Choose a scaled wage, per-run cap and budget together. Include statutory legs,
+  stream commitments, rehearsals and gas.
+- Time the stream so visible accrual occurs during rehearsal and presentation.
+
+Acceptance: every teammate uses the same addresses, wage and object plan, and the
+budget can cover the complete demonstrated flow more than once.
+
+## 2. Publish and configure payroll on Testnet
+
+- Publish/upgrade the payroll Move module.
+- Create and fund `PayrollMandate<USDC>` and deliver `PayrollCap` to the intended
+  signer.
+- Open the employee stream and record all public identifiers and explorer evidence.
+- Include `PAYROLL_PACKAGE_ID`; configuration is incomplete without it.
+
+Acceptance: direct chain reads show the expected employer, employee, policy,
+budget, capability ownership and stream state.
+
+## 3. Authenticated Set Up Payroll
+
+- Build `/payroll/setup` as the primary CTA.
+- Preview immutable rules, Testnet funding and gas before wallet signing.
+- Verify the finalized transaction server-side before registration.
+- Make registration idempotent and recoverable without creating a second mandate.
+- Replace sample employee data across payroll, proof and earnings screens.
+
+Acceptance: an authorized employer can create and reopen the registered payroll;
+a cancelled signature creates nothing; a forged digest or unauthorized wallet is
+rejected; registration can be retried without another funding transaction.
+
+## 4. Authorization and end-to-end payroll proof
+
+- Employer-only: payroll setup, payroll run and mandate revocation.
+- Employee-only: salary-stream withdrawal for that employee.
+- Employer-only and bounded: any interactive safety transaction.
+- Verify a successful payroll, deficient-contribution refusal and stream withdrawal.
+
+Acceptance: expected balances change exactly once for success, no balance changes
+for the refusal, unauthorized writes return 403, and every displayed digest opens
+the matching Testnet transaction.
+
+## 5. Preserve the expense treasury as a separate flow
+
+The receipt flow below is already complete locally and remains the secondary demo.
+Do not move its `AdminCap`, `AgentCap`, categories, claim cap or recipients into
+payroll setup. Later, **Create Expense Treasury** should independently create its
+own reimbursement mandate and verified event registration.
+
+### Authenticated identity and analysis binding — complete locally
 
 - Issue a short-lived wallet challenge with a one-time nonce.
 - Verify the signed challenge server-side and create an HTTP-only session.
@@ -25,7 +77,7 @@ member/treasurer access is checked from the session; invalid cookies cannot fall
 back; and atomic claim failure leaves the draft usable. Rollout still requires the
 hosted migration, exact HTTPS origin configuration, and manual two-role testing.
 
-## 2. MYR-to-USDC quote — complete locally; hosted verification pending
+### MYR-to-USDC quote — complete locally; hosted verification pending
 
 - Add original amount/currency and payout amount/currency as separate fields.
 - Store rate, provider, quoted time, expiry and integer rounding result.
@@ -36,7 +88,7 @@ hosted migration, exact HTTPS origin configuration, and manual two-role testing.
 Acceptance: no floating-point money, no implicit 1:1 conversion, deterministic
 rounding tests, and an expired or missing quote can never reach auto-pay.
 
-## 3. Treasurer review actions — complete locally
+### Treasurer review actions — complete locally
 
 - Implement approve, reject and request-correction endpoints with compare-and-set
   transitions and an audit event for every action.
@@ -46,7 +98,7 @@ rounding tests, and an expired or missing quote can never reach auto-pay.
 Acceptance: invalid transitions return 409, repeated requests are idempotent, and
 reviewing one claim cannot update another claim.
 
-## 4. Payment orchestration and reconciliation — complete locally
+### Payment orchestration and reconciliation — complete locally
 
 - Reserve budget before signing concurrent approved claims.
 - Move claims through `approved → paying → paid` or `payment_failed`.
@@ -60,10 +112,10 @@ finality remains `paying`, exact-digest checks settle terminal results once, and
 neither a not-found transaction nor an RPC failure can trigger a second payment.
 The funded Testnet smoke remains a separately authorized rollout check.
 
-## 5. Demo proof and submission
+## 6. Demo proof and submission
 
-- Wire one interactive safety refusal and one valid counterfactual payment.
-- Record a member-flow video and the adversarial safety-test video.
+- Record the payroll run, on-chain refusal and employee withdrawal.
+- Retain a short expense-claim demonstration as secondary proof.
 - Finish the deck, Devfolio copy, AI-tool disclosure and rehearsal.
 
 Acceptance: every visible digest opens in an explorer, all simulated controls remain

@@ -1,4 +1,4 @@
-# Product next steps — 3 September 2026
+# Product next steps — 4 September 2026
 
 Current evidence and subsystem status: [PROGRESS.md](PROGRESS.md).
 The local browser journey has paid RM6 as 1.484561 Testnet USDC. Hosted rollout
@@ -34,11 +34,33 @@ Owner: frontend + backend.
 Reason visibility and the first layout simplification are complete. Editing and
 resubmission are pending; the current UI directs the member to their treasurer.
 
-## Next: authenticated Create event inside the product
+## Primary: authenticated Set Up Payroll
 
 Owner: frontend + backend, with Sui integration support.
 
-1. Add a treasurer entry point and form: name, organisation, categories, event dates,
+1. Add `/payroll/setup` with employer, employee, scaled wage, budget, maximum per
+   run, expiry and statutory-recipient configuration.
+2. Preview Testnet funding and immutable rules, then use the existing
+   `buildCreatePayrollMandateTransaction` through the connected employer wallet.
+3. Verify finality, sender, package, coin type, mandate fields and `PayrollCap`
+   ownership in a protected backend registration endpoint.
+4. Make registration idempotent by transaction and mandate. Recover a successful
+   chain creation whose database registration failed without funding twice.
+5. Route payroll, proof, history and earnings from the registered payroll. Remove
+   `sampleStaff` from the live journey.
+6. Require the employer for setup/run/revoke and the registered employee for stream
+   withdrawal. A connected wallet is not automatically an employer.
+7. Verify one successful payroll, one atomic refusal and one employee withdrawal.
+
+This is the primary launch flow. It creates a `PayrollMandate` and must not create
+or modify the reimbursement `Mandate`.
+
+## Separate follow-up: Create Expense Treasury
+
+Owner: frontend + backend, with Sui integration support.
+
+1. Label this action **Create Expense Treasury**, not Set Up Payroll. Add a form for
+   name, organisation, categories, event dates,
    USDC budget, per-claim cap, approved recipients, and configured backend agent.
    Establish who is permitted to create events; a wallet session alone does not
    grant organisation-level treasurer permissions.
@@ -60,16 +82,16 @@ Owner: frontend + backend, with Sui integration support.
    retry after registration failure, and a wallet-created event's reimbursement.
 
 This feature is planned, not implemented by the claim-history change. Event records
-hold metadata and roles; the Sui mandate holds USDC. Creating an event should be
-possible from the app without visiting an explorer or running setup commands.
+hold metadata and roles; the Sui reimbursement mandate holds USDC. It remains
+separate so payroll employees, statutory recipients, `PayrollCap` and salary rules
+cannot be confused with claim recipients, `AgentCap` or per-claim policy.
 
 ## Demo release priorities
 
-1. Review and commit the local UI/configuration/evidence changes.
-2. Apply the latest hosted schema, configure the hosted event and server secrets,
-   and verify wallet sign-in and receipt flow at the exact HTTPS origin.
-3. Fix the recorded gas reporting discrepancy; verify hosted payment/reconciliation
-   with an explicitly authorized Testnet payment.
-4. Record the successful payment and a rejection/correction example. Explain the
-   single-wallet roles, Testnet funds, quote assumptions, and preview-only features.
-5. Finish the submission video, deck, disclosures and rehearsal.
+1. Lock and fund the single-employee payroll configuration.
+2. Publish/configure payroll and record the real objects.
+3. Build authenticated Set Up Payroll and close payroll write permissions.
+4. Record successful payroll, atomic refusal and employee withdrawal evidence.
+5. Keep the proven claim journey available; defer correction editing and dynamic
+   expense-treasury creation if they threaten the payroll proof.
+6. Finish the submission video, deck, disclosures and rehearsal.
