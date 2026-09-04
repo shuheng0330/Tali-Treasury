@@ -300,7 +300,8 @@ convention, not concealment. Tool use is disclosed here as MUBA's rules require
 and does not affect judging.
 
 The submission pack — verified evidence, the three-minute demo script and the
-Q and A preparation — is in [docs/SUBMISSION.md](docs/SUBMISSION.md).
+Q and A preparation — is in [docs/SUBMISSION.md](docs/SUBMISSION.md), and the
+slides that bookend the demo are in [docs/DECK.md](docs/DECK.md).
 
 ## What's new this increment
 
