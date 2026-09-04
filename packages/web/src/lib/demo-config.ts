@@ -16,8 +16,13 @@ export const DEMO_TREASURER = taliUsdcDemo.treasurer;
 export const PAYROLL_MANDATE_ID = process.env.NEXT_PUBLIC_PAYROLL_MANDATE_ID ?? '';
 export const DEMO_STREAM_ID = process.env.NEXT_PUBLIC_DEMO_STREAM_ID ?? '';
 
-/** A Sui address, not a secret — safe to inline into the client bundle. */
-export const DEMO_EMPLOYER = process.env.NEXT_PUBLIC_PAYROLL_EMPLOYER ?? '';
+/**
+ * The wallet allowed to run payroll, revoke a mandate and fire a safety
+ * attempt. Must be the same address as the server's `TALI_EMPLOYER_WALLET`,
+ * which is what actually decides; this only stops a control being offered to
+ * somebody it would refuse. A Sui address is not a secret.
+ */
+export const EMPLOYER_WALLET = process.env.NEXT_PUBLIC_EMPLOYER_WALLET ?? '';
 
 /**
  * The published payroll package, needed in the browser because Set Up Payroll

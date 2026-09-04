@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { PayrollDesk } from '@/components/payroll/PayrollDesk';
+import { payrollStage } from '@/lib/chain-status';
 import { payrollStaff } from '@/lib/mock/payroll';
 import { payrollIsLive } from '@/server/payroll/dependencies';
 
@@ -26,7 +27,11 @@ export default function PayrollPage() {
         Set Up Payroll
       </Link>
 
-      <PayrollDesk staff={payrollStaff()} runsAreLive={payrollIsLive()} />
+      <PayrollDesk
+        staff={payrollStaff()}
+        runsAreLive={payrollIsLive()}
+        stage={payrollStage()}
+      />
 
       <div className="flex flex-col gap-3">
         <Link href="/payroll/proof" className="btn btn--ghost btn--block">

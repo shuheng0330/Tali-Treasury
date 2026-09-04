@@ -3,7 +3,12 @@
 import { useEffect, useState } from 'react';
 import { toDisplay } from '@tali/shared';
 import { tryPreviewPayroll, tryRunPayroll } from '@/lib/api/payroll';
+import { payrollAttemptNote, type PayrollStage } from '@/lib/chain-status';
 import type { SampleEmployee } from '@/lib/mock/payroll';
+import { RoleNotice } from '@/components/RoleNotice';
+import { useWalletSession } from '@/components/wallet/WalletSessionProvider';
+import { EMPLOYER_WALLET } from '@/lib/demo-config';
+import { EMPLOYER_COPY, walletAccess } from '@/lib/wallet-access';
 import { Breakdown } from './Breakdown';
 
 type Outcome =
@@ -21,11 +26,21 @@ type Outcome =
 export function EnforcementProof({
   person,
   epfFloorBps,
+  /* Read on the server: the package and mandate ids are not NEXT_PUBLIC_. */
+  stage,
 }: {
   person: SampleEmployee;
   /** Read from the mandate when one exists. Base points, as a string. */
   epfFloorBps: string;
+  stage: PayrollStage;
 }) {
+  const { address } = useWalletSession();
+  /* Submitting from here runs a real payroll, so it is the employer's to press
+     and the same gate the desk uses applies. Without it a signed-out reader met
+     a dead button explained only by a missing quote — which is a consequence of
+     not being signed in, not the reason. */
+  const access = walletAccess(address, EMPLOYER_WALLET, EMPLOYER_COPY);
+
   const [shortEpf, setShortEpf] = useState(false);
   const [outcome, setOutcome] = useState<Outcome>({ kind: 'none' });
   const [breakdown, setBreakdown] = useState(person.breakdown);
@@ -132,10 +147,12 @@ export function EnforcementProof({
         </div>
       )}
 
+      <RoleNotice access={access} />
+
       <button
         type="button"
         className="btn btn--primary btn--block"
-        disabled={outcome.kind === 'running' || !breakdown.fxConversion}
+        disabled={!access.permitted || outcome.kind === 'running' || !breakdown.fxConversion}
         onClick={submit}
       >
         {outcome.kind === 'running'
@@ -145,7 +162,7 @@ export function EnforcementProof({
             : 'Run payroll'}
       </button>
 
-      {!breakdown.fxConversion ? (
+      {access.permitted && !breakdown.fxConversion ? (
         <p className="text-caption text-wait">
           A live MYR-to-USDC quote is required before this Testnet transaction can be submitted.
         </p>
@@ -178,8 +195,8 @@ export function EnforcementProof({
 
       {outcome.kind === 'unavailable' ? (
         <p className="rounded-card border border-wait-line bg-wait-soft p-4 text-caption text-wait">
-          <span className="font-medium">Nothing was submitted.</span> This becomes a real
-          testnet transaction once the payroll module is published — {outcome.reason}.
+          <span className="font-medium">Nothing was submitted.</span>{' '}
+          {payrollAttemptNote(stage)} — {outcome.reason}.
         </p>
       ) : null}
     </div>

@@ -16,12 +16,14 @@ still needs separate verification. No completion percentage is inferred from thi
   Policy checks and exchange-rate metadata are expandable; exact quoted USDC
   remains visible before approval. Quote acceptance and on-chain safeguards remain.
 
-## Next: member correction and resubmission
+## Delivered: member correction and resubmission
 
 Owner: frontend + backend.
 
-1. Provide an Edit claim action only to the signed-in owner of a claim awaiting
-   correction; show the reviewer's reason beside the fields to fix.
+1. ✅ An Edit action is offered to the signed-in owner of a claim awaiting
+   correction, with the reviewer's reason beside the fields to fix. My Claims
+   surfaces it as **Fix and resubmit**, routed through
+   `POST /api/claims/:id/resubmit`.
 2. Define whether a replacement receipt is needed. Preserve the original evidence
    and audit trail; never silently rewrite a paid or rejected claim.
 3. Validate replacement drafts, ownership, duplicate rules and allowed transitions
@@ -31,8 +33,10 @@ Owner: frontend + backend.
 5. Rehearse mobile and projector layouts. Keep the status, reason, and next action
    visible at a glance; keep advanced details available on demand.
 
-Reason visibility and the first layout simplification are complete. Editing and
-resubmission are pending; the current UI directs the member to their treasurer.
+Reason visibility, the first layout simplification, and member editing and
+resubmission are complete. Items 2 to 5 above describe the guarantees that
+flow already relies on; what remains is the rehearsal pass on projector and
+phone, not the feature.
 
 ## Primary: authenticated Set Up Payroll
 

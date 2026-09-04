@@ -76,7 +76,13 @@ Say this plainly if asked; it is the honest half of the story.
   was performed locally.
 
 The interface never presents a simulation as chain state. Digests, gas, finality
-and wallet signatures are never invented.
+and wallet signatures are never invented, and no screen claims an authority it
+does not have: every control that writes is gated on the wallet the server
+would actually accept — the employer for payroll, the event's treasurer for
+review and revocation, the stream's employee for withdrawal — and says whose it
+is when it is not yours. `/start` names the four ways in and marks the ones the
+connected wallet holds. Nothing is hidden by role; every route stays reachable
+by URL, because the screens check themselves.
 
 ## Tech
 
@@ -86,8 +92,8 @@ Testnet USDC. Gemini for receipt reading. Open Exchange Rates for MYR quotes.
 Wallet sign-in over a signed challenge, including Slush zkLogin.
 
 **Tests:** 42 Move contract tests (25 payroll, 17 treasury), 45 Sui integration
-tests, and 573 web tests (572 passing, one intentional skip) after the latest
-`main` integration. The local database suite has 132 passing pgTAP assertions.
+tests, and 606 web tests (605 passing, one intentional skip) on the current
+`main`. The local database suite has 132 passing pgTAP assertions.
 
 ## AI tooling disclosure
 
