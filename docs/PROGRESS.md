@@ -23,6 +23,18 @@ the submission time against the organiser channel; older notes used 23:59.
 
 ## Current status by subsystem
 
+### 4 September `main` integration verification
+
+- Integrated the 43 incoming commits through `fa490fb`, including payroll write
+  RBAC, role-aware screens, expense-treasury setup, event roster APIs, the purple
+  visual refresh, and the submission/deck documents.
+- Preserved the branch's authenticated payroll preview, finalized-object checks
+  and idempotent Supabase registration while adopting `main`'s centralized
+  `TALI_EMPLOYER_WALLET` authorization.
+- Fresh verification: 42 Move tests, 45 Sui integration tests, 565 web tests
+  (564 passing and one intentional skip), 132 pgTAP assertions, root typecheck,
+  and the production build all passed.
+
 ### 4 September roster-backend verification
 
 - Treasurer-only active roster GET and add-only POST are implemented against the
@@ -63,7 +75,7 @@ the submission time against the organiser channel; older notes used 23:59.
 | Event-member roster backend | ✅ Complete locally | Treasurer-only active roster GET and add-only POST, safe duplicate handling, shared contracts, and dashboard transport adapter | Deploy; verify treasurer success/non-treasurer 403; render authoritative roster in Treasury UI |
 | Payroll contract and chain boundary | ✅ Complete locally | `PayrollMandate`, payroll execution, contribution rules, salary streams, readers and builders | Publish/upgrade, fund, configure and record real evidence |
 | Payroll application | 🟡 Built against incomplete live configuration | Payroll, earnings, history and enforcement screens; RM30 preview converts every leg through the configured MYR/USD rate; write RBAC is enforced | Replace sample identity, connect one registered payroll and verify hosted flow |
-| Authenticated Set Up Payroll | 🟡 Screen built, nothing to sign against | `/payroll/setup`: employer form, live-quote approval, wallet-signed funding through the existing builder, and a registration retry that never refunds | Publish the module, add `POST /api/payroll/register`, then verify idempotent registration and recovery |
+| Authenticated Set Up Payroll | ✅ Complete locally; hosted migration pending | `/payroll/setup`: employer-only live-FX preview, RM30/RM50 demo limits, wallet funding, strict mandate/cap verification and idempotent registration/recovery | Publish the module, apply the two `2026090402…` payroll registration migrations, configure it and run the browser smoke |
 | Create Expense Treasury | 🟡 Screen built and able to sign | `/treasury/setup`: treasurer form, USDC funding preview, wallet-signed creation against the published package, AdminCap retained and AgentCap issued, registration retry that never refunds | Add `POST /api/events`, then event selection/routing and event-aware capability mapping |
 | Safety Test UI | 🟡 Mocked with live evidence links | Local preview plus links to two real rejected transactions; API is employer-only | Interactive signed attempts and revocation scenario |
 | Deployment | ✅ Live reads; auth rollout pending | Vercel production and live Sui dashboard verified | Push wallet migration, configure exact HTTPS origin, verify protected writes |
@@ -113,8 +125,9 @@ Updated 4 September. See [payroll launch plan](PAYROLL_LAUNCH_PLAN.md) and
    stream timing and total Testnet funding.
 2. Publish/upgrade payroll, create the funded mandate, open the demo stream and
    record package, mandate, capability, stream and recipient identifiers.
-3. Implement authenticated **Set Up Payroll** with wallet signing and verified,
-   idempotent backend registration.
+3. Apply the payroll-configuration migration to hosted Supabase and verify
+   authenticated **Set Up Payroll** from a fresh browser. Local verification and
+   idempotent registration are complete.
 4. Replace `sampleStaff` and global demo assumptions with the registered payroll;
    enforce employer authorization and employee-only stream withdrawal.
 5. Verify one successful payroll, one deficient-contribution refusal and one

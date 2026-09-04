@@ -64,8 +64,10 @@ Say this plainly if asked; it is the honest half of the story.
   arithmetic, the contract, the screens and the enforcement demo all exist and
   run locally. No `PayrollMandate` exists on Testnet, so the payroll figures on
   screen are labelled as a preview rather than as chain state.
-- **Set Up Payroll can build and sign its transaction but has nothing to sign
-  against**, and its registration endpoint is not built.
+- **Set Up Payroll has a complete local signing, verification and idempotent
+  registration path**, but the payroll module is not published and the hosted
+  payroll-registration migrations are not applied, so it cannot yet create the
+  final Testnet demo mandate.
 - **Interactive safety attempts fall back to a local prediction**, labelled as
   one. The two refusals in the table above are real and are what the screen
   links to.
@@ -83,7 +85,8 @@ Testnet USDC. Gemini for receipt reading. Open Exchange Rates for MYR quotes.
 Wallet sign-in over a signed challenge, including Slush zkLogin.
 
 **Tests:** 42 Move contract tests (25 payroll, 17 treasury), 45 Sui integration
-tests, 473 web tests.
+tests, and 565 web tests (564 passing, one intentional skip) after the latest
+`main` integration. The local database suite has 132 passing pgTAP assertions.
 
 ## AI tooling disclosure
 

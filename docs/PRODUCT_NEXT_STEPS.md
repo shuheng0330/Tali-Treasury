@@ -38,13 +38,14 @@ resubmission are pending; the current UI directs the member to their treasurer.
 
 Owner: frontend + backend, with Sui integration support.
 
-1. Add `/payroll/setup` with employer, employee, scaled wage, budget, maximum per
-   run, expiry and statutory-recipient configuration.
-2. Preview Testnet funding and immutable rules, then use the existing
+1. ✅ Add employer-only `/payroll/setup`. The authenticated employer supplies the
+   employee and expiry; the server supplies the agreed RM30/RM50 demo amounts,
+   current FX quote, agent cap owner and configured statutory recipients.
+2. ✅ Preview exact Testnet USDC funding and immutable rules, then use the existing
    `buildCreatePayrollMandateTransaction` through the connected employer wallet.
-3. Verify finality, sender, package, coin type, mandate fields and `PayrollCap`
-   ownership in a protected backend registration endpoint.
-4. Make registration idempotent by transaction and mandate. Recover a successful
+3. ✅ Verify finality, sender, package, coin type, mandate fields and `PayrollCap`
+   ownership in a protected endpoint without trusting browser object IDs.
+4. ✅ Make registration idempotent by transaction and mandate. Recover a successful
    chain creation whose database registration failed without funding twice.
 5. Route payroll, proof, history and earnings from the registered payroll. Remove
    `sampleStaff` from the live journey.
@@ -90,7 +91,8 @@ cannot be confused with claim recipients, `AgentCap` or per-claim policy.
 
 1. Lock and fund the single-employee payroll configuration.
 2. Publish/configure payroll and record the real objects.
-3. Build authenticated Set Up Payroll and close payroll write permissions.
+3. Apply the registration migration to hosted Supabase, wire payroll pages to the
+   registered configuration and close all payroll write permissions.
 4. Record successful payroll, atomic refusal and employee withdrawal evidence.
 5. Keep the proven claim journey available; defer correction editing and dynamic
    expense-treasury creation if they threaten the payroll proof.

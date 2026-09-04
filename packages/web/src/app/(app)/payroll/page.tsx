@@ -22,6 +22,10 @@ export default function PayrollPage() {
         </p>
       </header>
 
+      <Link href="/payroll/setup" className="btn btn--primary btn--block">
+        Set Up Payroll
+      </Link>
+
       <PayrollDesk staff={payrollStaff()} runsAreLive={payrollIsLive()} />
 
       <div className="flex flex-col gap-3">
@@ -30,9 +34,6 @@ export default function PayrollPage() {
         </Link>
         <Link href="/payroll/history" className="link self-start">
           What has been run
-        </Link>
-        <Link href="/payroll/setup" className="link self-start">
-          Set up a payroll mandate
         </Link>
       </div>
     </div>

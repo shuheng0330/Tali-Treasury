@@ -1,7 +1,5 @@
 import Link from 'next/link';
 import { PayrollSetup } from '@/components/payroll/PayrollSetup';
-import { PAYROLL_EMPLOYEE } from '@/lib/demo-config';
-import { sampleStaff } from '@/lib/mock/payroll';
 
 export const metadata = {
   title: 'Set up payroll · Tali Treasury',
@@ -23,7 +21,7 @@ export default function PayrollSetupPage() {
         </p>
       </header>
 
-      <PayrollSetup defaultEmployee={PAYROLL_EMPLOYEE || sampleStaff[0]!.address} />
+      <PayrollSetup />
 
       <p className="text-caption text-ink-3">
         Reimbursing receipts is a separate mandate with its own rules.{' '}
@@ -32,6 +30,7 @@ export default function PayrollSetupPage() {
         </Link>{' '}
         instead; it is not created here.
       </p>
+      <Link href="/payroll" className="link self-start">Back to payroll</Link>
     </div>
   );
 }

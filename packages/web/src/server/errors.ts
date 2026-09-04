@@ -17,6 +17,7 @@ export type ServerErrorCode =
   | 'reviewer_forbidden'
   | 'claim_not_found'
   | 'payroll_run_not_found'
+  | 'payroll_setup_verification_failed'
   | 'stream_not_found'
   | 'processing_conflict'
   | 'mandate_read_failed'

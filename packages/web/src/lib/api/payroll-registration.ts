@@ -12,7 +12,7 @@ function describe(error: unknown): string {
       : 'the backend is unreachable';
   }
   if (error.status === 404) {
-    return 'this deployment has no payroll registration endpoint yet';
+    return 'this deployment has not rolled out payroll registration yet';
   }
   if (error.code === 'authentication_required') {
     return 'the wallet session was not accepted';
@@ -34,18 +34,19 @@ function describe(error: unknown): string {
  */
 export async function tryRegisterPayroll(digest: string): Promise<RegistrationOutcome> {
   try {
-    const response = await fetch('/api/payroll/register', {
+    const response = await fetch('/api/payroll/setup/register', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ digest }),
     });
-    const result = await responseJson<
-      | { status: 'registered'; mandateId: string; capId: string }
-      | { status: 'refused'; message: string }
-    >(response);
-    return result.status === 'registered'
-      ? { kind: 'registered', mandateId: result.mandateId, capId: result.capId }
-      : { kind: 'refused', message: result.message };
+    const result = await responseJson<{
+      registration: { mandateId: string; capId: string };
+    }>(response);
+    return {
+      kind: 'registered',
+      mandateId: result.registration.mandateId,
+      capId: result.registration.capId,
+    };
   } catch (error) {
     return { kind: 'unavailable', reason: describe(error) };
   }

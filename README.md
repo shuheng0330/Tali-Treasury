@@ -46,17 +46,17 @@ Status words are intentionally precise:
 | Claim outcomes | **Complete locally** | Paid with Auto-paid / Paid after review chips; Rejected tab; correction/rejection reasons on both screens |
 | Payroll Move module and integration | **Complete locally; publication pending** | Contract, tests, builders, readers, payroll service and screens exist; live configuration and proof remain |
 | Payroll MYR → USDC valuation | **Complete locally** | RM statutory calculation is converted leg-by-leg with one approved live-reference rate; hosted proof pending |
-| Authenticated Set Up Payroll | **Pending** | Primary launch CTA; wallet creates/funds a verified `PayrollMandate` |
+| Authenticated Set Up Payroll | **Complete locally; hosted migration pending** | Employer-only preview, Slush signing, strict finalized-object verification and idempotent Supabase registration are implemented |
 | Live payroll run and salary stream | **Pending** | Requires published package, funded mandate, real employee wiring, authorization and Testnet evidence |
-| Create Expense Treasury | **Pending** | Separate reimbursement setup backed by the existing `Mandate`; not part of payroll setup |
-| Revoke and Safety Test interactions | **Mocked** | Clearly labelled previews; no browser signing or state changes |
-| Gemini receipt analysis and Supabase claims | **Complete locally; rollout pending** | Private drafts, authenticated access and 125 pgTAP assertions |
+| Create Expense Treasury | **Complete locally through wallet execution** | Separate reimbursement setup screen can sign against the existing package; verified event registration remains pending |
+| Revoke and Safety Test interactions | **Complete locally; live proof pending** | Employer-authorized APIs can submit through the server signer; unsupported scenarios remain clearly labelled predictions |
+| Gemini receipt analysis and Supabase claims | **Complete locally; rollout pending** | Private drafts, authenticated access and 132 pgTAP assertions |
 | Deterministic policy and backend agent signing | **Live via local app** | Native USDC payment/recovery and manually approved MYR reimbursement verified on Testnet |
 | Wallet connection and live UI writes | **Complete locally** | Testnet connect, explicit sign-in, one-hour HTTP-only session and sign-out |
 | Statutory payroll enforcement | **Complete locally** | `payroll.move`, 25 contract tests; EPF Third Schedule bands and SOCSO/EIS ceilings enforced as an on-chain basis-point floor. Not yet published to Testnet |
 | Per-second salary accrual | **Complete locally** | `SalaryStream` open/accrue/withdraw, tested against the same integer arithmetic the UI displays. Not yet published to Testnet |
 | Web hosting | **Live** | [`tali-treasury.vercel.app`](https://tali-treasury.vercel.app) |
-| Submission pack | **Pending** | Final hackathon phase |
+| Submission pack | **Complete locally; recording pending** | Written submission and six-slide deck are present; video and rehearsal remain |
 
 The detailed team checklist lives in [`docs/PROGRESS.md`](docs/PROGRESS.md).
 Upcoming correction/resubmission and authenticated event creation are specified in

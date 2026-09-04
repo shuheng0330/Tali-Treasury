@@ -2,6 +2,14 @@
 
 Last updated: 4 September 2026 (MYT)
 
+## Latest integrated verification
+
+After merging `origin/main` through `fa490fb` with the authenticated payroll setup
+work, the complete local suite passes: 42 Move tests, 45 Sui integration tests,
+565 web tests (564 passing and one intentional skip), 132 pgTAP assertions, root
+typecheck, and the Next.js production build. Payroll publication and hosted
+payroll-registration migrations remain pending.
+
 ## Complete locally
 
 - strict Gemini receipt schema and `gemini-3.5-flash-lite` default;
