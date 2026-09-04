@@ -17,6 +17,9 @@ the submission time against the organiser channel; older notes used 23:59.
 - The immediate definition of done is one authorized payroll, one atomic policy
   refusal and one employee stream withdrawal on Testnet. See
   [PAYROLL_LAUNCH_PLAN.md](PAYROLL_LAUNCH_PLAN.md).
+- Demo funding is fixed at an RM30 source wage with an RM50-equivalent total
+  ceiling. The configured MYR/USD quote converts every amount to USDC; the app
+  must never submit RM base units as though they were micro-USDC.
 
 ## Current status by subsystem
 
@@ -48,7 +51,7 @@ the submission time against the organiser channel; older notes used 23:59.
 | Receipt and claim backend | ✅ Complete locally | Wallet sessions, one-time analysis drafts, private storage, deterministic policy, atomic review/payment states, and safe exact-digest reconciliation | Apply latest migrations and configure hosted API/origin/signer |
 | Claim and review UX | ✅ Complete locally | Browser MYR reimbursement verified, readable outcomes and reasons, exact quote approval, payment-status polling | Hosted verification and member correction/resubmission |
 | Payroll contract and chain boundary | ✅ Complete locally | `PayrollMandate`, payroll execution, contribution rules, salary streams, readers and builders | Publish/upgrade, fund, configure and record real evidence |
-| Payroll application | 🟡 Built against incomplete live configuration | Payroll, earnings, history and enforcement screens plus backend calculator/service | Replace sample staff, enforce roles, connect one registered payroll and verify hosted flow |
+| Payroll application | 🟡 Built against incomplete live configuration | Payroll, earnings, history and enforcement screens; RM30 preview converts every leg through the configured MYR/USD rate | Replace sample identity, enforce roles, connect one registered payroll and verify hosted flow |
 | Authenticated Set Up Payroll | ⬜ Pending | Existing create-payroll transaction builder | Employer form, wallet-funded `PayrollMandate`, verified idempotent registration and recovery |
 | Create Expense Treasury | ⬜ Pending | Existing reimbursement builder and manual/local event setup | Separate authenticated form, wallet signing, verified registration and event-aware capability mapping |
 | Safety Test UI | 🟡 Mocked with live evidence links | Local preview plus links to two real rejected transactions | Interactive signed attempts and revocation scenario |

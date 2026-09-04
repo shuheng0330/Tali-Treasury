@@ -6,13 +6,8 @@ const BASE_UNIT_AMOUNT = /^[0-9]{1,30}$/;
 /** RM200,000 a month in base units. Past this it is a typo, not a salary. */
 const MAX_GROSS = 200_000_000_000n;
 
-/**
- * RM100 a month. Below this the EPF band arithmetic stops describing a salary:
- * the schedule's narrowest band is RM20, so the employee contribution is a
- * share of RM20 however small the wage, and by about RM10 that already exceeds
- * the share of gross the mandate requires the worker to keep.
- */
-const MIN_GROSS = 100_000_000n;
+/** RM20 is the narrowest supported EPF wage band and permits the scaled demo. */
+const MIN_GROSS = 20_000_000n;
 
 export const payrollRequestSchema = z
   .object({
@@ -25,6 +20,13 @@ export const payrollRequestSchema = z
       .refine((value) => BigInt(value) <= MAX_GROSS, 'gross is implausibly large'),
     age: z.number().int().min(16).max(100),
     citizenship: z.enum(['local', 'foreign']),
+    fxApproval: z
+      .object({
+        myrPerUsd: z.string().regex(/^\d{1,3}(?:\.\d{1,12})?$/, 'invalid MYR/USD rate'),
+        rateTimestampMs: z.number().int().positive(),
+      })
+      .strict()
+      .optional(),
     /**
      * Present only on the enforcement screen, which deliberately underpays a
      * body to show the contract refusing it. Named rather than boolean so the

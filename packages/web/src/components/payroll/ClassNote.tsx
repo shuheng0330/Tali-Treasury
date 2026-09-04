@@ -1,6 +1,6 @@
-import type { PayrollBreakdown } from '@tali/shared';
+import type { PayrollBreakdown, StatutorySplit } from '@tali/shared';
 
-function bodyTotal(breakdown: PayrollBreakdown, body: 'epf' | 'socso' | 'eis') {
+function bodyTotal(breakdown: StatutorySplit, body: 'epf' | 'socso' | 'eis') {
   const found = breakdown.bodies.find((entry) => entry.body === body);
   return {
     employee: BigInt(found?.employee ?? '0'),
@@ -17,9 +17,10 @@ function bodyTotal(breakdown: PayrollBreakdown, body: 'epf' | 'socso' | 'eis') {
  * screen.
  */
 export function ClassNote({ breakdown }: { breakdown: PayrollBreakdown }) {
-  const epf = bodyTotal(breakdown, 'epf');
-  const eis = bodyTotal(breakdown, 'eis');
-  const socso = bodyTotal(breakdown, 'socso');
+  const source = breakdown.fxConversion?.source ?? breakdown;
+  const epf = bodyTotal(source, 'epf');
+  const eis = bodyTotal(source, 'eis');
+  const socso = bodyTotal(source, 'socso');
 
   const notes: string[] = [];
 
@@ -29,7 +30,7 @@ export function ClassNote({ breakdown }: { breakdown: PayrollBreakdown }) {
   if (eis.employee === 0n && eis.employer === 0n) {
     notes.push('EIS does not cover this worker, so nothing is withheld for it.');
   }
-  if (socso.employee > 0n && BigInt(breakdown.gross) > 6_000_000_000n) {
+  if (socso.employee > 0n && BigInt(source.gross) > 6_000_000_000n) {
     notes.push('SOCSO and EIS are charged on the first RM6,000 of wages only.');
   }
 

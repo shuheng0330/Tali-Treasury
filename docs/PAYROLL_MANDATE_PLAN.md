@@ -411,24 +411,25 @@ and the contract agree on `available` to the base unit for a stream mid-period.
 
 ## S5. Deploy and seed
 
-1. **Confirm the testnet USDC balance first.** A payroll mandate needs meaningfully more
-   than the 20 USDC the claim mandate holds — budget for at least 200 USDC across payroll
-   runs and one stream. If the faucet cannot supply it, reduce the demo salary figures
-   rather than discovering the shortfall on Thursday.
+1. **Confirm the testnet USDC balance first.** The agreed demo ceiling is RM50
+   equivalent, converted with the current configured MYR/USD rate and USDC valued at
+   USD parity. Do not interpret the RM30 source wage as 30 USDC. The converted budget
+   must cover the valid payroll plus the distinct stream allocation.
 2. Upgrade the package using the existing UpgradeCap. If the upgrade fails for any reason,
    **publish `payroll` as a separate package instead of debugging under time pressure** —
    record the new package ID and move on.
-3. Create the payroll mandate: expiry **30 September 2026**, `max_per_run` 50 USDC,
+3. Create the payroll mandate: expiry **30 September 2026**, with both budget and
+   `max_per_run` set from the approved RM50-equivalent USDC quote,
    `statutory_recipients` = three testnet addresses standing in for EPF, SOCSO and EIS,
    `statutory_min_bps` = `[2300, 225, 40]`,
    `statutory_wage_cap` = `[0, 6_000_000000, 6_000_000000]`, `net_min_bps` = `7000`.
 4. Open one salary stream for the demo employee over a short period — an hour, not a month —
    so accrual is visible to the eye during a demo.
-5. **Re-create the claim mandate** with a 30 September expiry.
-6. Record every object id in `packages/sui-integration/src/demo.ts` under a new
-   `taliPayrollDemo` export, and update the existing `taliUsdcDemo` ids for the new claim
-   mandate.
-7. Add `PAYROLL_MANDATE_ID`, `PAYROLL_CAP_ID` and `DEMO_STREAM_ID` to `.env.example` with
+5. Keep the reimbursement mandate separate. Re-create it only if the selected hosted
+   claim demo actually expires before it is needed; never fold it into payroll setup.
+6. Record every payroll object id in `packages/sui-integration/src/demo.ts` under a new
+   `taliPayrollDemo` export. Do not overwrite historical reimbursement evidence.
+7. Add `PAYROLL_PACKAGE_ID`, `PAYROLL_MANDATE_ID`, `PAYROLL_CAP_ID` and `DEMO_STREAM_ID` to `.env.example` with
    empty values, and post the real values in the group chat — not in the repo.
 
 **Done when:** every id in `demo.ts` resolves on testnet, no mandate expires before

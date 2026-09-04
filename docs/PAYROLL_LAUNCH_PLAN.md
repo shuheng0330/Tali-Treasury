@@ -18,6 +18,27 @@ mandate types must not share a creation wizard, capability or backend configurat
 | Set Up Payroll | `PayrollMandate<USDC>` + `PayrollCap` | Salary, contribution legs and salary streams |
 | Create Expense Treasury | `Mandate<USDC>` + `AdminCap` + `AgentCap` | Receipt claims and reimbursements |
 
+## Agreed demo amounts
+
+- Source wage: **RM30**.
+- Total payroll-mandate allocation ceiling: **RM50 equivalent**.
+- All mandate and payment amounts are converted using the configured live MYR/USD
+  provider, with Testnet USDC valued at USD parity. RM30 must never be interpreted
+  as 30 USDC.
+- The statutory calculation remains in MYR. One server-issued rate converts the
+  gross, worker net, each statutory leg and total employer cost into micro-USDC.
+- The employer approves the displayed rate and exact USDC amounts before signing.
+  If the rate changes, the app requires a refreshed preview.
+
+At the previously recorded example rate of `1 USD = 4.0416 MYR`, RM30 gross is
+`7.422803 USDC`, the RM36.585 calculated employer cost is approximately
+`9.052109 USDC` after leg-by-leg rounding, and the RM50 budget is `12.371338 USDC`.
+These are examples only;
+creation must use the current validated quote. Reserve at most RM10 equivalent of
+the RM50 allocation for the stream demonstration, leaving the valid payroll and
+stream together below the agreed ceiling. Treat that stream as a separate demo
+allocation, not a second payment of the same salary obligation.
+
 ## Minimum demo journey
 
 1. An authenticated employer opens **Set Up Payroll**.
@@ -58,8 +79,8 @@ demo.
 ### Gate 1 — agree and fund
 
 - Choose one demo employee wallet and one supported employee class.
-- Choose a scaled wage and ensure the mandate budget covers the complete payroll,
-  statutory legs, stream reservation, rehearsals and transaction fees.
+- Use the agreed RM30 wage and RM50-equivalent ceiling. Ensure the mandate budget
+  covers the payroll, the separate stream allocation, rehearsals and transaction fees.
 - Fund the employer and server signer with Testnet SUI. Fund the employer with
   sufficient Testnet USDC.
 

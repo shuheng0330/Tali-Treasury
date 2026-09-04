@@ -25,14 +25,14 @@ describe('grossProblem', () => {
   it('accepts a monthly wage the server would accept', () => {
     // The bounds are the request schema's, so the screen must not refuse what
     // the server allows, nor offer to send what it would reject.
-    expect(grossProblem('100')).toBeNull();
+    expect(grossProblem('30')).toBeNull();
     expect(grossProblem('3000')).toBeNull();
     expect(grossProblem('200000')).toBeNull();
   });
 
-  it('refuses a wage below the narrowest EPF band', () => {
-    expect(grossProblem('99.999999')).toContain('EPF bands');
-    expect(grossProblem('10')).toContain('EPF bands');
+  it('refuses a scaled wage below the narrowest EPF band', () => {
+    expect(grossProblem('19.999999')).toContain('at least');
+    expect(grossProblem('10')).toContain('at least');
   });
 
   it('refuses a figure that is a typo rather than a salary', () => {

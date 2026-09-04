@@ -56,6 +56,7 @@ export {
 } from './payroll.js';
 export type {
   PayrollBreakdown,
+  PayrollFxConversion,
   PayrollRunStatus,
   PayrollRunView,
   SalaryStreamView,

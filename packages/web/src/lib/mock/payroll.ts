@@ -59,6 +59,7 @@ function breakdown(input: {
     employerCost: ringgit(input.employerCost),
     bodies: [body('epf', input.epf), body('socso', input.socso), body('eis', input.eis)],
     recipients: RECIPIENTS,
+    currency: 'MYR',
   };
 }
 
@@ -69,12 +70,12 @@ export const sampleStaff: SampleEmployee[] = [
     address: '0x405200312d4c8ee0159d44429ca69ef0cf035f4a00c12f2035a0bdef882bb16e',
     breakdown: breakdown({
       employee: '0x405200312d4c8ee0159d44429ca69ef0cf035f4a00c12f2035a0bdef882bb16e',
-      gross: '3000.00',
-      net: '2649.00',
-      employerCost: '3448.50',
-      epf: ['330.00', '390.00'],
-      socso: ['15.00', '52.50'],
-      eis: ['6.00', '6.00'],
+      gross: '30.00',
+      net: '24.79',
+      employerCost: '36.585',
+      epf: ['5.00', '6.00'],
+      socso: ['0.15', '0.525'],
+      eis: ['0.06', '0.06'],
     }),
   },
   {
@@ -106,4 +107,4 @@ export const sampleStaff: SampleEmployee[] = [
       eis: ['12.00', '12.00'],
     }),
   },
-];
+].slice(0, 1);

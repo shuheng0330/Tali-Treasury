@@ -35,10 +35,35 @@ export interface StatutorySplit {
   bodies: StatutoryBodyAmount[];
 }
 
+/**
+ * The MYR calculation behind a USDC payroll transaction.
+ *
+ * One rate converts every leg. Keeping the source split alongside the token
+ * amounts makes the employer's approval auditable and prevents the interface
+ * from relabelling ringgit base units as micro-USDC.
+ */
+export interface PayrollFxConversion {
+  provider: 'open_exchange_rates';
+  sourceCurrency: 'MYR';
+  targetCurrency: 'USDC';
+  /** MYR per one USD; USDC is valued at USD parity for this Testnet demo. */
+  myrPerUsd: string;
+  rateTimestampMs: number;
+  fetchedAtMs: number;
+  quotedAtMs: number;
+  valuation: 'USDC_USD_PARITY';
+  rounding: 'HALF_UP_6DP';
+  source: StatutorySplit;
+}
+
 /** A split with recipients attached, ready to submit. */
 export interface PayrollBreakdown extends StatutorySplit {
   employee: Address;
   recipients: Record<StatutoryBody, Address>;
+  /** Currency of gross, net, body amounts and employerCost. */
+  currency?: 'MYR' | 'USDC';
+  /** Present for a live MYR payroll quoted into USDC. */
+  fxConversion?: PayrollFxConversion;
 }
 
 export type PayrollRunStatus = 'pending' | 'paid' | 'failed';
