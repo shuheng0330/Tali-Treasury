@@ -4,7 +4,19 @@ This is the authoritative implementation checklist. A UI phase marked complete
 means the UX works against its declared data source; it does not imply that the
 whole product flow is live.
 
-**Deadline:** submission 5 Sep 23:59 MYT · pitch 6 Sep at APU.
+**Planning deadline:** submission 5 Sep at noon MYT · pitch 6 Sep at APU. Confirm
+the submission time against the organiser channel; older notes used 23:59.
+
+### 4 September product direction
+
+- Tali is now payroll-first. The primary employer CTA will be **Set Up Payroll**.
+- Set Up Payroll creates and funds `PayrollMandate<USDC>`; it does not create a
+  reimbursement mandate.
+- **Create Expense Treasury** remains a separate flow backed by the existing
+  `Mandate<USDC>` and the proven receipt-claim system.
+- The immediate definition of done is one authorized payroll, one atomic policy
+  refusal and one employee stream withdrawal on Testnet. See
+  [PAYROLL_LAUNCH_PLAN.md](PAYROLL_LAUNCH_PLAN.md).
 
 ## Current status by subsystem
 
@@ -35,7 +47,10 @@ whole product flow is live.
 | Web dashboard | ✅ Complete locally; live chain data | Mandate reads, review actions, paid/rejected views, reasons and payment evidence | Hosted verification and backend claim totals |
 | Receipt and claim backend | ✅ Complete locally | Wallet sessions, one-time analysis drafts, private storage, deterministic policy, atomic review/payment states, and safe exact-digest reconciliation | Apply latest migrations and configure hosted API/origin/signer |
 | Claim and review UX | ✅ Complete locally | Browser MYR reimbursement verified, readable outcomes and reasons, exact quote approval, payment-status polling | Hosted verification and member correction/resubmission |
-| Treasurer Create event | ⬜ Pending | Existing Move builder and manual/local event setup | Authenticated form, wallet signing, verified event registration and recovery |
+| Payroll contract and chain boundary | ✅ Complete locally | `PayrollMandate`, payroll execution, contribution rules, salary streams, readers and builders | Publish/upgrade, fund, configure and record real evidence |
+| Payroll application | 🟡 Built against incomplete live configuration | Payroll, earnings, history and enforcement screens plus backend calculator/service | Replace sample staff, enforce roles, connect one registered payroll and verify hosted flow |
+| Authenticated Set Up Payroll | ⬜ Pending | Existing create-payroll transaction builder | Employer form, wallet-funded `PayrollMandate`, verified idempotent registration and recovery |
+| Create Expense Treasury | ⬜ Pending | Existing reimbursement builder and manual/local event setup | Separate authenticated form, wallet signing, verified registration and event-aware capability mapping |
 | Safety Test UI | 🟡 Mocked with live evidence links | Local preview plus links to two real rejected transactions | Interactive signed attempts and revocation scenario |
 | Deployment | ✅ Live reads; auth rollout pending | Vercel production and live Sui dashboard verified | Push wallet migration, configure exact HTTPS origin, verify protected writes |
 | Submission | ⬜ Pending | — | Landing content, videos, deck, disclosure and rehearsal |
@@ -76,21 +91,22 @@ Legend: ✅ done · 🟡 in progress · ⬜ not started · ⛔ cut
 
 ## Current remaining gaps
 
-Updated 3 September. See [product next steps](PRODUCT_NEXT_STEPS.md) for acceptance criteria:
+Updated 4 September. See [payroll launch plan](PAYROLL_LAUNCH_PLAN.md) and
+[product next steps](PRODUCT_NEXT_STEPS.md) for acceptance criteria:
 
-1. Push the wallet/draft migration, configure `TALI_APP_ORIGIN`, and verify member
-   and treasurer browser wallets on the hosted app.
-2. Coordinate and roll out the locally implemented MYR-to-USDC quote, then
-   verify the hosted browser flow with a separately authorized payment.
-3. Member correction and resubmission after a treasurer request. Reasons now show
-   on both screens; editing/resubmission still needs implementation.
-4. Native-USDC smoke payment and reconciliation passed locally on 3 September;
-   verify the hosted path separately and fix the recorded gas metric discrepancy.
-5. Authenticated Create event: wallet-signed mandate funding followed by verified,
-   idempotent backend registration of event, categories and members.
-6. Further usability rehearsal on mobile/projector; interactive safety and live
-   revocation only if included in the pitch.
-7. Submission video, deck, AI disclosure and rehearsal.
+1. Lock one employee wallet, supported employee class, scaled wage, payroll cap,
+   stream timing and total Testnet funding.
+2. Publish/upgrade payroll, create the funded mandate, open the demo stream and
+   record package, mandate, capability, stream and recipient identifiers.
+3. Implement authenticated **Set Up Payroll** with wallet signing and verified,
+   idempotent backend registration.
+4. Replace `sampleStaff` and global demo assumptions with the registered payroll;
+   enforce employer authorization and employee-only stream withdrawal.
+5. Verify one successful payroll, one deficient-contribution refusal and one
+   accrued-salary withdrawal from a fresh browser.
+6. Preserve the working expense-claim demo. Build **Create Expense Treasury** as a
+   separate follow-up rather than coupling it to payroll setup.
+7. Update evidence, record a backup video, complete disclosures and rehearse.
 
 ---
 

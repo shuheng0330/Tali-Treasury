@@ -9,6 +9,20 @@ Three people, mostly working alone at night. Stay inside your paths and we don't
 | Ku Kian Xiang | Frontend + product | `packages/web/src/app/(app)/**`, `packages/web/src/components/**` |
 | Everyone (heads-up first) | Contracts | `packages/shared/**`, `.env.example`, `docs/**` |
 
+## Payroll-first feature ownership
+
+| Deliverable | Lead | Required support |
+|---|---|---|
+| Publish/upgrade payroll, create mandate and stream, record evidence | Shu Heng | Team agrees wage, employee and funding first |
+| Sui payroll builders/readers and setup transaction boundary | Shu Heng | Backend and frontend consume the boundary; they do not duplicate it |
+| Verified payroll registration and employer/employee authorization | Lim Wey Cheng | Shu Heng supplies object invariants; Kian Xiang supplies request/UI states |
+| Set Up Payroll, payroll run, proof and earnings UX | Ku Kian Xiang | Backend endpoint contracts and Sui transaction builder |
+| Hosted end-to-end verification and rehearsal | Everyone | One shared configuration and acceptance checklist |
+
+**Set Up Payroll** and **Create Expense Treasury** are separate workstreams.
+Changing one flow must not silently change the other's mandate IDs, caps, employees,
+recipients or environment variables.
+
 ## Rules
 
 1. **`packages/shared` changes need a message in the group chat before you push.**
@@ -18,10 +32,14 @@ Three people, mostly working alone at night. Stay inside your paths and we don't
 3. **Chain types come from `@tali/treasury-sui`, not from `@tali/shared`.**
    `MandateState` uses `bigint`; `MandateView` is its JSON-safe projection for API
    responses. Convert with `toMandateView`.
-4. **Frontend builds against mocks until an endpoint exists.** Nobody waits on anybody.
+4. **Frontend may build against mocks until an endpoint exists, but every mocked
+   state remains labelled.** Payroll is not live merely because IDs are present.
 5. **Branch per person**, merge to `main` when green: `Shuheng`, `Xiang-UI`, `feat/backend`.
 6. **Never commit a key.** Before submission we scan the whole history — a leaked key is
    both a disqualification risk and a real loss of funds.
+7. **Public IDs may be committed; signing material may not.** Package, mandate,
+   capability, stream and transaction identifiers are public. Private keys,
+   recovery phrases and service-role credentials stay in secret storage.
 
 ## Environment
 

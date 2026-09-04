@@ -1,9 +1,18 @@
 # Tali Treasury
 
-Tali Treasury is an AI-assisted reimbursement system for student organisations.
-A treasurer funds a mandate with Circle Testnet USDC, an agent evaluates receipt
-claims, and the Sui Move contract remains the final authority over budget,
-per-claim limits, expiry, revocation, and approved recipients.
+Tali Treasury is a payroll-first, Sui-based treasury product. An employer funds a
+payroll mandate with Circle Testnet USDC, deterministic rules enforce salary and
+statutory-allocation constraints, and employees can receive or withdraw earned
+funds. A separate expense-treasury flow uses receipt analysis and its own Sui
+mandate for reimbursements.
+
+The two flows deliberately use different objects and capabilities:
+
+- **Set Up Payroll** creates a `PayrollMandate` and `PayrollCap`.
+- **Create Expense Treasury** creates the existing reimbursement `Mandate`,
+  `AdminCap` and `AgentCap`.
+
+They must not be combined into one setup transaction or configuration flow.
 
 > Testnet only. All SUI and USDC used here have no financial value.
 
@@ -33,7 +42,10 @@ Status words are intentionally precise:
 | Safe payment reconciliation | **Complete locally** | Digest stored before broadcast; explicit status checks never sign or resubmit |
 | MYR → USDC reimbursement quotes | **Live via local app** | RM6 → 1.484561 USDC browser payment verified; hosted rollout pending |
 | Claim outcomes | **Complete locally** | Paid with Auto-paid / Paid after review chips; Rejected tab; correction/rejection reasons on both screens |
-| Treasurer Create event screen | **Pending** | Mandates and events currently created through setup tools; see [next steps](docs/PRODUCT_NEXT_STEPS.md) |
+| Payroll Move module and integration | **Complete locally; publication pending** | Contract, tests, builders, readers, payroll service and screens exist; live configuration and proof remain |
+| Authenticated Set Up Payroll | **Pending** | Primary launch CTA; wallet creates/funds a verified `PayrollMandate` |
+| Live payroll run and salary stream | **Pending** | Requires published package, funded mandate, real employee wiring, authorization and Testnet evidence |
+| Create Expense Treasury | **Pending** | Separate reimbursement setup backed by the existing `Mandate`; not part of payroll setup |
 | Revoke and Safety Test interactions | **Mocked** | Clearly labelled previews; no browser signing or state changes |
 | Gemini receipt analysis and Supabase claims | **Complete locally; rollout pending** | Private drafts, authenticated access and 91 pgTAP assertions |
 | Deterministic policy and backend agent signing | **Live via local app** | Native USDC payment/recovery and manually approved MYR reimbursement verified on Testnet |
@@ -44,6 +56,8 @@ Status words are intentionally precise:
 The detailed team checklist lives in [`docs/PROGRESS.md`](docs/PROGRESS.md).
 Upcoming correction/resubmission and authenticated event creation are specified in
 [`docs/PRODUCT_NEXT_STEPS.md`](docs/PRODUCT_NEXT_STEPS.md).
+The payroll-first release order and acceptance gate live in
+[`docs/PAYROLL_LAUNCH_PLAN.md`](docs/PAYROLL_LAUNCH_PLAN.md).
 
 ## Live Testnet proof
 
@@ -69,6 +83,12 @@ separation of duties or completion of the hosted flow.
 ## How the pieces fit
 
 ```text
+Employer wallet -> Set Up Payroll -> PayrollMandate<USDC>
+                                      |-- atomic payroll + statutory allocations
+                                      `-- salary stream -> employee withdrawal
+
+Employer wallet -> Create Expense Treasury -> Mandate<USDC>
+                                                |
 Member receipt UI (Testnet wallet session; real analyze, create and list)
              |
              v
@@ -91,6 +111,10 @@ approval of the USDC amount. Other non-USDC currencies remain unsupported. Eligi
 USDC review claims can be approved by the treasurer and enter the atomic payment
 flow; rejection and correction are durably audited.
 ```
+
+Salary streaming represents time-based accrual configured by the employer; it is
+not proof of attendance or hours worked. Testnet statutory-recipient wallets are
+demonstration stand-ins, not production remittance to Malaysian authorities.
 
 The web application reads public mandate state without a key. The process API can
 sign an eligible `auto_pay` claim with a server-only testnet agent after an atomic
@@ -269,7 +293,8 @@ Immediate hosted rollout (the local payment flow is already verified):
 - [`docs/API.md`](docs/API.md) — authenticated session, receipt draft and claim endpoint contracts.
 - [`docs/MYR_USDC_QUOTES.md`](docs/MYR_USDC_QUOTES.md) — live-reference valuation, free-plan setup, safeguards and rollout.
 - [`docs/PROGRESS.md`](docs/PROGRESS.md) — authoritative team status and next work.
-- [`docs/PRODUCT_NEXT_STEPS.md`](docs/PRODUCT_NEXT_STEPS.md) — claim clarity, correction/resubmission and authenticated Create event acceptance criteria.
+- [`docs/PAYROLL_LAUNCH_PLAN.md`](docs/PAYROLL_LAUNCH_PLAN.md) — payroll-first scope, order and demo acceptance gate.
+- [`docs/PRODUCT_NEXT_STEPS.md`](docs/PRODUCT_NEXT_STEPS.md) — separate Set Up Payroll and Create Expense Treasury product flows.
 - [`docs/LOCAL_SINGLE_WALLET_DEMO.md`](docs/LOCAL_SINGLE_WALLET_DEMO.md) — separate demo mandate and verified browser MYR payment.
 - [`docs/NEXT_STEPS.md`](docs/NEXT_STEPS.md) — production implementation order and acceptance criteria.
 - [`docs/HOSTED_SUPABASE_VERIFICATION.md`](docs/HOSTED_SUPABASE_VERIFICATION.md) — hosted schema verification scope and reproducible checks.
