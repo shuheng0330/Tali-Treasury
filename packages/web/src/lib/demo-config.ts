@@ -16,6 +16,33 @@ export const DEMO_TREASURER = taliUsdcDemo.treasurer;
 export const PAYROLL_MANDATE_ID = process.env.NEXT_PUBLIC_PAYROLL_MANDATE_ID ?? '';
 export const DEMO_STREAM_ID = process.env.NEXT_PUBLIC_DEMO_STREAM_ID ?? '';
 
+/** A Sui address, not a secret — safe to inline into the client bundle. */
+export const DEMO_EMPLOYER = process.env.NEXT_PUBLIC_PAYROLL_EMPLOYER ?? '';
+
+/**
+ * The published payroll package, needed in the browser because Set Up Payroll
+ * builds its transaction there. A package id names published bytecode and
+ * authorises nothing, so it belongs on the public side of the boundary; the
+ * signing key stays on the server and never gains a NEXT_PUBLIC_ prefix.
+ */
+export const PAYROLL_PACKAGE_ID = process.env.NEXT_PUBLIC_PAYROLL_PACKAGE_ID ?? '';
+
+/**
+ * The wallet the registered payroll is allowed to pay.
+ *
+ * Empty until the mandate exists. The payroll screens fall back to the sample
+ * employee, which is fine while nothing can be signed, but a run addressed to
+ * the sample wallet aborts once a mandate approving a different one is live.
+ */
+export const PAYROLL_EMPLOYEE = process.env.NEXT_PUBLIC_PAYROLL_EMPLOYEE ?? '';
+
+/**
+ * The backend signer. It is the default holder of the PayrollCap because the
+ * server runs payroll on a schedule; the employer can send the capability
+ * somewhere else, and the setup screen says what that would mean.
+ */
+export const AGENT_ADDRESS = process.env.NEXT_PUBLIC_AGENT_ADDRESS ?? '';
+
 /** True once both exist, which is what the screens key their banners off. */
 export const PAYROLL_CONFIGURED =
   PAYROLL_MANDATE_ID !== '' && DEMO_STREAM_ID !== '';

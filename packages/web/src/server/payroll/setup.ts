@@ -8,6 +8,7 @@ import { convertMyrToUsdc } from '@tali/shared';
 import { ServerError } from '../errors';
 import type { EnvLike } from '../env';
 import type { FxRate } from '../fx/rates';
+import { assertAuthorizedWallet, requireEmployerWallet } from '../auth/authorization';
 
 const WAGE_MYR = '30000000';
 const BUDGET_MYR = '50000000';
@@ -48,15 +49,9 @@ function required(env: EnvLike, name: string): string {
 }
 
 export function assertPayrollEmployer(identityInput: string, env: EnvLike = process.env): string {
-  const employer = normalizeAddress(required(env, 'PAYROLL_EMPLOYER_ADDRESS'), 'payroll employer');
+  const employer = requireEmployerWallet(env);
   const identity = normalizeAddress(identityInput, 'authenticated employer');
-  if (identity !== employer) {
-    throw new ServerError(
-      'payroll_employer_forbidden',
-      403,
-      'Only the configured employer can set up payroll.',
-    );
-  }
+  assertAuthorizedWallet(identity, employer);
   return employer;
 }
 

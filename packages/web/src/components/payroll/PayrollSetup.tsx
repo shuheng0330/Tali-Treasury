@@ -44,6 +44,10 @@ export function PayrollSetup() {
       setError('Connect and sign in with the configured employer wallet first.');
       return;
     }
+    if (wallet.address !== wallet.connectedAddress) {
+      setError('The connected wallet does not match the signed-in wallet. Sign in again.');
+      return;
+    }
     const expiryMs = Date.parse(`${expiry}T23:59:59+08:00`);
     if (!Number.isSafeInteger(expiryMs)) {
       setError('Choose a valid expiry date.');
@@ -65,7 +69,12 @@ export function PayrollSetup() {
   }
 
   async function createPayroll() {
-    if (!preview || wallet.status !== 'authenticated' || wallet.address !== preview.employer) {
+    if (
+      !preview ||
+      wallet.status !== 'authenticated' ||
+      wallet.address !== wallet.connectedAddress ||
+      wallet.address !== preview.employer
+    ) {
       setError('The signed-in employer no longer matches this preview. Refresh it first.');
       return;
     }
@@ -176,7 +185,7 @@ export function PayrollSetup() {
         </div>
       ) : null}
 
-      {error ? <p className="rounded-card border border-stop-line bg-stop-soft p-4 text-caption text-stop">{error}</p> : null}
+      {error ? <p className="rounded-card border border-no-line bg-no-soft p-4 text-caption text-no">{error}</p> : null}
       {digest && !registration && status === 'verifying' ? (
         <button className="btn btn--ghost btn--block" type="button" onClick={retryRegistration}>
           Retry registration (do not fund again)

@@ -1,4 +1,5 @@
 import type { PayrollBreakdown, StatutoryBody } from '@tali/shared';
+import { PAYROLL_EMPLOYEE } from '../demo-config';
 
 /**
  * Fixed sample breakdowns so the payroll screens can be built and reviewed
@@ -108,3 +109,21 @@ export const sampleStaff: SampleEmployee[] = [
     }),
   },
 ].slice(0, 1);
+
+/**
+ * The sample staff, addressed to the employee the mandate actually approves.
+ *
+ * Only the address is replaced. The amounts stay sample until the preview
+ * endpoint answers, and the screens label them as such — but a run sent to the
+ * sample wallet is refused by a mandate that approves a different one, so the
+ * address cannot stay a placeholder once the configuration exists.
+ */
+export function payrollStaff(employee: string = PAYROLL_EMPLOYEE): SampleEmployee[] {
+  const address = employee.trim();
+  if (!address) return sampleStaff;
+  return sampleStaff.map((person) => ({
+    ...person,
+    address,
+    breakdown: { ...person.breakdown, employee: address },
+  }));
+}

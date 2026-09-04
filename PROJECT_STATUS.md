@@ -1,6 +1,14 @@
 # Project status
 
-Last updated: 2 September 2026 (MYT)
+Last updated: 4 September 2026 (MYT)
+
+## Latest integrated verification
+
+After merging `origin/main` through `fa490fb` with the authenticated payroll setup
+work, the complete local suite passes: 42 Move tests, 45 Sui integration tests,
+565 web tests (564 passing and one intentional skip), 132 pgTAP assertions, root
+typecheck, and the Next.js production build. Payroll publication and hosted
+payroll-registration migrations remain pending.
 
 ## Complete locally
 
@@ -52,6 +60,21 @@ Last updated: 2 September 2026 (MYT)
   explorer links, explicit bounded polling, and reconcile-on-refresh behavior;
 - 349 web tests passing at the reconciliation checkpoint. The new migration and
   pgTAP assertions are authored; their local replay remains pending Docker startup.
+- employer-session authorization for payroll execution, mandate revocation, and
+  safety-test broadcasts, with exact-origin checks before parsing or mutation;
+- employee-session ownership enforcement for salary-stream withdrawals, including
+  read-before-withdraw ordering and safe denial without signing;
+- treasurer-only event-member roster services and `GET`/`POST
+  `/api/events/:id/members`, with active-only stable listing, exact-origin writes,
+  strict address/name validation, duplicate conflicts, and sanitized errors;
+- the existing Treasury add-member transport now uses the shared
+  `{ address, displayName }` and `{ member }` contracts;
+- statutory payroll and salary-stream enforcement (`payroll.move`, 29 contract
+  tests), the EPF/SOCSO/EIS calculator, and the PayrollDesk/earnings UI — complete
+  locally, not yet published to Testnet. See `docs/PAYROLL_LAUNCH_PLAN.md` for the
+  remaining publish work before the pitch;
+- 535 web tests (534 passing, one intentional skip), 45 Sui integration tests,
+  and 125 pgTAP assertions passing after the roster integration.
 
 ## Hosted schema verified
 
@@ -65,14 +88,12 @@ Last updated: 2 September 2026 (MYT)
   were checked. The recorded scope and reproducible checks are in
   [`docs/HOSTED_SUPABASE_VERIFICATION.md`](docs/HOSTED_SUPABASE_VERIFICATION.md).
 
-## Environment note
+## Local verification environment
 
-Docker Desktop 4.66.1 currently fails during startup while removing inaccessible
-Windows Unix-socket files for its disabled inference and secrets services. The
-transient `Docker\run` and `docker-secrets-engine` runtime directories were moved
-to timestamped local backups; no images, volumes, or project data were removed.
-The application suite is verified, but the new local Supabase reset/pgTAP replay
-must be rerun after Docker Desktop is repaired or upgraded.
+Docker Desktop and the local Supabase stack are available. Pending local migrations
+`20260901040000`, `20260903010000`, and `20260904010000` were applied without a
+reset on 4 September; all 125 pgTAP assertions then passed. No hosted migration or
+hosted data was changed by this verification.
 
 ## Pending integration
 
@@ -83,8 +104,11 @@ must be rerun after Docker Desktop is repaired or upgraded.
   `TALI_APP_ORIGIN` to the deployed HTTPS origin;
 - manually verify member analyze/create/list and treasurer process/review with
   browser Testnet wallets;
-- add trusted MYR-to-USDC quote capture, expiry and converted payout storage;
+- roll out and verify the merged MYR-to-USDC quote capture, expiry, and converted
+  payout path in the hosted environment;
 - add member correction and resubmission after a correction request;
+- deploy and verify the event-member roster API, then let the Treasury UI reload
+  and render the authoritative roster after additions;
 - run the hosted receipt flow end to end after authenticated identity is available.
 
 ## Known limitations
@@ -103,4 +127,6 @@ must be rerun after Docker Desktop is repaired or upgraded.
   reconciled or retried automatically; it fails closed for manual investigation.
 - Reconciliation is deliberately treasurer-triggered and on demand; no scheduled
   background job is included in the hackathon scope.
+- Event membership is add-only in this increment; rename, deactivate, reactivate,
+  and payroll Move roster mutation are deferred.
 - Mainnet signing and real-value payments remain out of scope.

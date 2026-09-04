@@ -16,7 +16,7 @@ const expiryMs = 10_000_000;
 const budget = convertMyrToUsdc('50000000', rate.myrPerUsd);
 const wageCap = convertMyrToUsdc('6000000000', rate.myrPerUsd);
 const env = {
-  PAYROLL_EMPLOYER_ADDRESS: employer,
+  TALI_EMPLOYER_WALLET: employer,
   PAYROLL_PACKAGE_ID: packageId,
   AGENT_PRIVATE_KEY: agent.getSecretKey(),
   PAYROLL_EPF_ADDRESS: `0x${'d'.repeat(64)}`,
@@ -119,7 +119,7 @@ describe('payroll setup transaction verification', () => {
       env,
       client: chain as never,
       rates: async () => rate,
-    })).rejects.toMatchObject({ code: 'payroll_employer_forbidden', status: 403 });
+    })).rejects.toMatchObject({ code: 'forbidden', status: 403 });
     expect(chain.waitForTransaction).not.toHaveBeenCalled();
   });
 });

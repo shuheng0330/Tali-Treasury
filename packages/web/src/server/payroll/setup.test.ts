@@ -7,7 +7,7 @@ const employer = `0x${'a'.repeat(64)}`;
 const employee = `0x${'b'.repeat(64)}`;
 const agent = Ed25519Keypair.generate();
 const env = {
-  PAYROLL_EMPLOYER_ADDRESS: employer,
+  TALI_EMPLOYER_WALLET: employer,
   PAYROLL_PACKAGE_ID: `0x${'c'.repeat(64)}`,
   AGENT_PRIVATE_KEY: agent.getSecretKey(),
   PAYROLL_EPF_ADDRESS: `0x${'d'.repeat(64)}`,
@@ -44,7 +44,7 @@ describe('authenticated payroll setup preview', () => {
       env,
       rates,
       now: () => 3_000,
-    })).rejects.toMatchObject({ code: 'payroll_employer_forbidden', status: 403 });
+    })).rejects.toMatchObject({ code: 'forbidden', status: 403 });
     expect(rates).not.toHaveBeenCalled();
   });
 

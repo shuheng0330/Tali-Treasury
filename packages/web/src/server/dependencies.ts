@@ -21,6 +21,11 @@ import { createSupabaseReceiptStore } from './supabase/receipt-store';
 import { createSupabaseWalletAuthRepository } from './supabase/wallet-auth-repository';
 import { createSuiMandateReader } from './sui/mandate-reader';
 import { createSuiPaymentExecutor } from './sui/payment-executor';
+import {
+  createAddEventMemberService,
+  createListEventMembersService,
+} from './events/members';
+import { createSupabaseEventMemberRepository } from './supabase/event-member-repository';
 import { createSupabaseRateCache } from './fx/cache';
 import { createOpenExchangeRateReader } from './fx/rates';
 import { createClaimQuoter } from './fx/quotes';
@@ -37,6 +42,8 @@ export interface BackendServices {
   auth: ReturnType<typeof createSupabaseWalletAuthRepository>;
   issueWalletChallenge: ReturnType<typeof createIssueWalletChallengeService>;
   completeWalletSession: ReturnType<typeof createCompleteWalletSessionService>;
+  addEventMember: ReturnType<typeof createAddEventMemberService>;
+  listEventMembers: ReturnType<typeof createListEventMembersService>;
   appOrigin: string;
 }
 
@@ -50,7 +57,9 @@ export function getBackendServices(): BackendServices {
   >[0] &
     Parameters<typeof createSupabaseReceiptStore>[0] &
     Parameters<typeof createSupabaseWalletAuthRepository>[0] &
-    Parameters<typeof createSupabaseAnalysisDraftRepository>[0] & Parameters<typeof createSupabaseRateCache>[0];
+    Parameters<typeof createSupabaseAnalysisDraftRepository>[0] &
+    Parameters<typeof createSupabaseEventMemberRepository>[0] &
+    Parameters<typeof createSupabaseRateCache>[0];
   const claims = createSupabaseClaimRepository(client);
   const receipts = createSupabaseReceiptStore(client);
   const drafts = createSupabaseAnalysisDraftRepository(client);
@@ -61,6 +70,7 @@ export function getBackendServices(): BackendServices {
   const mandates = createSuiMandateReader();
   const payments = createSuiPaymentExecutor();
   const auth = createSupabaseWalletAuthRepository(client);
+  const members = createSupabaseEventMemberRepository(client);
   const appOrigin = requireAppOrigin();
   const quotes = createClaimQuoter({ rates: createOpenExchangeRateReader({
     appId: () => process.env.OPEN_EXCHANGE_RATES_APP_ID,
@@ -79,6 +89,8 @@ export function getBackendServices(): BackendServices {
     auth,
     issueWalletChallenge: createIssueWalletChallengeService({ auth, appOrigin }),
     completeWalletSession: createCompleteWalletSessionService({ auth }),
+    addEventMember: createAddEventMemberService({ members }),
+    listEventMembers: createListEventMembersService({ members }),
     appOrigin,
   };
   return services;

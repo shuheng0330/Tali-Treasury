@@ -27,6 +27,41 @@ for one fixed hour, and returns `{ "address", "expiresAt" }`. The response never
 contains the token. `GET /api/auth/session` returns the active session;
 `DELETE /api/auth/session` revokes only the current token and clears its cookie.
 
+## Event member roster
+
+Both roster endpoints require an active wallet session for the event's configured
+treasurer. Member wallets and unrelated treasurers receive `403`.
+
+`GET /api/events/:id/members` returns active members ordered by creation time and
+then wallet address:
+
+```json
+{
+  "members": [
+    {
+      "eventId": "event uuid",
+      "address": "0x…64 lowercase hex digits…",
+      "displayName": "Lim Wey Cheng",
+      "addedAtMs": 1788480000000
+    }
+  ]
+}
+```
+
+`POST /api/events/:id/members` also requires the exact configured `Origin` and
+accepts:
+
+```json
+{
+  "address": "0x…64 lowercase hex digits…",
+  "displayName": "New Member"
+}
+```
+
+The display name must already be trimmed and contain 1–120 characters. A successful
+insert returns HTTP `201` with `{ "member": { ... } }`. The endpoint never renames
+or reactivates an existing event/address pair.
+
 ## Receipt and claims
 
 `POST /api/receipts/analyze` is multipart with `receipt` and `eventId`. It returns:
@@ -95,6 +130,8 @@ or broadcasts. Terminal claims replay their stored payment result.
 - `410 analysis_draft_expired`: the 15-minute draft expired; analyze again.
 - `403 member_not_found`, `processor_forbidden`, `reviewer_forbidden`: the session
   wallet lacks the required event role.
+- `404 event_not_found`: the roster event does not exist.
+- `409 member_already_exists`: the wallet is already present in the event roster.
 - `409 payment_reconciliation_unavailable`: a legacy in-flight claim has no safe
   durable digest and will not be retried automatically.
 - `502 payment_reconciliation_failed`: the chain result could not be determined;
@@ -111,7 +148,7 @@ API errors.
 { "employee": "0x…", "expiryMs": 1788281999000 }
 ```
 
-Only `PAYROLL_EMPLOYER_ADDRESS` may call it. The server returns the configured
+Only `TALI_EMPLOYER_WALLET` may call it. The server returns the configured
 Testnet package, official USDC type, backend `PayrollCap` recipient, statutory
 recipients and rules, plus the exact RM50-equivalent micro-USDC budget derived
 from the current MYR/USD rate. The browser uses that server-issued preview with

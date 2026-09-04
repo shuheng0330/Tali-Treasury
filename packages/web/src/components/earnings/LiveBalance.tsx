@@ -4,6 +4,10 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ApiError, SalaryStreamView, WithdrawEarnedResult } from '@tali/shared';
 import { accruedAt, availableAt, toDisplay } from '@tali/shared';
 
+import { RoleNotice } from '@/components/RoleNotice';
+import { useWalletSession } from '@/components/wallet/WalletSessionProvider';
+import { EMPLOYEE_COPY, walletAccess } from '@/lib/wallet-access';
+
 type WithdrawOutcome = WithdrawEarnedResult | { ok: 'unreachable'; message: string };
 
 const CORRECTION_INTERVAL_MS = 15_000;
@@ -32,6 +36,7 @@ function usePrefersReducedMotion(): boolean {
  * refuses.
  */
 export function LiveBalance({ initial }: { initial: SalaryStreamView }) {
+  const { address } = useWalletSession();
   const [stream, setStream] = useState(initial);
   const [now, setNow] = useState(() => initial.startedAtMs);
   const [withdrawing, setWithdrawing] = useState(false);
@@ -40,6 +45,11 @@ export function LiveBalance({ initial }: { initial: SalaryStreamView }) {
 
   const reduced = usePrefersReducedMotion();
   const frame = useRef<number | null>(null);
+
+  /* The stream names its own employee, so this needs no configuration: the
+     contract pays `stream.employee` whoever signs, and nobody else's wallet is
+     the one this balance belongs to. */
+  const access = walletAccess(address, stream.employee, EMPLOYEE_COPY);
 
   const finished = now >= stream.endsAtMs;
 
@@ -132,10 +142,12 @@ export function LiveBalance({ initial }: { initial: SalaryStreamView }) {
           <span className="tnum text-title">{toDisplay(available)}</span>
         </div>
 
+        <RoleNotice access={access} />
+
         <button
           type="button"
           className="btn btn--primary btn--block"
-          disabled={nothingYet || withdrawing}
+          disabled={!access.permitted || nothingYet || withdrawing}
           onClick={onWithdraw}
         >
           {withdrawing ? 'Withdrawing…' : 'Withdraw earned wages'}

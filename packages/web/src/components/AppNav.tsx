@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
 const TABS = [
+  { href: '/payroll/setup', label: 'Set up', full: 'Set up payroll' },
   { href: '/payroll', label: 'Payroll', full: 'Run payroll' },
   { href: '/earnings', label: 'Earn', full: 'Your earnings' },
   { href: '/treasury', label: 'Treasury', full: 'Treasurer view' },

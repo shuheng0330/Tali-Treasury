@@ -11,6 +11,10 @@ import { Breakdown } from './Breakdown';
 import { ClassNote } from './ClassNote';
 import { grossProblem, grossToBaseUnits, type WageClassValue } from '@/lib/payroll-wage';
 import { WageClass } from './WageClass';
+import { RoleNotice } from '@/components/RoleNotice';
+import { useWalletSession } from '@/components/wallet/WalletSessionProvider';
+import { DEMO_EMPLOYER } from '@/lib/demo-config';
+import { EMPLOYER_COPY, walletAccess } from '@/lib/wallet-access';
 
 interface RunState {
   status: 'idle' | 'running' | 'paid' | 'refused' | 'unknown';
@@ -25,6 +29,9 @@ export function PayrollDesk({
   staff: SampleEmployee[];
   runsAreLive: boolean;
 }) {
+  const { address } = useWalletSession();
+  const access = walletAccess(address, DEMO_EMPLOYER, EMPLOYER_COPY);
+
   const [selected, setSelected] = useState(staff[0]);
   const [wage, setWage] = useState<WageClassValue>({
     gross: toDisplay(staff[0].breakdown.gross),
@@ -227,10 +234,13 @@ export function PayrollDesk({
           </span>
         </div>
 
+        <RoleNotice access={access} />
+
         <button
           type="button"
           className="btn btn--primary btn--block"
           disabled={
+            !access.permitted ||
             run.status === 'running' ||
             invalid ||
             breakdown === null ||

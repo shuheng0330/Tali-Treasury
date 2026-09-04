@@ -3,6 +3,8 @@
 import { ConnectButton } from '@mysten/dapp-kit-react/ui';
 import { useEffect, useState } from 'react';
 
+import { ROLE_LABEL, viewerRole } from '@/lib/viewer-role';
+
 import { useWalletSession } from './WalletSessionProvider';
 
 function shortAddress(address: string): string {
@@ -13,6 +15,7 @@ export function WalletSessionControl() {
   const session = useWalletSession();
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
+  const role = viewerRole(session.address);
 
   if (!mounted) {
     return <button className="btn-secondary min-w-28" disabled>Loading wallet…</button>;
@@ -34,7 +37,8 @@ export function WalletSessionControl() {
       {session.status === 'authenticated' && session.address ? (
         <>
           <span className="rounded-badge border border-ok-line bg-ok-soft px-2.5 py-1.5 font-mono text-caption text-ok">
-            Signed in · {shortAddress(session.address)}
+            {role ? `${ROLE_LABEL[role]} · ` : ''}
+            {shortAddress(session.address)}
           </span>
           <button type="button" className="btn-secondary" onClick={() => void session.signOut()}>
             Sign out
