@@ -33,6 +33,20 @@ const SUI_ADDRESS = /^0x[0-9a-fA-F]{1,64}$/;
 const MIN_FUNDING_MYR = 20_000_000n;
 const MAX_FUNDING_MYR = 200_000_000_000n;
 
+/**
+ * Chooses the employee shown when payroll setup opens.
+ *
+ * The configured demo employee must win over the connected wallet: that wallet
+ * is the employer funding the mandate, not the person receiving wages. Falling
+ * back to the connected address keeps an unconfigured local checkout usable.
+ */
+export function initialPayrollEmployee(
+  configuredEmployee: string,
+  connectedWallet: string | null | undefined,
+): string {
+  return configuredEmployee.trim() || connectedWallet?.trim() || '';
+}
+
 export interface SetupFormValue {
   employee: string;
   /** Receives the PayrollCap, and can therefore run and revoke this payroll. */

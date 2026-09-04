@@ -3,6 +3,7 @@ import {
   capProblem,
   coverageProblem,
   expiryMsFromDays,
+  initialPayrollEmployee,
   mandateAmounts,
   NET_MIN_BPS,
   setupProblems,
@@ -16,6 +17,17 @@ const SOCSO = '0x16b9fdc16764d6fa514fb6da55df5ca840d30e5bb057eba6a5ab67cf743c7f6
 const EIS = '0x7be8aa82872facbd01372cdeb20375a82f74011dca1512e41737664a759dc523';
 
 const NOW = 1_757_000_000_000;
+
+describe('initialPayrollEmployee', () => {
+  it('prefers the configured employee over the connected employer wallet', () => {
+    expect(initialPayrollEmployee(EMPLOYEE, `0x${'c4'.repeat(32)}`)).toBe(EMPLOYEE);
+  });
+
+  it('uses the connected wallet only when no employee is configured', () => {
+    const connected = `0x${'c4'.repeat(32)}`;
+    expect(initialPayrollEmployee('', connected)).toBe(connected);
+  });
+});
 
 function form(overrides: Partial<SetupFormValue> = {}): SetupFormValue {
   return {

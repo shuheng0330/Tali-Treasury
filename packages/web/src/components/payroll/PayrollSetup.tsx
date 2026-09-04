@@ -7,6 +7,8 @@ import { useEffect, useState } from 'react';
 
 import { useWalletSession } from '@/components/wallet/WalletSessionProvider';
 import { previewPayrollSetup, registerPayrollSetup } from '@/lib/api/payroll-setup';
+import { PAYROLL_EMPLOYEE } from '@/lib/demo-config';
+import { initialPayrollEmployee } from '@/lib/payroll-setup';
 import type { PayrollSetupPreview } from '@/server/payroll/setup';
 import type { PayrollSetupRegistration } from '@/server/payroll/setup-registration';
 
@@ -27,7 +29,9 @@ function walletMessage(error: unknown): string {
 export function PayrollSetup() {
   const wallet = useWalletSession();
   const dapp = useDAppKit();
-  const [employee, setEmployee] = useState('');
+  const [employee, setEmployee] = useState(() =>
+    initialPayrollEmployee(PAYROLL_EMPLOYEE, wallet.address),
+  );
   const [expiry, setExpiry] = useState(defaultExpiry);
   const [preview, setPreview] = useState<PayrollSetupPreview | null>(null);
   const [status, setStatus] = useState<'idle' | 'previewing' | 'ready' | 'signing' | 'verifying' | 'registered'>('idle');
@@ -36,7 +40,9 @@ export function PayrollSetup() {
   const [registration, setRegistration] = useState<PayrollSetupRegistration | null>(null);
 
   useEffect(() => {
-    if (!employee && wallet.address) setEmployee(wallet.address);
+    if (!employee && wallet.address) {
+      setEmployee(initialPayrollEmployee(PAYROLL_EMPLOYEE, wallet.address));
+    }
   }, [employee, wallet.address]);
 
   async function loadPreview() {
