@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { toDisplay } from '@tali/shared';
-import { tryRunPayroll } from '@/lib/api/payroll';
+import { tryPreviewPayroll, tryRunPayroll } from '@/lib/api/payroll';
 import type { SampleEmployee } from '@/lib/mock/payroll';
 import { Breakdown } from './Breakdown';
 
@@ -28,18 +28,41 @@ export function EnforcementProof({
 }) {
   const [shortEpf, setShortEpf] = useState(false);
   const [outcome, setOutcome] = useState<Outcome>({ kind: 'none' });
+  const [breakdown, setBreakdown] = useState(person.breakdown);
 
-  const epf = person.breakdown.bodies.find((body) => body.body === 'epf');
-  const required = (BigInt(person.breakdown.gross) * BigInt(epfFloorBps)) / 10000n;
+  useEffect(() => {
+    let current = true;
+    const sourceGross = person.breakdown.fxConversion?.source.gross ?? person.breakdown.gross;
+    void tryPreviewPayroll({
+      employee: person.address,
+      gross: sourceGross,
+      age: 30,
+      citizenship: 'local',
+    }, person.breakdown).then((result) => {
+      if (current) setBreakdown(result.data ?? person.breakdown);
+    });
+    return () => { current = false; };
+  }, [person]);
+
+  const epf = breakdown.bodies.find((body) => body.body === 'epf');
+  const required = (BigInt(breakdown.gross) * BigInt(epfFloorBps)) / 10000n;
 
   async function submit() {
     setOutcome({ kind: 'running' });
     const result = await tryRunPayroll({
       employee: person.address,
-      gross: person.breakdown.gross,
+      gross: breakdown.fxConversion?.source.gross ?? breakdown.gross,
       age: 30,
       citizenship: 'local',
       underpay: shortEpf ? 'epf' : undefined,
+      ...(breakdown.fxConversion
+        ? {
+            fxApproval: {
+              myrPerUsd: breakdown.fxConversion.myrPerUsd,
+              rateTimestampMs: breakdown.fxConversion.rateTimestampMs,
+            },
+          }
+        : {}),
     });
 
     if (result.data === null) {
@@ -55,7 +78,7 @@ export function EnforcementProof({
       abortCode: result.data.abortCode,
       message:
         result.data.abortCode === 24
-          ? `EPF must receive at least ${toDisplay(required.toString())} on a gross of ${toDisplay(person.breakdown.gross)}.`
+          ? `EPF must receive at least ${toDisplay(required.toString(), 6)} USDC on the quoted gross.`
           : 'The contract refused this run.',
     });
   }
@@ -83,15 +106,15 @@ export function EnforcementProof({
         </label>
       </div>
 
-      <Breakdown breakdown={person.breakdown} shortedBody={shortEpf ? 'epf' : null} />
+      <Breakdown breakdown={breakdown} shortedBody={shortEpf ? 'epf' : null} />
 
       {shortEpf ? (
         <div className="flex flex-col gap-2 rounded-card border border-stop-line bg-stop-soft p-5">
           <span className="eyebrow text-stop">What the contract will do</span>
           <p className="text-body text-ink-2">
             <span className="font-medium text-stop">Refuse it, on abort 24.</span> EPF must
-            receive at least {toDisplay(required.toString())} on a gross of{' '}
-            {toDisplay(person.breakdown.gross)}. Nothing moves: the worker is not paid
+            receive at least {toDisplay(required.toString(), 6)} USDC on a gross of{' '}
+            {toDisplay(breakdown.gross, 6)} USDC. Nothing moves: the worker is not paid
             either, because the payment is one transaction and it reverts whole.
           </p>
           <p className="text-caption text-ink-3">
@@ -103,7 +126,7 @@ export function EnforcementProof({
           <span className="eyebrow text-ok">What the contract will do</span>
           <p className="text-body text-ink-2">
             Pay four recipients in one transaction, totalling{' '}
-            {toDisplay(person.breakdown.employerCost)}. The worker cannot be paid without
+            {toDisplay(breakdown.employerCost, 6)} USDC. The worker cannot be paid without
             EPF, SOCSO and EIS being paid in the same moment.
           </p>
         </div>
@@ -112,7 +135,7 @@ export function EnforcementProof({
       <button
         type="button"
         className="btn btn--primary btn--block"
-        disabled={outcome.kind === 'running'}
+        disabled={outcome.kind === 'running' || !breakdown.fxConversion}
         onClick={submit}
       >
         {outcome.kind === 'running'
@@ -121,6 +144,12 @@ export function EnforcementProof({
             ? 'Submit the underpaid run'
             : 'Run payroll'}
       </button>
+
+      {!breakdown.fxConversion ? (
+        <p className="text-caption text-wait">
+          A live MYR-to-USDC quote is required before this Testnet transaction can be submitted.
+        </p>
+      ) : null}
 
       {outcome.kind === 'refused' ? (
         <p className="rounded-card border border-stop-line bg-stop-soft p-4 text-caption text-stop">

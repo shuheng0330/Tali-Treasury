@@ -4,6 +4,20 @@ Implemented locally on `test_main`, 3 September 2026. A browser-approved MYR
 reimbursement is verified on Sui Testnet; hosted rollout remains unverified.
 See the dated payment evidence below.
 
+## Payroll use
+
+The configured Open Exchange Rates reader also supplies payroll previews. Payroll
+first calculates the wage and statutory split in MYR, then converts every
+transaction leg with one rate and reconstructs the rounded USDC accounting totals.
+A payroll run must submit the exact rate and timestamp shown in its preview; if the
+cached provider rate changes, the server returns a conflict and requires another
+preview. Claim quotes and payroll previews share the provider/cache, but they remain
+different domain records and must not be substituted for each other.
+
+The agreed demo uses an RM30 source wage and caps the full payroll mandate at an
+RM50-equivalent USDC amount calculated when setup is signed. These are Testnet
+valuation figures, not a currency-exchange service.
+
 ## Meaning of the quote
 
 - Original receipt amount and currency stay unchanged. This repository stores

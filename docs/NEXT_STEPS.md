@@ -16,8 +16,9 @@ currencies remain unsupported.
 
 - Choose one employee wallet, employer wallet and server signer.
 - Support one employee class for the demo; do not imply universal statutory coverage.
-- Choose a scaled wage, per-run cap and budget together. Include statutory legs,
-  stream commitments, rehearsals and gas.
+- Use the agreed RM30 source wage and RM50-equivalent total ceiling. Convert both
+  through one current configured MYR/USD quote; include statutory legs and a
+  distinct stream allocation of at most RM10 equivalent.
 - Time the stream so visible accrual occurs during rehearsal and presentation.
 
 Acceptance: every teammate uses the same addresses, wage and object plan, and the

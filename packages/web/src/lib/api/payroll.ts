@@ -12,6 +12,10 @@ export interface PreviewRequest {
 /** Sent when the run deliberately underpays a body, to show the refusal. */
 export interface RunRequest extends PreviewRequest {
   underpay?: 'epf' | 'socso' | 'eis';
+  fxApproval?: {
+    myrPerUsd: string;
+    rateTimestampMs: number;
+  };
 }
 
 function describe(error: unknown): string {

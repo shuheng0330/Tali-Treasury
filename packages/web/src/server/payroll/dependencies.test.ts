@@ -6,6 +6,7 @@ import type { EnvLike } from '../env';
 
 const complete: EnvLike = {
   AGENT_PRIVATE_KEY: 'suiprivkey1abc',
+  PAYROLL_PACKAGE_ID: '0x6',
   PAYROLL_CAP_ID: '0x1',
   PAYROLL_MANDATE_ID: '0x2',
   PAYROLL_EPF_ADDRESS: '0x3',

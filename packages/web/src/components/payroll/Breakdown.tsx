@@ -49,9 +49,26 @@ export function Breakdown({
   /** Rendered struck through when a body has been deliberately underpaid. */
   shortedBody?: 'epf' | 'socso' | 'eis' | null;
 }) {
+  const unit = breakdown.currency ?? 'MYR';
+  const source = breakdown.fxConversion?.source;
+
   return (
-    <div className="flex flex-col divide-y divide-rule rounded-card border border-rule bg-surface px-5">
-      <Row label="Gross wage" amount={breakdown.gross} strong />
+    <div className="flex flex-col rounded-card border border-rule bg-surface px-5">
+      {source && breakdown.fxConversion ? (
+        <div className="border-b border-rule py-4">
+          <p className="text-body font-medium">
+            RM {toDisplay(source.gross)} gross → {toDisplay(breakdown.gross, 6)} USDC
+          </p>
+          <p className="text-caption text-ink-3">
+            Total employer cost RM {toDisplay(source.employerCost)} →{' '}
+            {toDisplay(breakdown.employerCost, 6)} USDC · 1 USD ={' '}
+            {breakdown.fxConversion.myrPerUsd} MYR · 1 USDC = 1 USD for this Testnet demo
+          </p>
+        </div>
+      ) : null}
+
+      <div className="flex flex-col divide-y divide-rule">
+      <Row label={`Gross wage (${unit})`} amount={breakdown.gross} strong fractionDigits={unit === 'USDC' ? 6 : 2} />
 
       {breakdown.bodies.map((body) => {
         const shorted = shortedBody === body.body;
@@ -59,12 +76,13 @@ export function Breakdown({
           <div key={body.body} className={shorted ? '-mx-5 border-l-2 border-stop bg-stop-soft px-5' : undefined}>
             <Row
               label={STATUTORY_BODY_LABEL[body.body]}
-              detail={`${toDisplay(body.employee)} from wages · ${toDisplay(
+              detail={`${toDisplay(body.employee, unit === 'USDC' ? 6 : 2)} ${unit} from wages · ${toDisplay(
                 body.employer,
-              )} from the employer`}
+                unit === 'USDC' ? 6 : 2,
+              )} ${unit} from the employer`}
               amount={shorted ? '1' : body.total}
               muted={shorted}
-              fractionDigits={shorted ? 6 : 2}
+              fractionDigits={shorted || unit === 'USDC' ? 6 : 2}
             />
             {shorted ? (
               <p className="pb-2 text-caption text-stop">
@@ -75,13 +93,15 @@ export function Breakdown({
         );
       })}
 
-      <Row label="Net to the worker" amount={breakdown.net} strong />
+      <Row label={`Net to the worker (${unit})`} amount={breakdown.net} strong fractionDigits={unit === 'USDC' ? 6 : 2} />
       <Row
-        label="Total cost to the employer"
+        label={`Total cost to the employer (${unit})`}
         detail="Gross plus the employer contributions"
         amount={breakdown.employerCost}
         strong
+        fractionDigits={unit === 'USDC' ? 6 : 2}
       />
+      </div>
     </div>
   );
 }

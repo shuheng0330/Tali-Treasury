@@ -10,7 +10,7 @@ export interface WageClassValue {
 
 /* The same bounds the request schema enforces, so the screen refuses what the
    server would refuse and says the same thing about it. */
-const MIN_GROSS = 100_000_000n;
+const MIN_GROSS = 20_000_000n;
 const MAX_GROSS = 200_000_000_000n;
 
 const AMOUNT = /^\d+(?:\.\d{1,6})?$/;
@@ -28,9 +28,7 @@ export function grossProblem(gross: string): string | null {
   const base = grossToBaseUnits(gross);
   if (base === null) return 'Enter a monthly wage in ringgit, to at most six decimals.';
   if (base < MIN_GROSS) {
-    /* The EPF schedule's narrowest band is RM20, so below about RM100 the
-       employee share stops being a share of the wage at all. */
-    return `Below ${toDisplay(MIN_GROSS.toString())} the EPF bands stop describing a salary.`;
+    return `The scaled demo wage must be at least ${toDisplay(MIN_GROSS.toString())} MYR.`;
   }
   if (base > MAX_GROSS) return 'That is a typo, not a monthly salary.';
   return null;
