@@ -16,17 +16,21 @@ you need a value that isn't there, add it to the `@theme` block — never inline
    and anything you type into. `card` (16px) for a group of related rows. `panel`
    (28px) for a whole section. `modal` (24px) for dialogs. `badge` (pill) for chips,
    tabs and buttons. A pill is always interactive; a rectangle never is.
-4. **One accent, and it is a fill before it is a colour.** `accent` (#ff7a00) is the
-   only chromatic brand colour. It is never text: at 2.6:1 on white it fails at every
-   size. Orange text uses `accent-ink`, orange fills carry `on-accent` (a fixed dark
-   that does not flip with the theme, because the fill doesn't either).
+4. **One accent, and it is a fill before it is a colour.** `accent` (#7c3aed) is the
+   only chromatic brand colour, and it is never text. Accent text uses `accent-ink`
+   (#6d28d9, 7.10:1 on canvas and 6.48:1 on `accent-soft`); accent fills carry
+   `on-accent`, which is white at 5.70:1. Near-black on the fill measures 3.43:1 and
+   fails, which is the opposite of what the orange ramp needed.
 5. **Primary action is ink, not accent.** The default button is `btn--primary`, a dark
    pill. `btn--accent` is for the one action a screen is actually about — the safety
-   test's trigger, the landing's first call. Two orange buttons in a viewport means one
+   test's trigger, the landing's first call. Two accent buttons in a viewport means one
    of them is wrong.
-6. **`ok` / `no` / `dead` are status only** and never appear on a button. `wait` is an
-   alias of the accent ramp: "needs attention" and "the brand" are the same warm hue on
-   purpose, so the palette carries four meanings, not five.
+6. **`ok` / `no` / `dead` / `wait` are status only** and never appear on a button.
+   `wait` was once an alias of the accent ramp, on the grounds that "needs attention"
+   and "the brand" were the same warm hue. The brand is purple now, so that coupling
+   would have made warnings purple — and amber is the one status colour a reader
+   already knows without being told. `wait` keeps the amber ramp and the palette
+   carries five meanings, deliberately.
 7. **Tabular figures on every number.** Use `.tnum`. The unit is smaller and lighter
    than the value.
 8. **Status never relies on colour alone.** Every chip carries a glyph shape and a text
@@ -70,7 +74,7 @@ The demo runs on a projector, 3–8m away, in a lit room.
 - No mid-greys on white — they vanish. `ink-3` is the lightest text allowed and never
   carries anything load-bearing.
 - **Hover holds nothing.** Hover may recolour, lift or slide; it may never be the only
-  way to reach a fact. The role cards flood orange on hover and say the same words
+  way to reach a fact. The role cards flood accent on hover and say the same words
   either way.
 - No autoplay video. CSS and SVG animation only.
 - One animated element per view. Only the in-progress state animates; terminal states

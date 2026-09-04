@@ -13,10 +13,10 @@
   --rule: 232 233 234;
   --rule-strong: 212 214 216;
 
-  --accent: 255 122 0;
-  --accent-ink: 170 85 0;
-  --accent-soft: 255 242 230;
-  --accent-line: 255 199 148;
+  --accent: 124 58 237;
+  --accent-ink: 109 40 217;
+  --accent-soft: 245 243 255;
+  --accent-line: 196 181 253;
 
   --ok: 12 122 68;
   --ok-soft: 226 244 234;
@@ -37,82 +37,6 @@
   color-scheme: light;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme='light']) {
-    --canvas: 8 13 16;
-    --surface: 18 26 31;
-    --raised: 26 35 41;
-    --sunken: 34 44 51;
-
-    --ink: 245 246 247;
-    --ink-2: 168 177 183;
-    --ink-3: 128 138 145;
-
-    --rule: 38 47 53;
-    --rule-strong: 60 70 77;
-
-    --accent: 255 122 0;
-    --accent-ink: 255 154 60;
-    --accent-soft: 46 27 8;
-    --accent-line: 92 56 18;
-
-    --ok: 72 203 140;
-    --ok-soft: 13 44 30;
-    --ok-line: 31 92 63;
-
-    --wait: 255 154 60;
-    --wait-soft: 46 27 8;
-    --wait-line: 92 56 18;
-
-    --no: 240 124 106;
-    --no-soft: 48 24 21;
-    --no-line: 103 48 42;
-
-    --dead: 145 155 164;
-    --dead-soft: 28 35 41;
-    --dead-line: 59 68 77;
-
-    color-scheme: dark;
-  }
-}
-
-:root[data-theme='dark'] {
-  --canvas: 8 13 16;
-  --surface: 18 26 31;
-  --raised: 26 35 41;
-  --sunken: 34 44 51;
-
-  --ink: 245 246 247;
-  --ink-2: 168 177 183;
-  --ink-3: 128 138 145;
-
-  --rule: 38 47 53;
-  --rule-strong: 60 70 77;
-
-  --accent: 255 122 0;
-  --accent-ink: 255 154 60;
-  --accent-soft: 46 27 8;
-  --accent-line: 92 56 18;
-
-  --ok: 72 203 140;
-  --ok-soft: 13 44 30;
-  --ok-line: 31 92 63;
-
-  --wait: 255 154 60;
-  --wait-soft: 46 27 8;
-  --wait-line: 92 56 18;
-
-  --no: 240 124 106;
-  --no-soft: 48 24 21;
-  --no-line: 103 48 42;
-
-  --dead: 145 155 164;
-  --dead-soft: 28 35 41;
-  --dead-line: 59 68 77;
-
-  color-scheme: dark;
-}
-
 @theme inline {
   --color-canvas: rgb(var(--canvas));
   --color-surface: rgb(var(--surface));
@@ -131,10 +55,10 @@
   --color-accent-soft: rgb(var(--accent-soft));
   --color-accent-line: rgb(var(--accent-line));
 
-  /* Deliberately does not flip with the theme. Orange stays orange in both, so
-     anything sitting on top of it has to stay dark in both — reading `ink`
-     there would put near-white on orange at 2.4:1 the moment the OS is dark. */
-  --color-on-accent: rgb(8 13 16);
+  /* White, not ink. The accent fill is dark enough that near-black on it
+     measures 3.43:1 and fails; white clears 5.70:1. This is the one pairing
+     that had to change with the hue rather than follow it. */
+  --color-on-accent: rgb(255 255 255);
 
   --color-ok: rgb(var(--ok));
   --color-ok-soft: rgb(var(--ok-soft));
