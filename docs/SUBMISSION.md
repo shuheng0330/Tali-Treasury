@@ -35,9 +35,11 @@ the agent cannot exceed even holding a valid capability.
 
 ## Live right now
 
-Deployed at **https://tali-treasury.vercel.app**. Package
-`0x7be8aa82872facbd01372cdeb20375a82f74011dca1512e41737664a759dc523` on Sui
-Testnet.
+Deployed at **https://tali-treasury.vercel.app**. The original expense package is
+`0x7be8aa82872facbd01372cdeb20375a82f74011dca1512e41737664a759dc523`;
+package v2 with `payroll` and `treasury` is
+`0xeb973dbac9e4e5c2ea0c31ffb6b51b4df1f34e05443f970e89a35301e6b97688`
+on Sui Testnet.
 
 Every digest below opens in a public explorer.
 
@@ -47,6 +49,7 @@ Every digest below opens in a public explorer.
 | Asked for 15 USDC against a 5 USDC cap | Refused, abort 5 | `5fMDNz9dAxJFiamg5Bi5iXnPjnHv2HTUB3hv2wJ2PNpU` |
 | Asked to pay an address not on the allowlist | Refused, abort 7 | `2htVB5NJCxhz1QXQtLGDjJ6kLVAwit6MLqzghzGDnk5e` |
 | RM6 receipt reimbursed from the browser | Paid 1.484561 USDC | `J6fWBNa7RQXiLaVVK4ZhZSNphggNLq312HKRyhRbZQq` |
+| Published payroll module in package v2 | Allowed | `86914sL2wFj9s7sfcMqdYx9ekST8FRU8Y1tLT5SAaSfN` |
 
 Both refusals were signed by the agent's real capability. The mandate refused
 them anyway, burning 0.002095 SUI in gas and moving no USDC. Budget after:
@@ -60,14 +63,12 @@ the exact payout before it was sent.
 
 Say this plainly if asked; it is the honest half of the story.
 
-- **The payroll module is written and tested but not published.** The statutory
-  arithmetic, the contract, the screens and the enforcement demo all exist and
-  run locally. No `PayrollMandate` exists on Testnet, so the payroll figures on
-  screen are labelled as a preview rather than as chain state.
+- **The payroll module is published, but no demo `PayrollMandate` exists yet.**
+  The statutory arithmetic, contract and screens exist, but payroll figures remain
+  previews until the authenticated setup flow creates and registers the funded object.
 - **Set Up Payroll has a complete local signing, verification and idempotent
-  registration path**, but the payroll module is not published and the hosted
-  payroll-registration migrations are not applied, so it cannot yet create the
-  final Testnet demo mandate.
+  registration path**, but the hosted payroll-registration migrations and runtime
+  configuration are not yet verified, so it cannot yet create the final demo mandate.
 - **Interactive safety attempts fall back to a local prediction**, labelled as
   one. The two refusals in the table above are real and are what the screen
   links to.
@@ -85,7 +86,7 @@ Testnet USDC. Gemini for receipt reading. Open Exchange Rates for MYR quotes.
 Wallet sign-in over a signed challenge, including Slush zkLogin.
 
 **Tests:** 42 Move contract tests (25 payroll, 17 treasury), 45 Sui integration
-tests, and 565 web tests (564 passing, one intentional skip) after the latest
+tests, and 571 web tests (570 passing, one intentional skip) after the latest
 `main` integration. The local database suite has 132 passing pgTAP assertions.
 
 ## AI tooling disclosure
@@ -116,15 +117,15 @@ is not already on chain.
 | 2:20–2:45 | `/earnings` | Employee withdraws accrued wages. Real transaction. |
 | 2:45–3:00 | Close | "Wages and EPF leave together, or neither does. That is a contract, not a policy." |
 
-### B — payroll not published
+### B — payroll mandate not created
 
 | Time | Screen | Say and do |
 |---|---|---|
 | 0:00–0:20 | Landing | Same opening. |
 | 0:20–0:55 | Landing evidence | Three real Testnet transactions: one allowed, two refused. Open a refusal in the explorer. Stress that the agent had a valid capability and was still refused. |
 | 0:55–1:45 | `/claim` | Photograph an RM receipt. Agent reads it, quotes MYR to USDC, treasurer approves the exact payout. Show the payment digest. |
-| 1:45–2:25 | `/payroll` + `/payroll/proof` | The statutory split against the EPF Third Schedule, then the refusal the contract enforces. **Say clearly that payroll is not yet published**, and that the arithmetic and the contract are written and tested. |
-| 2:25–2:45 | `/payroll/setup` | The employer flow that funds it, and why signing is disabled right now. |
+| 1:45–2:25 | `/payroll` + `/payroll/proof` | The statutory split against the EPF Third Schedule. **Say clearly that the module is published but no funded payroll mandate or execution proof exists yet.** |
+| 2:25–2:45 | `/payroll/setup` | The employer flow that will create, fund, verify and register that mandate once hosted configuration is complete. |
 | 2:45–3:00 | Close | Same close. |
 
 Rehearse on the projector resolution and on a phone. Keep status, reason and
@@ -148,8 +149,9 @@ disqualification under MUBA rules.
 
 **"What is real and what is mocked?"**
 Point at the table above and at the on-screen labels. The claims contract,
-mandate, payments and both refusals are real. Payroll is written and tested but
-not yet published, and every screen says so where it matters.
+mandate, payments and both refusals are real. Payroll code is published in package
+v2, but its funded mandate and execution evidence are not yet created, and every
+screen must say so where it matters.
 
 **"Who holds the keys?"**
 Expense reimbursement splits an `AdminCap`, held by the treasurer, from an
