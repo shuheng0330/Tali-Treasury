@@ -143,6 +143,21 @@ export interface GetEventResponse {
   };
 }
 
+/** POST /api/events/:id/members */
+export interface CreateEventMemberRequest {
+  address: Address;
+  displayName: string;
+}
+
+export interface CreateEventMemberResponse {
+  member: EventMember;
+}
+
+/** GET /api/events/:id/members */
+export interface ListEventMembersResponse {
+  members: EventMember[];
+}
+
 /** GET /api/events/:id/claims?state=... */
 export interface ListClaimsResponse {
   claims: Claim[];

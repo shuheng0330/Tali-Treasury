@@ -10,6 +10,7 @@ export type ServerErrorCode =
   | 'unsupported_receipt'
   | 'event_not_found'
   | 'member_not_found'
+  | 'member_already_exists'
   | 'processor_forbidden'
   | 'reviewer_forbidden'
   | 'claim_not_found'
