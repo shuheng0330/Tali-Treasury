@@ -14,9 +14,11 @@ currencies remain unsupported.
 
 ## 1. Lock the payroll demo configuration
 
-- Choose one employee wallet, employer wallet and server signer.
+- ✅ Use the configured Slush employer, `tali-member` employee, server signer and
+  separate Testnet-only EPF/SOCSO/EIS stand-ins.
 - Support one employee class for the demo; do not imply universal statutory coverage.
-- Use the agreed RM30 source wage and RM50-equivalent total ceiling. Convert both
+- ✅ Fund the employer with 12.640845 Testnet USDC and 0.1 SUI. Use the agreed RM30
+  source wage and RM50-equivalent total ceiling. Convert both
   through one current configured MYR/USD quote; include statutory legs and a
   distinct stream allocation of at most RM10 equivalent.
 - Time the stream so visible accrual occurs during rehearsal and presentation.
@@ -26,11 +28,12 @@ budget can cover the complete demonstrated flow more than once.
 
 ## 2. Publish and configure payroll on Testnet
 
-- Publish/upgrade the payroll Move module.
+- ✅ Upgrade the payroll Move module to package v2 (`0xeb973d…b97688`).
 - Create and fund `PayrollMandate<USDC>` and deliver `PayrollCap` to the intended
   signer.
 - Open the employee stream and record all public identifiers and explorer evidence.
-- Include `PAYROLL_PACKAGE_ID`; configuration is incomplete without it.
+- ✅ Record `PAYROLL_PACKAGE_ID` in the public configuration example. Configure
+  the same value in local and hosted runtime environments.
 
 Acceptance: direct chain reads show the expected employer, employee, policy,
 budget, capability ownership and stream state.

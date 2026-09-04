@@ -44,22 +44,23 @@ Status words are intentionally precise:
 | Event-member roster API | **Complete locally** | Treasurer-only active roster GET and add-only POST; existing dashboard form uses the shared contract |
 | MYR → USDC reimbursement quotes | **Live via local app** | RM6 → 1.484561 USDC browser payment verified; hosted rollout pending |
 | Claim outcomes | **Complete locally** | Paid with Auto-paid / Paid after review chips; Rejected tab; correction/rejection reasons on both screens |
-| Payroll Move module and integration | **Complete locally; publication pending** | Contract, tests, builders, readers, payroll service and screens exist; live configuration and proof remain |
+| Payroll Move module and integration | **Live package; setup pending** | Package v2 contains `payroll` and `treasury`; contract tests, builders and readers pass; a funded payroll mandate and proof remain |
 | Payroll MYR → USDC valuation | **Complete locally** | RM statutory calculation is converted leg-by-leg with one approved live-reference rate; hosted proof pending |
 | Authenticated Set Up Payroll | **Complete locally; binding and hosted migration pending** | Employer-only preview and Slush funding use one strict digest-only verifier and immutable registry; payroll pages still need explicit registered-payroll selection |
-| Live payroll run and salary stream | **Pending** | Requires published package, funded mandate, real employee wiring, authorization and Testnet evidence |
+| Live payroll run and salary stream | **Pending** | Requires a funded mandate, real employee wiring, authorization and Testnet evidence |
 | Create Expense Treasury | **Complete locally through wallet execution** | Separate reimbursement setup screen can sign against the existing package; verified event registration remains pending |
 | Revoke and Safety Test interactions | **Complete locally; live proof pending** | Employer-authorized APIs can submit through the server signer; unsupported scenarios remain clearly labelled predictions |
 | Gemini receipt analysis and Supabase claims | **Complete locally; rollout pending** | Private drafts, authenticated access and 141 pgTAP assertions across the current schema |
 | Deterministic policy and backend agent signing | **Live via local app** | Native USDC payment/recovery and manually approved MYR reimbursement verified on Testnet |
 | Wallet connection and live UI writes | **Complete locally** | Testnet connect, explicit sign-in, one-hour HTTP-only session and sign-out |
-| Statutory payroll enforcement | **Complete locally** | `payroll.move`, 25 contract tests; EPF Third Schedule bands and SOCSO/EIS ceilings enforced as an on-chain basis-point floor. Not yet published to Testnet |
-| Per-second salary accrual | **Complete locally** | `SalaryStream` open/accrue/withdraw, tested against the same integer arithmetic the UI displays. Not yet published to Testnet |
+| Statutory payroll enforcement | **Published; live proof pending** | `payroll.move`, 25 contract tests; EPF Third Schedule bands and SOCSO/EIS ceilings are published in package v2. Funded execution proof is next |
+| Per-second salary accrual | **Published; live proof pending** | `SalaryStream` open/accrue/withdraw is published in package v2 and tested locally. A funded stream has not yet been opened |
 | Web hosting | **Live** | [`tali-treasury.vercel.app`](https://tali-treasury.vercel.app) |
 | Submission pack | **Complete locally; recording pending** | Written submission and six-slide deck are present; video and rehearsal remain |
 
 The detailed team checklist lives in [`docs/PROGRESS.md`](docs/PROGRESS.md).
-Upcoming correction/resubmission and authenticated event creation are specified in
+Member correction/resubmission is delivered; authenticated event creation is still
+specified rather than built. Both are recorded in
 [`docs/PRODUCT_NEXT_STEPS.md`](docs/PRODUCT_NEXT_STEPS.md).
 The payroll-first release order and acceptance gate live in
 [`docs/PAYROLL_LAUNCH_PLAN.md`](docs/PAYROLL_LAUNCH_PLAN.md).
@@ -68,7 +69,9 @@ The payroll-first release order and acceptance gate live in
 
 | Item | Identifier |
 | --- | --- |
-| Package | [`0x7be8aa…9dc523`](https://suiscan.xyz/testnet/object/0x7be8aa82872facbd01372cdeb20375a82f74011dca1512e41737664a759dc523) |
+| Original package v1 (expense treasury) | [`0x7be8aa…9dc523`](https://suiscan.xyz/testnet/object/0x7be8aa82872facbd01372cdeb20375a82f74011dca1512e41737664a759dc523) |
+| Current package v2 (payroll + treasury) | [`0xeb973d…b97688`](https://suiscan.xyz/testnet/object/0xeb973dbac9e4e5c2ea0c31ffb6b51b4df1f34e05443f970e89a35301e6b97688) |
+| Package upgrade | [`86914s…AaSfN`](https://suiscan.xyz/testnet/tx/86914sL2wFj9s7sfcMqdYx9ekST8FRU8Y1tLT5SAaSfN) |
 | USDC mandate | [`0x16b9fd…3c7f6f`](https://suiscan.xyz/testnet/object/0x16b9fdc16764d6fa514fb6da55df5ca840d30e5bb057eba6a5ab67cf743c7f6f) |
 | Successful 3 USDC payment | [`Aksj8w…5yQXA`](https://suiscan.xyz/testnet/tx/Aksj8wgVoVRnbkVDyCMQ4qMKa1HfkWqDWF8Xptz5yQXA) |
 | Rejected 15 USDC overspend | [`5fMDNz…2PNpU`](https://suiscan.xyz/testnet/tx/5fMDNz9dAxJFiamg5Bi5iXnPjnHv2HTUB3hv2wJ2PNpU) |
@@ -144,7 +147,7 @@ See [`docs/OWNERSHIP.md`](docs/OWNERSHIP.md) before editing shared paths.
 - npm.
 - Docker Desktop for the standard local Supabase workflow, or PostgreSQL 16 for
   migration-only verification.
-- Sui CLI `1.78.1` with the Testnet-compatible Move framework.
+- Sui CLI `1.79.0` (or the current Testnet-compatible release) with the Testnet Move framework.
 - A Sui Testnet client configuration for Move tests and CLI verification.
 
 ## Fresh-clone setup

@@ -31,10 +31,21 @@ the submission time against the organiser channel; older notes used 23:59.
 - Consolidated the parallel payroll-registration implementations around the
   strict digest-only verifier, immutable registry and centralized
   `TALI_EMPLOYER_WALLET` authorization while retaining the latest setup UI.
-- Post-merge verification passes 48 Sui integration tests, 609 web tests with one
-  intentional skip, root typecheck, production build and a zero-vulnerability
-  high-severity audit. Docker Desktop's Linux engine was unavailable for a fresh
-  database replay; all 141 pgTAP assertions passed immediately before this merge.
+- Integrated the latest role-aware navigation, treasury action gates and
+  submission corrections from `main` through `c20925d`.
+- Fast-forwarded to `main` at `9f6a07f`; wallet sign-in now surfaces sanitized
+  backend failures before applying wallet/network heuristics.
+- Upgraded the Move package to Testnet version 2 with `payroll` and `treasury` at
+  `0xeb973dbac9e4e5c2ea0c31ffb6b51b4df1f34e05443f970e89a35301e6b97688`.
+  Upgrade transaction: `86914sL2wFj9s7sfcMqdYx9ekST8FRU8Y1tLT5SAaSfN`.
+- Locked the demo employee plus separate EPF/SOCSO/EIS stand-ins. Funded the Slush
+  employer with 9.5 USDC and 0.1 SUI; its verified balance is now 12.640845 USDC
+  and 0.1 SUI, ready for authenticated mandate setup.
+- Fixed Set Up Payroll to prefill the configured employee instead of silently
+  copying the authenticated employer address into the immutable allowlist.
+- Fresh combined verification passes 48 Sui integration tests, 644 web tests with
+  one intentional skip, root typecheck, production build and a zero-vulnerability
+  audit. Docker-backed pgTAP verification is reported separately.
 
 ### 4 September roster-backend verification
 
@@ -75,13 +86,13 @@ the submission time against the organiser channel; older notes used 23:59.
 | Payroll and treasury write RBAC | ✅ Complete locally | Employer-only payroll/revoke/safety APIs and employee-only stream withdrawal | Configure hosted employer wallet and verify both roles |
 | Event-member roster backend | ✅ Complete locally | Treasurer-only active roster GET and add-only POST, safe duplicate handling, shared contracts, and dashboard transport adapter | Deploy; verify treasurer success/non-treasurer 403; render authoritative roster in Treasury UI |
 | Payroll registration backend | ✅ Complete locally | Employer-only digest registration, finalized Sui object verification, immutable service-role registry and idempotent recovery | Apply migration, register the funded digest, then implement explicit registered-payroll selection |
-| Payroll contract and chain boundary | ✅ Complete locally | `PayrollMandate`, payroll execution, contribution rules, salary streams, readers and builders | Publish/upgrade, fund, configure and record real evidence |
+| Payroll contract and chain boundary | ✅ Published on Testnet | Package v2 `0xeb973d…b97688` contains `PayrollMandate`, payroll execution, contribution rules and salary streams; readers/builders and tests pass | Fund, configure and record mandate/run/refusal/stream evidence |
 | Payroll application | 🟡 Built against incomplete live configuration | Payroll, earnings, history and enforcement screens; RM30 preview converts every leg through the configured MYR/USD rate; write RBAC is enforced | Replace sample identity, connect one registered payroll and verify hosted flow |
-| Authenticated Set Up Payroll | 🟡 Registration complete locally | `/payroll/setup`: employer-only live-FX preview, wallet funding, strict mandate/cap verification and idempotent digest-only recovery | Apply the single payroll-registry migration, register one funded mandate, then bind all payroll pages to the selected record |
+| Authenticated Set Up Payroll | ✅ Complete locally; binding and hosted migration pending | `/payroll/setup`: employer-only live-FX preview, wallet funding, strict mandate/cap verification and idempotent digest-only recovery; package v2 is live | Apply the single payroll-registry migration, register one funded mandate, then bind all payroll pages to the selected record |
 | Create Expense Treasury | 🟡 Screen built and able to sign | `/treasury/setup`: treasurer form, USDC funding preview, wallet-signed creation against the published package, AdminCap retained and AgentCap issued, registration retry that never refunds | Add `POST /api/events`, then event selection/routing and event-aware capability mapping |
 | Safety Test UI | 🟡 Mocked with live evidence links | Local preview plus links to two real rejected transactions; API is employer-only | Interactive signed attempts and revocation scenario |
 | Deployment | ✅ Live reads; auth rollout pending | Vercel production and live Sui dashboard verified | Push wallet migration, configure exact HTTPS origin, verify protected writes |
-| Payroll and salary streams | 🟡 Complete locally | `payroll.move` (25 tests), EPF/SOCSO/EIS calculator, PayrollDesk/earnings UI, all wired to flip live once env vars exist | Package upgrade publish, mandate creation, funded stream — see `docs/PAYROLL_LAUNCH_PLAN.md` |
+| Payroll and salary streams | 🟡 Package live; objects pending | `payroll.move` v2 is published; 25 tests, EPF/SOCSO/EIS calculator and PayrollDesk/earnings UI pass | Mandate creation, funded stream and real execution proof — see `docs/PAYROLL_LAUNCH_PLAN.md` |
 | Submission | 🟡 Written, not recorded | `docs/SUBMISSION.md` (verified evidence, two demo scripts, Q and A) and `docs/DECK.md` (six slides with timings); AI tooling disclosed | Record the video, build the slides, rehearse on the projector |
 
 ## Real versus simulated
@@ -123,14 +134,17 @@ Legend: ✅ done · 🟡 in progress · ⬜ not started · ⛔ cut
 Updated 4 September. See [payroll launch plan](PAYROLL_LAUNCH_PLAN.md) and
 [product next steps](PRODUCT_NEXT_STEPS.md) for acceptance criteria:
 
-1. Lock one employee wallet, supported employee class, scaled wage, payroll cap,
-   stream timing and total Testnet funding.
-2. Publish/upgrade payroll, create the funded mandate, open the demo stream and
-   record package, mandate, capability, stream and recipient identifiers.
-3. Deploy and verify the completed authenticated **Set Up Payroll** registration
-   using the already funded digest.
+1. ✅ Lock one employee wallet and separate Testnet statutory stand-ins; fund the
+   employer for the RM50-equivalent mandate. Employee class and stream timing still
+   need to be confirmed in the setup preview.
+2. Configure package v2, create the funded mandate, open the demo stream and
+   record mandate, capability, stream and recipient identifiers. Package publication
+   is complete (`86914sL2wFj9s7sfcMqdYx9ekST8FRU8Y1tLT5SAaSfN`).
+3. Apply the single payroll-configuration migration to hosted Supabase and verify
+   authenticated **Set Up Payroll** from a fresh browser. Local verification and
+   idempotent registration are complete.
 4. Replace `sampleStaff` and global demo assumptions with an explicitly selected
-   registered payroll; authorization is already enforced on write routes.
+   registered payroll; employer and employee write authorization is already enforced.
 5. Verify one successful payroll, one deficient-contribution refusal and one
    accrued-salary withdrawal from a fresh browser.
 6. Preserve the working expense-claim demo. Add protected registration and

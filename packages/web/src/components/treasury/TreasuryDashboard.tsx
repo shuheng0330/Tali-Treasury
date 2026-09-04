@@ -29,6 +29,8 @@ import { RevokeDialog } from './RevokeDialog';
 import { ReviewActionDialog } from './ReviewActionDialog';
 import { PaymentReconciliationStatus } from './PaymentReconciliationStatus';
 import { useWalletSession } from '@/components/wallet/WalletSessionProvider';
+import { RoleNotice } from '@/components/RoleNotice';
+import { REVIEW_COPY, REVOKE_COPY, walletAccess } from '@/lib/wallet-access';
 import { reviewRequestForClaim } from '@/lib/review-actions';
 
 type Tab = 'review' | 'paid' | 'rejected' | 'all';
@@ -47,6 +49,8 @@ interface Props {
   reviewsRecordable: boolean;
   initialMandate: MandateView | null;
   readError?: string;
+  /** Read from the event row, which is the authority the server checks. */
+  eventTreasurer?: string | null;
 }
 
 export function TreasuryDashboard({
@@ -54,9 +58,23 @@ export function TreasuryDashboard({
   reviewsRecordable,
   initialMandate: mandate,
   readError,
+  eventTreasurer,
 }: Props) {
   const wallet = useWalletSession();
   const authenticated = apiEnabled && wallet.status === 'authenticated';
+
+  /* Reviewing, paying and revoking all belong to the event treasurer, and every
+     one of them was offered to anybody signed in — revoke to anybody at all.
+     The server refuses all three, so this only decides whether the refusal
+     arrives before the click or after it.
+
+     Checked against the treasurer recorded on the event rather than through
+     `viewerRole`: that is the authority the server reads, and it differs per
+     event. `DEMO_TREASURER` is a build-time constant kept only as the fallback
+     for an event that could not be read. */
+  const treasurer = eventTreasurer?.trim() || DEMO_TREASURER;
+  const reviewAccess = walletAccess(wallet.address, treasurer, REVIEW_COPY);
+  const revokeAccess = walletAccess(wallet.address, treasurer, REVOKE_COPY);
   const router = useRouter();
   const [refreshing, startRefresh] = useTransition();
   const [tab, setTab] = useState<Tab>('review');
@@ -305,9 +323,11 @@ export function TreasuryDashboard({
         mandate={mandate}
         committed={committed}
         onRevoke={() => setConfirming(true)}
+        canRevoke={revokeAccess.permitted}
+        revokeNotice={revokeAccess.notice}
       />
 
-      {viewerRole(wallet.address) === 'treasurer' ? (
+      {viewerRole(wallet.address, eventTreasurer) === 'treasurer' ? (
         <AddMemberForm eventId={DEMO_EVENT_ID} onAdded={() => live.reload()} />
       ) : null}
 
@@ -374,6 +394,7 @@ export function TreasuryDashboard({
               Reconciliation failed: {reconciliationError}
             </p>
           ) : null}
+          <RoleNotice access={reviewAccess} />
         </div>
         <div className="flex flex-wrap items-center gap-1 border-b border-rule px-3 py-2">
           {TABS.map((entry) => (
@@ -429,8 +450,10 @@ export function TreasuryDashboard({
                   onCheckPayment={checkPayment}
                   paying={payingId === item.claim.id}
                   reconciling={reconcilingId === item.claim.id}
-                  actionsDisabled={!authenticated}
-                  disabledReason="Sign in with the event treasurer wallet first"
+                  actionsDisabled={!authenticated || !reviewAccess.permitted}
+                  disabledReason={
+                    reviewAccess.notice ?? 'Sign in with the event treasurer wallet first'
+                  }
                   reviewsBlocked={!reviewsRecordable}
                   reviewsBlockedReason="The database cannot store a decision yet"
                 />

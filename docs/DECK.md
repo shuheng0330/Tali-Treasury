@@ -77,7 +77,8 @@ The agent held a real capability both times. The contract refused, burned
 0.002095 SUI doing it, and moved no USDC. Every digest opens in a public
 explorer.
 
-If payroll is not yet published, say so here rather than being asked.
+Payroll code is now published in package v2. Until the funded mandate and execution
+evidence exist, say that boundary plainly here rather than being asked.
 
 ---
 

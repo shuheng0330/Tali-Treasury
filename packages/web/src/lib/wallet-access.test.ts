@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { EMPLOYER_COPY, walletAccess } from './wallet-access';
+import { EMPLOYER_COPY, REVIEW_COPY, REVOKE_COPY, SETUP_COPY, walletAccess } from './wallet-access';
 
 const EMPLOYER = '0x939194a716226335b1089c5b36088ebc0b57a928c206d63c9ddcad70ff76b471';
 const SOMEBODY = '0x405200312d4c8ee0159d44429ca69ef0cf035f4a00c12f2035a0bdef882bb16e';
@@ -42,5 +42,28 @@ describe('walletAccess', () => {
 
   it('still asks a signed-out reader to sign in when nothing is configured', () => {
     expect(walletAccess(null, '', EMPLOYER_COPY).permitted).toBe(false);
+  });
+
+  /* Creating the mandate and spending inside it are different acts, and the
+     setup screen used to name neither — it let anyone fill the form and only
+     refused on the first request. */
+  it('names setting up payroll, not running it, on the setup screen', () => {
+    expect(walletAccess(null, EMPLOYER, SETUP_COPY).notice).toBe(
+      'Sign in with the employer wallet to set up payroll.',
+    );
+    expect(walletAccess(SOMEBODY, EMPLOYER, SETUP_COPY).notice).toContain('set up payroll');
+  });
+
+  /* Reviewing and revoking are the treasurer's and are named apart from each
+     other: revoke pulls the agent's permission to spend, and calling that
+     "review claims" would describe the wrong act on the more dangerous button. */
+  it('names the treasurer acts separately', () => {
+    expect(walletAccess(SOMEBODY, EMPLOYER, REVIEW_COPY).notice).toContain('review claims');
+    expect(walletAccess(SOMEBODY, EMPLOYER, REVOKE_COPY).notice).toContain(
+      'revoke this mandate',
+    );
+    expect(walletAccess(null, EMPLOYER, REVOKE_COPY).notice).toBe(
+      "Sign in with the event treasurer's wallet to revoke this mandate.",
+    );
   });
 });
