@@ -5,10 +5,16 @@ import { useRouter } from 'next/navigation';
 import { useMemo, useState, useTransition } from 'react';
 import type { ClaimReviewAction, MandateView } from '@tali/shared';
 import { Money } from '@/components/Money';
-import { COMMITTED, event } from '@/lib/mock/data';
+import { event } from '@/lib/mock/data';
 import { ClaimStatusSummary } from '../claim/ClaimStatusSummary';
 import { FxQuoteSummary } from '../claim/FxQuoteSummary';
-import { DEMO_EVENT_NAME, DEMO_TREASURER, SINGLE_WALLET_DEMO } from '@/lib/demo-config';
+import {
+  DEMO_EVENT_ID,
+  DEMO_EVENT_NAME,
+  DEMO_TREASURER,
+  SINGLE_WALLET_DEMO,
+} from '@/lib/demo-config';
+import { viewerRole } from '@/lib/viewer-role';
 import { reviewQueue, settledClaims } from '@/lib/mock/api';
 import { committedFrom, settledFrom, toReviewQueue } from '@/lib/queue';
 import { useClaims } from '@/lib/api/useClaims';
@@ -17,6 +23,7 @@ import { reconcileClaim, TaliApiError } from '@/lib/api/client';
 import { pollPaymentReconciliation } from '@/lib/api/reconciliation';
 import { DataNotice } from '@/components/DataNotice';
 import { ClaimRow } from './ClaimRow';
+import { AddMemberForm } from './AddMemberForm';
 import { MandateHeader } from './MandateHeader';
 import { RevokeDialog } from './RevokeDialog';
 import { ReviewActionDialog } from './ReviewActionDialog';
@@ -98,9 +105,13 @@ export function TreasuryDashboard({
      budget still counts them as available, so subtracting them here is what
      stops the header inviting an approval the money cannot cover. */
   const committed = useMemo(
-    /* The sample evaluator measures the budget against COMMITTED, so the header
-       has to use the same figure or it contradicts the rows underneath it. */
-    () => (live.source === 'live' ? committedFrom(live.claims) : COMMITTED),
+    /* Only a real queue can say what is really spoken for. The mandate figures
+       above come from the chain, so subtracting the sample constant from them
+       produced an "available" that was neither real nor sample — a fabricated
+       number under a real mandate id, which is what the sample rows below are
+       labelled to avoid. When the queue is not live, nothing is known to be
+       committed and the header reports the chain balance alone. */
+    () => (live.source === 'live' ? committedFrom(live.claims) : '0'),
     [live.source, live.claims],
   );
 
@@ -295,6 +306,10 @@ export function TreasuryDashboard({
         committed={committed}
         onRevoke={() => setConfirming(true)}
       />
+
+      {viewerRole(wallet.address) === 'treasurer' ? (
+        <AddMemberForm eventId={DEMO_EVENT_ID} onAdded={() => live.reload()} />
+      ) : null}
 
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-card border border-ok-line bg-ok-soft px-4 py-3 sm:px-6">
         <div>
