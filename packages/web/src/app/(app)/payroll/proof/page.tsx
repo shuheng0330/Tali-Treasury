@@ -27,6 +27,7 @@ export default async function PayrollProofPage() {
       <EnforcementProof
         person={payrollStaff()[0]!}
         epfFloorBps={floor.epfBps.toString()}
+        stage={payrollStage()}
       />
 
       <p className="text-caption text-ink-3">

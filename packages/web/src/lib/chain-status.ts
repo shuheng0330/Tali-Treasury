@@ -76,6 +76,22 @@ export function payrollRunNote(stage: PayrollStage, runsAreLive: boolean): strin
 }
 
 /**
+ * What an attempt the server would not submit becomes, once the deployment can
+ * sign one. Worded as a clause because the screen follows it with the server's
+ * own reason for refusing this particular attempt.
+ */
+export function payrollAttemptNote(stage: PayrollStage): string {
+  switch (stage) {
+    case 'unpublished':
+      return 'This becomes a real testnet transaction once the payroll module is published';
+    case 'published':
+      return 'This becomes a real testnet transaction once a mandate is funded from the published module';
+    case 'mandated':
+      return 'This becomes a real testnet transaction once the signer and statutory recipients are configured';
+  }
+}
+
+/**
  * Why the enforcement screen is quoting the floor the mandate is *created* with
  * rather than one read back off it. Only reached when the chain read did not
  * produce a figure; the caller says the good sentence itself when it did.
