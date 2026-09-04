@@ -40,6 +40,8 @@ Status words are intentionally precise:
 | Claim policy processing | **Complete locally** | Treasurer action invokes the server evaluator and persists the decision |
 | Treasurer review actions | **Complete locally** | Real approve/reject/correction API and UI; eligible USDC approval enters the guarded testnet signer |
 | Safe payment reconciliation | **Complete locally** | Digest stored before broadcast; explicit status checks never sign or resubmit |
+| Payroll write-route authorization | **Complete locally** | Employer session guards payroll, revocation and safety broadcasts; stream employee guards withdrawal |
+| Event-member roster API | **Complete locally** | Treasurer-only active roster GET and add-only POST; existing dashboard form uses the shared contract |
 | MYR → USDC reimbursement quotes | **Live via local app** | RM6 → 1.484561 USDC browser payment verified; hosted rollout pending |
 | Claim outcomes | **Complete locally** | Paid with Auto-paid / Paid after review chips; Rejected tab; correction/rejection reasons on both screens |
 | Payroll Move module and integration | **Complete locally; publication pending** | Contract, tests, builders, readers, payroll service and screens exist; live configuration and proof remain |
@@ -48,7 +50,7 @@ Status words are intentionally precise:
 | Live payroll run and salary stream | **Pending** | Requires published package, funded mandate, real employee wiring, authorization and Testnet evidence |
 | Create Expense Treasury | **Pending** | Separate reimbursement setup backed by the existing `Mandate`; not part of payroll setup |
 | Revoke and Safety Test interactions | **Mocked** | Clearly labelled previews; no browser signing or state changes |
-| Gemini receipt analysis and Supabase claims | **Complete locally; rollout pending** | Private drafts, authenticated access and 91 pgTAP assertions |
+| Gemini receipt analysis and Supabase claims | **Complete locally; rollout pending** | Private drafts, authenticated access and 125 pgTAP assertions |
 | Deterministic policy and backend agent signing | **Live via local app** | Native USDC payment/recovery and manually approved MYR reimbursement verified on Testnet |
 | Wallet connection and live UI writes | **Complete locally** | Testnet connect, explicit sign-in, one-hour HTTP-only session and sign-out |
 | Statutory payroll enforcement | **Complete locally** | `payroll.move`, 25 contract tests; EPF Third Schedule bands and SOCSO/EIS ceilings enforced as an on-chain basis-point floor. Not yet published to Testnet |
@@ -172,7 +174,8 @@ wallet, then use the separate **Sign in** action before protected APIs activate.
 The treasury process API
 persists real policy decisions and can run the server-only testnet signer for USDC
 `auto_pay` claims. Treasurer review actions are real API writes. Revoke and Safety
-Test writes remain clearly marked simulations or previews.
+Test controls remain clearly marked simulations or previews, while their server
+write routes now reject any session other than the configured employer.
 
 Run Move tests separately:
 
@@ -214,6 +217,7 @@ AGENT_CAP_ID=
 SUI_NETWORK=testnet
 TALI_ALLOW_INSECURE_DEMO_IDENTITY=false
 TALI_APP_ORIGIN=http://localhost:3000
+TALI_EMPLOYER_WALLET=
 ```
 
 `SUPABASE_SERVICE_ROLE_KEY` remains a temporary fallback for an existing project,
@@ -224,6 +228,12 @@ but `SUPABASE_SECRET_KEY` is preferred. Never add either value to a
 use their HTTPS origin and keep `TALI_ALLOW_INSECURE_DEMO_IDENTITY=false`. The
 compatibility identity is local-only, works only when no session cookie exists,
 and never overrides an invalid or expired cookie.
+
+`TALI_EMPLOYER_WALLET` is a server-only canonical lowercase Sui address. Its
+authenticated session is required to run payroll, revoke the payroll mandate, or
+submit a safety-test transaction. Salary-stream withdrawal instead requires the
+authenticated wallet to match that stream's immutable employee address. Exact
+origin and session checks run before request parsing or any signing dependency.
 
 Run the local database checks:
 
@@ -253,12 +263,19 @@ accepts only JPEG, PNG, and WebP. The server exposes:
   hash, path, currency and original extraction come from the stored draft;
 - `GET /api/events/:id/claims` — persisted claims with 300-second receipt URLs
   for an active member or configured treasurer;
+- `GET /api/events/:id/members` — active event roster in stable creation/address
+  order, restricted to the configured treasurer;
+- `POST /api/events/:id/members` — exact-origin, treasurer-only insertion of a
+  canonical wallet and trimmed display name;
 - `POST /api/claims/:id/process` — treasurer-triggered deterministic policy and,
   for `auto_pay` only, an atomic server-agent payment attempt.
 - `POST /api/claims/:id/review` — one atomic treasurer approval, rejection, or
   correction request; eligible USDC approval immediately starts testnet payment.
 - `POST /api/claims/:id/reconcile` — treasurer-only observation of the stored Sui
   digest; returns pending or atomically persists a confirmed terminal result.
+- `POST /api/payroll/runs`, `POST /api/mandate/revoke`, and
+  `POST /api/safety/attack` — configured-employer-only writes.
+- `POST /api/streams/:id/withdraw` — stream-employee-only withdrawal request.
 
 See [`docs/API.md`](docs/API.md) for request/response and error details. Protected
 writes require the exact configured Origin header. Wallet connection alone does
@@ -287,8 +304,10 @@ Immediate hosted rollout (the local payment flow is already verified):
 2. Configure server-only Gemini and Supabase credentials in the deployment.
 3. Roll out and verify [MYR quotes](docs/MYR_USDC_QUOTES.md) with the backend/UI
    teammates. Member correction/resubmission remains pending.
-4. Configure the testnet agent key and owned `AgentCap` server-side.
-5. With separate authorization, run one small funded smoke claim and record its
+4. Deploy and verify the event-member roster backend; finish authoritative roster
+   reload/rendering in the dashboard.
+5. Configure the testnet agent key and owned `AgentCap` server-side.
+6. With separate authorization, run one small funded smoke claim and record its
    real digest; automated tests intentionally never broadcast.
 
 ## AI tooling

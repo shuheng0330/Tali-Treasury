@@ -127,8 +127,37 @@ The reconciliation endpoint and treasury UI must:
 - expose the digest, explorer link, explicit status check, and bounded 20-second
   client polling in the treasury UI, with no scheduled background job.
 
+## Implemented event-member roster scope
+
+The roster backend must:
+
+- expose authenticated `GET /api/events/:id/members` and return only active
+  members, ordered by creation time and then wallet address;
+- expose exact-origin `POST /api/events/:id/members` and insert one active member;
+- authorize both operations against the event's configured treasurer before
+  reading the roster or validating and writing the member payload;
+- accept only canonical lowercase 32-byte Sui addresses and already-trimmed
+  display names from 1 to 120 characters;
+- return `201` with `{ member }` after insertion and a safe
+  `409 member_already_exists` for an existing event/address pair;
+- fail safely for missing events, invalid sessions, unauthorized wallets, invalid
+  input, and provider errors; and
+- reuse the existing `event_members` table without a schema migration or browser
+  database access.
+
 ## Security and business rules
 
+- Payroll execution, mandate revocation, and safety-test broadcasts require an
+  authenticated wallet matching the canonical server-only
+  `TALI_EMPLOYER_WALLET` value.
+- Salary-stream withdrawal requires an authenticated wallet matching the
+  selected stream's immutable employee address; the employer is not a substitute.
+- Exact-origin validation must precede session resolution, payload parsing,
+  service mutation, transaction construction, and signing for these writes.
+- Missing or malformed employer configuration fails closed with a sanitized 503;
+  a valid but unauthorized session returns a sanitized 403.
+- Rejected authorization requests must never invoke payroll, revocation, safety,
+  or withdrawal mutation dependencies.
 - Gemini and Supabase credentials are server-only and must never use a
   `NEXT_PUBLIC_` prefix.
 - The backend-agent private key is server-only, testnet-only, loaded only when an
@@ -166,6 +195,8 @@ The reconciliation endpoint and treasury UI must:
 - a live funded smoke transaction for this increment (automated verification uses
   injected fake operations and never broadcasts);
 - member correction and resubmission after `request_correction`;
+- event-member deactivation, reactivation, renaming, or payroll Move roster changes;
+- an authoritative roster list in the Treasury Dashboard (frontend handoff);
 - live browser presentation for payments initiated outside the review flow;
 - production rollout of this new migration and hosted wallet-flow verification.
 
