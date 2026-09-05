@@ -121,31 +121,8 @@ describe('visibleSections', () => {
     expect(labels(roles('employee', 'member'))).toEqual(['Requests', 'Earnings', 'Safety']);
   });
 
-  it('shows the employer everything they administer', () => {
+  it('shows the employer every section', () => {
     expect(labels(roles('employer', 'member'))).toEqual([
-      'Requests',
-      'Approvals',
-      'Payroll',
-      'Treasury',
-      'Safety',
-    ]);
-  });
-
-  /* Earnings is one person's salary stream, not a screen about the business. */
-  it('does not hand the employer somebody else’s earnings', () => {
-    expect(labels(roles('employer', 'member'))).not.toContain('Earnings');
-  });
-
-  it('gives a treasurer the budget without payroll or approvals', () => {
-    expect(labels(roles('treasurer', 'member'))).toEqual(['Requests', 'Treasury', 'Safety']);
-  });
-
-  it('leaves a wallet with no special role what anyone signed in may do', () => {
-    expect(labels(roles('member'))).toEqual(['Requests', 'Safety']);
-  });
-
-  it('unions the capabilities of a wallet holding two roles', () => {
-    expect(labels(roles('employer', 'employee', 'member'))).toEqual([
       'Requests',
       'Earnings',
       'Approvals',
@@ -155,7 +132,25 @@ describe('visibleSections', () => {
     ]);
   });
 
-  it('keeps every signed-in wallet able to ask for something and read the proofs', () => {
+  it('gives a treasurer the budget without payroll or approvals', () => {
+    expect(labels(roles('treasurer', 'member'))).toEqual([
+      'Requests',
+      'Earnings',
+      'Treasury',
+      'Safety',
+    ]);
+  });
+
+  /**
+   * The bug this replaced: a wallet holding no configured role saw Requests and
+   * Safety and nothing else, so the one screen showing the salary this product
+   * exists to pay was hidden from the person being paid.
+   */
+  it('shows a wallet with no configured role its own pay', () => {
+    expect(labels(roles('member'))).toEqual(['Requests', 'Earnings', 'Safety']);
+  });
+
+  it('keeps every signed-in wallet able to ask, to earn, and to read the proofs', () => {
     for (const set of [
       roles('member'),
       roles('employee', 'member'),
@@ -163,6 +158,7 @@ describe('visibleSections', () => {
       roles('treasurer', 'member'),
     ]) {
       expect(labels(set)).toContain('Requests');
+      expect(labels(set)).toContain('Earnings');
       expect(labels(set)).toContain('Safety');
     }
   });

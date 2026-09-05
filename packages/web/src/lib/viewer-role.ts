@@ -26,22 +26,30 @@ export type Capability =
   | 'proof';
 
 /**
- * The employer holds the treasury as well as payroll: they are the one account
- * that administers this organisation, and a treasurer who is not the employer
- * still holds the event's expense budget on their own.
+ * Gate authority over other people, never what is somebody's own.
  *
- * The employer does NOT hold `earn`. It is not a screen about the business, it
- * is one person's salary stream, and putting it in an employer's navigation
- * would be exactly the clutter this model exists to remove.
+ * Approving a claim, running payroll and holding the treasury are powers over
+ * others, and they are the whole of what this table restricts. Asking for
+ * something, reading your own pay and watching the contract refuse are not
+ * powers at all: they are a person's own business, and every signed-in wallet
+ * carries them.
  *
- * Everybody signed in may `request`, because an expense, an hour worked late
- * and a day off are asked for by whoever did the work, whatever else they are.
+ * `earn` was briefly the employee's alone, which was a plain mistake. The
+ * screen behind it resolves the connected wallet's own payrolls — the server
+ * reads them with `listByEmployee` and refuses any mandate the wallet is not
+ * party to — and it says so plainly when there are none. Gating it on a
+ * build-time constant naming one wallet meant that everybody else, in a product
+ * whose entire idea is that a salary accrues by the second and you withdraw
+ * what you have already earned, could not see their salary.
+ *
+ * Whether a wallet has a stream is a question about data, and the screen
+ * answers it honestly. It was never a question about permission.
  */
 const CAPABILITIES: Record<ViewerRole, readonly Capability[]> = {
-  employer: ['request', 'approve', 'runPayroll', 'holdTreasury', 'proof'],
-  treasurer: ['request', 'holdTreasury', 'proof'],
+  employer: ['request', 'earn', 'approve', 'runPayroll', 'holdTreasury', 'proof'],
+  treasurer: ['request', 'earn', 'holdTreasury', 'proof'],
   employee: ['request', 'earn', 'proof'],
-  member: ['request', 'proof'],
+  member: ['request', 'earn', 'proof'],
 };
 
 function sameAddress(a: string | null | undefined, b: string | null | undefined): boolean {
