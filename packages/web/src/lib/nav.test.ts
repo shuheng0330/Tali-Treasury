@@ -1,13 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import {
-  NAV_SECTIONS,
-  activeChild,
-  activeSection,
-  orderSections,
-  otherRolesNote,
-  parentOf,
-} from './nav';
+import { NAV_SECTIONS, activeChild, activeSection, parentOf, visibleSections } from './nav';
 import type { ViewerRole } from './viewer-role';
 
 const roles = (...values: ViewerRole[]) => new Set<ViewerRole>(values);
@@ -18,13 +11,6 @@ describe('NAV_SECTIONS', () => {
       if (section.children.length === 0) continue;
       expect(activeSection(section.children[0]!.href), section.label).toBe(section);
     }
-  });
-
-  /* AppNav lays the pills out two to a row below 380px and three above it,
-     and both only fill whole rows at a count that divides by six. A seventh
-     section would strand one pill alone on the last row at every width. */
-  it('holds a count both phone layouts can fill whole rows with', () => {
-    expect(NAV_SECTIONS.length % 6).toBe(0);
   });
 
   /* A single sub-tab is a label pretending to be a control. */
@@ -118,94 +104,75 @@ describe('activeChild', () => {
   });
 });
 
-describe('orderSections', () => {
-  it('leaves the declared order alone when nobody is signed in', () => {
-    expect(orderSections(roles())).toEqual(NAV_SECTIONS);
+describe('visibleSections', () => {
+  const labels = (set: ReadonlySet<ViewerRole>) =>
+    visibleSections(set).map((section) => section.label);
+
+  /* Before a wallet is connected there is no answer about who this is, and
+     hiding on the strength of not knowing leaves a first-time visitor an app
+     that looks broken. Every screen underneath says which wallet it wants. */
+  it('shows everything to a visitor who has not connected a wallet', () => {
+    expect(visibleSections(roles())).toEqual(NAV_SECTIONS);
   });
 
-  it('puts the employee’s section first', () => {
-    expect(orderSections(roles('employee', 'member'))[0]!.label).toBe('Earnings');
+  /* The whole point: an employee is never shown the approval queue, so they
+     never reach an Approve button the server would refuse. */
+  it('never shows an employee the approvals', () => {
+    expect(labels(roles('employee', 'member'))).toEqual(['Requests', 'Earnings', 'Safety']);
   });
 
-  it('puts the treasurer’s section first', () => {
-    expect(orderSections(roles('treasurer', 'member'))[0]!.label).toBe('Treasury');
-  });
-
-  it('keeps every section, whatever the roles', () => {
-    for (const set of [roles(), roles('member'), roles('employer', 'member')]) {
-      const byHref = (a: { href: string }, b: { href: string }) => a.href.localeCompare(b.href);
-      expect(orderSections(set)).toHaveLength(NAV_SECTIONS.length);
-      expect([...orderSections(set)].sort(byHref)).toEqual([...NAV_SECTIONS].sort(byHref));
-    }
-  });
-
-  it('keeps the viewer’s own sections ahead of the ones every wallet can open', () => {
-    expect(orderSections(roles('employer', 'member')).map((section) => section.label)).toEqual([
+  it('shows the employer everything they administer', () => {
+    expect(labels(roles('employer', 'member'))).toEqual([
+      'Requests',
       'Approvals',
       'Payroll',
-      'Requests',
-      'Safety',
-      'Earnings',
       'Treasury',
+      'Safety',
     ]);
   });
 
-  it('leads the employee with their own pay, then what anyone may ask for', () => {
-    expect(
-      orderSections(roles('employee', 'member'))
-        .slice(0, 3)
-        .map((section) => section.label),
-    ).toEqual(['Earnings', 'Requests', 'Safety']);
-  });
-});
-
-describe('otherRolesNote', () => {
-  it('says nothing before anyone signs in', () => {
-    expect(otherRolesNote(roles())).toBeNull();
+  /* Earnings is one person's salary stream, not a screen about the business. */
+  it('does not hand the employer somebody else’s earnings', () => {
+    expect(labels(roles('employer', 'member'))).not.toContain('Earnings');
   });
 
-  it('names the employer’s sections to an employee', () => {
-    expect(otherRolesNote(roles('employee', 'member'))).toBe(
-      "The approval queue and the payroll run are the employer's. " +
-        "The treasury dashboard is the treasurer's.",
-    );
+  it('gives a treasurer the budget without payroll or approvals', () => {
+    expect(labels(roles('treasurer', 'member'))).toEqual(['Requests', 'Treasury', 'Safety']);
   });
 
-  /* A subject that carried its own capital read as a title once a role owned
-     two screens: "the approval queue and The payroll run". */
-  it('capitalises only the subject that opens the sentence', () => {
-    expect(otherRolesNote(roles('employee', 'treasurer', 'member'))).toBe(
-      "The approval queue and the payroll run are the employer's.",
-    );
+  it('leaves a wallet with no special role what anyone signed in may do', () => {
+    expect(labels(roles('member'))).toEqual(['Requests', 'Safety']);
   });
 
-  it('agrees the verb with the count', () => {
-    expect(otherRolesNote(roles('employer', 'employee', 'member'))).toBe(
-      "The treasury dashboard is the treasurer's.",
-    );
+  it('unions the capabilities of a wallet holding two roles', () => {
+    expect(labels(roles('employer', 'employee', 'member'))).toEqual([
+      'Requests',
+      'Earnings',
+      'Approvals',
+      'Payroll',
+      'Treasury',
+      'Safety',
+    ]);
   });
 
-  it('names a section in the third person, never handing the reader their own', () => {
-    expect(otherRolesNote(roles('employer', 'member'))).toBe(
-      "The treasury dashboard is the treasurer's. The earnings screen is the employee's.",
-    );
-  });
-
-  /* Requests and Safety belong to the role every signed-in wallet holds, so
-     they are never anybody else's and never earn a sentence. */
-  it('never says a section is a member’s, because the reader always is one', () => {
+  it('keeps every signed-in wallet able to ask for something and read the proofs', () => {
     for (const set of [
       roles('member'),
+      roles('employee', 'member'),
       roles('employer', 'member'),
       roles('treasurer', 'member'),
-      roles('employee', 'member'),
     ]) {
-      expect(otherRolesNote(set) ?? '').not.toContain("a member's");
+      expect(labels(set)).toContain('Requests');
+      expect(labels(set)).toContain('Safety');
     }
   });
 
-  it('says nothing when every section is the viewer’s', () => {
-    expect(otherRolesNote(roles('employer', 'treasurer', 'employee', 'member'))).toBeNull();
+  it('never invents a section that is not declared', () => {
+    for (const set of [roles(), roles('member'), roles('employer', 'treasurer', 'member')]) {
+      for (const section of visibleSections(set)) {
+        expect(NAV_SECTIONS).toContain(section);
+      }
+    }
   });
 });
 

@@ -3,7 +3,10 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
+import { PAYROLL_EMPLOYEE } from '@/lib/demo-config';
 import { activeChild, activeSection } from '@/lib/nav';
+import { can, viewerRoles } from '@/lib/viewer-role';
+import { useWalletSession } from './wallet/WalletSessionProvider';
 
 /**
  * The screens inside the current section.
@@ -20,12 +23,18 @@ import { activeChild, activeSection } from '@/lib/nav';
  * navigation.
  *
  * Renders nothing at all — band, rule and padding included — where a section
- * has no children, so a single screen keeps its full height.
+ * has no children, so a single screen keeps its full height. Same when the
+ * wallet cannot reach the section: a strip of screens above a panel explaining
+ * that none of them are yours is worse than no strip.
  */
 export function SectionNav() {
   const pathname = usePathname();
+  const session = useWalletSession();
   const section = activeSection(pathname);
   if (!section || section.children.length === 0) return null;
+
+  const roles = viewerRoles(session.address, { employee: PAYROLL_EMPLOYEE });
+  if (roles.size > 0 && !can(roles, section.capability)) return null;
 
   const current = activeChild(pathname, section);
 
