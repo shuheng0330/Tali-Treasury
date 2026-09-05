@@ -15,12 +15,14 @@ authored; local replay still depends on Docker Desktop's Linux engine.
 Parallel setup implementations were consolidated around one strict digest-only
 verifier, one immutable registry migration and the canonical
 `POST /api/payroll/register` handler while preserving the latest setup UI. The
-post-merge checks pass: 42 Move tests, 48 Sui integration tests, 673 web tests
-(672 passing and one intentional skip), 141 pgTAP assertions, root typecheck,
+post-merge checks pass: 42 Move tests, 48 Sui integration tests, 679 web tests
+(678 passing and one intentional skip), 145 pgTAP assertions, root typecheck,
 production build and a zero-vulnerability audit. A forward migration preserves
 the old local registration read-only and installs the strict registry without a
-database reset. Payroll package v2, setup, one successful run and one abort-24
-refusal are live; salary-stream and hosted-registry verification remain pending.
+database reset. The existing setup digest has been re-verified against its
+historical creation-state objects and stored in that registry. Payroll package
+v2, setup, one successful run and one abort-24 refusal are live; salary-stream
+and hosted-registry verification remain pending.
 
 ## Complete locally
 

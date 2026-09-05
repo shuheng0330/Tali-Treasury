@@ -41,8 +41,9 @@ const transaction: PayrollRegistrationTransaction = {
     {
       objectId: mandateId,
       type: `${packageId}::payroll::PayrollMandate<${CIRCLE_TESTNET_USDC_TYPE}>`,
+      version: '9',
     },
-    { objectId: capId, type: `${packageId}::payroll::PayrollCap` },
+    { objectId: capId, type: `${packageId}::payroll::PayrollCap`, version: '9' },
   ],
 };
 
@@ -114,6 +115,20 @@ describe('createSuiPayrollRegistrationVerifier', () => {
       netMinBps: '7000',
       initialBudget: '100000000000',
     });
+  });
+
+  it('reads the object versions created by the setup transaction', async () => {
+    const currentOperations = operations();
+    const current = createSuiPayrollRegistrationVerifier({
+      env,
+      operations: currentOperations,
+      now: () => 2_000_000_000_000,
+    });
+
+    await current.verify({ digest, employer });
+
+    expect(currentOperations.readMandate).toHaveBeenCalledWith(mandateId, '9');
+    expect(currentOperations.readCap).toHaveBeenCalledWith(capId, '9');
   });
 
   it('reports a transaction that is not found or checkpointed as pending', async () => {

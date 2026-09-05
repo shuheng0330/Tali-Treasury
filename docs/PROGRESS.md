@@ -74,9 +74,10 @@ the submission time against the organiser channel; older notes used 23:59.
   copying the authenticated employer address into the immutable allowlist.
 - Reconciled the replaced payroll-registry migration without resetting local
   data: the legacy registration is preserved read-only for audit, while the new
-  strict registry requires the finalized setup digest to be verified again.
+  strict registry verified the finalized setup digest against its historical
+  creation-state objects and stored the current demo payroll.
 - Fresh combined verification passes 42 Move tests, 48 Sui integration tests,
-  673 web tests (672 passing and one intentional skip), 141 pgTAP assertions,
+  679 web tests (678 passing and one intentional skip), 145 pgTAP assertions,
   root typecheck, production build and a zero-vulnerability audit.
 
 ### 4 September roster-backend verification
@@ -120,7 +121,7 @@ the submission time against the organiser channel; older notes used 23:59.
 | Payroll registration backend | ✅ Complete locally | Employer-only digest registration, finalized Sui object verification, immutable service-role registry and idempotent recovery | Apply migration and implement explicit registered-payroll selection |
 | Payroll contract and chain boundary | ✅ Live on Testnet | Package v2, funded mandate, atomic RM30 payroll and abort-24 deficient-EPF refusal are verified; readers/builders and tests pass | Record salary-stream evidence |
 | Payroll application | 🟡 Live local payroll; stream demo gate pending | Authenticated setup, RM30 run and deficient-EPF safety refusal use the registered employee, live FX and real Testnet mandate | Remove remaining sample/global assumptions, verify employee withdrawal, then host |
-| Authenticated Set Up Payroll | ✅ Live via local app; binding and hosted rollout pending | Slush funded `0xa04894…f1100`; strict verification and immutable, idempotent Supabase registration are implemented | Re-register the preserved setup digest, apply the hosted migration, repeat from a fresh browser and bind payroll pages to the selected record |
+| Authenticated Set Up Payroll | ✅ Live via local app; binding and hosted rollout pending | Slush funded `0xa04894…f1100`; its historical creation state passed strict verification and immutable, idempotent Supabase registration | Apply the hosted migration, repeat from a fresh browser and bind payroll pages to the selected record |
 | Create Expense Treasury | 🟡 Screen built and able to sign | `/treasury/setup`: treasurer form, USDC funding preview, wallet-signed creation against the published package, AdminCap retained and AgentCap issued, registration retry that never refunds | Add `POST /api/events`, then event selection/routing and event-aware capability mapping |
 | Safety Test UI | 🟡 Mocked with live evidence links | Local preview plus links to two real rejected transactions; API is employer-only | Interactive signed attempts and revocation scenario |
 | Deployment | ✅ Live reads; auth rollout pending | Vercel production and live Sui dashboard verified | Push wallet migration, configure exact HTTPS origin, verify protected writes |
@@ -170,9 +171,9 @@ Updated 4 September. See [payroll launch plan](PAYROLL_LAUNCH_PLAN.md) and
 1. ✅ Lock one employee wallet and separate Testnet statutory stand-ins; fund the
    employer for the RM50-equivalent mandate. Employee class and stream timing still
    need to be confirmed in the setup preview.
-2. ✅ Configure package v2, create the funded mandate, and record mandate,
-   capability and recipient identifiers. Re-register its preserved setup digest
-   in the strict registry; opening the demo stream and recording its identifier remain.
+2. ✅ Configure package v2, create and strictly register the funded mandate, and
+   record mandate, capability and recipient identifiers. Opening the demo stream
+   and recording its identifier remain.
 3. Apply the single payroll-configuration migration to hosted Supabase and verify
    authenticated **Set Up Payroll** from a fresh browser. Local verification and
    idempotent registration are complete.
