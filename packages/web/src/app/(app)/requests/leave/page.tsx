@@ -14,8 +14,7 @@ export default function LeavePage() {
       <header className="flex flex-col gap-2">
         <h1 className="text-display">Leave</h1>
         <p className="text-body text-ink-2">
-          Ask for time off. The employer approves it, and only unpaid leave changes what the
-          next payroll run pays.
+          Request time off. Only unpaid leave reduces your next payroll.
         </p>
       </header>
 

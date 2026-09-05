@@ -14,8 +14,7 @@ export default function OvertimePage() {
       <header className="flex flex-col gap-2">
         <h1 className="text-display">Overtime</h1>
         <p className="text-body text-ink-2">
-          Record the hours you worked past the normal day. The employer approves them, and
-          approved hours are added to the wage in the next payroll run.
+          Log extra hours. Approved overtime is added to your next payroll.
         </p>
       </header>
 

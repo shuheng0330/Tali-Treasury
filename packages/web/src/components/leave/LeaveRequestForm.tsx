@@ -200,6 +200,10 @@ export function LeaveRequestForm() {
           plural
           simulated="Approval is the employer's."
           fallbackLabel={listing.reached ? 'Held in memory.' : 'Nothing loaded.'}
+          brief={{
+            live: 'Your requests are live.',
+            fallback: 'Live requests are unavailable — saved temporarily. Employer approval is still required.',
+          }}
         />
       )}
 
@@ -281,8 +285,8 @@ export function LeaveRequestForm() {
           }))}
           hint={
             kind === 'unpaid'
-              ? 'Unpaid leave reduces the wage, and with it every statutory base.'
-              : 'Ordinary wages. Payroll pays the month exactly as it would have.'
+              ? 'Reduces next payroll and statutory bases.'
+              : 'Paid leave — no payroll change.'
           }
         />
 
@@ -291,11 +295,11 @@ export function LeaveRequestForm() {
           hint={
             chosenDays === null
               ? span !== null && span >= 1
-                ? `Counted from the dates, skipping Sundays. ${span} calendar ${
+                ? `Counted from the dates. ${span} calendar ${
                     span === 1 ? 'day' : 'days'
-                  } selected. Correct it if a public holiday falls inside.`
-                : 'Counted from the dates once both are set.'
-              : 'Your correction. The dates above still bound it.'
+                  }, excluding Sundays. Adjust for public holidays.`
+                : 'Set both dates to calculate days.'
+              : 'Your correction must stay within the selected dates.'
           }
         >
           <span className="flex items-baseline gap-2">
@@ -314,7 +318,7 @@ export function LeaveRequestForm() {
           </span>
         </Field>
 
-        <Field label="Why you are away">
+        <Field label="Reason">
           <input
             value={reason}
             disabled={!access.permitted}
@@ -339,26 +343,31 @@ export function LeaveRequestForm() {
         ))}
       </section>
 
-      <section className="flex flex-col gap-2 rounded-panel border border-rule bg-surface p-5">
-        <h2 className="eyebrow">What this does to payroll</h2>
+      <section className="flex flex-col gap-3 rounded-panel border border-rule bg-surface p-5">
+        <h2 className="eyebrow">Payroll impact</h2>
         {kind === 'unpaid' ? (
           <>
-            <p className="flex items-baseline justify-between gap-3">
-              <span className="text-body text-ink-2">Comes off the wage</span>
-              <span className="tnum text-title">{toDisplay(deduction)}</span>
+            <p className="text-caption text-ink-2">Deducted from next payroll</p>
+            <p className="flex items-baseline gap-2">
+              <span className="tnum text-display">{toDisplay(deduction)}</span>
+              <span className="text-body text-ink-3">MYR</span>
             </p>
-            <p className="text-caption text-ink-3">
-              Against a wage of record of <span className="tnum">{toDisplay(monthlyWage)}</span>{' '}
-              MYR a month, at one twenty-sixth of it a day. Wages not payable are not wages
-              under any of the three definitions, so this comes off the EPF, SOCSO and EIS
-              bases alike.
-            </p>
+            <p className="text-caption text-ink-3">Also reduces EPF, SOCSO and EIS wage bases.</p>
+            <details className="border-t border-rule pt-3">
+              <summary className="cursor-pointer text-caption font-medium text-ink underline underline-offset-4">
+                View calculation details
+              </summary>
+              <p className="mt-3 text-caption text-ink-2">
+                Monthly wage of <span className="tnum">{toDisplay(monthlyWage)}</span> MYR ÷ 26
+                working days. Unpaid leave lowers the wage base used by EPF, SOCSO and EIS.
+              </p>
+            </details>
           </>
         ) : (
-          <p className="text-body text-ink-2">
-            Nothing. {LEAVE_KIND_LABEL[kind]} is ordinary wages, so the month is paid exactly
-            as it would have been.
-          </p>
+          <>
+            <p className="text-body-lg font-medium">No payroll change</p>
+            <p className="text-caption text-ink-3">{LEAVE_KIND_LABEL[kind]} is paid leave.</p>
+          </>
         )}
       </section>
 
