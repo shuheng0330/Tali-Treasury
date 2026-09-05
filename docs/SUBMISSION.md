@@ -101,9 +101,9 @@ Tailwind v4. Supabase with row-level security for claims and audit. Circle
 Testnet USDC. Gemini for receipt reading. Open Exchange Rates for MYR quotes.
 Wallet sign-in over a signed challenge, including Slush zkLogin.
 
-**Tests:** 42 Move contract tests (25 payroll, 17 treasury), 45 Sui integration
-tests, and 614 web tests (613 passing, one intentional skip) on the current
-`main`. The local database suite has 132 passing pgTAP assertions.
+**Tests:** 42 Move contract tests (25 payroll, 17 treasury), 48 Sui integration
+tests, and 663 web tests (662 passing, one intentional skip) on the current
+`main`. The local database suite has 141 passing pgTAP assertions.
 
 ## AI tooling disclosure
 
@@ -131,21 +131,26 @@ Keep B below as the fallback if the room's network cannot reach an explorer.
 | Time | Screen | Say and do |
 |---|---|---|
 | 0:00–0:20 | Landing | "Unpaid EPF is the quietest way a payroll goes wrong." Read the headline. |
-| 0:20–0:50 | `/payroll/setup` | Employer signs and funds one mandate. Point at the rules being fixed at creation. |
+| 0:20–0:50 | `/payroll/setup` | The screen that created the funded mandate. Point at the rules fixed at creation — do not sign a second one live; the mandate has 3.317095 USDC left and a run costs 9.046290. |
 | 0:50–1:40 | `/payroll` | Run the payroll. Show the four payments leaving in one transaction. Open the digest. |
 | 1:40–2:20 | `/payroll/proof` | Underpay EPF. Contract aborts on 24. Show that no balance moved. |
-| 2:20–2:45 | `/earnings` | Employee withdraws accrued wages. Real transaction. |
+| 2:20–2:45 | `/earnings` | Accrual, computed with the contract's own arithmetic. **This is the one step with no Testnet proof — say so, or drop it and give the time to the refusal.** |
 | 2:45–3:00 | Close | "Wages and EPF leave together, or neither does. That is a contract, not a policy." |
 
-### B — payroll mandate not created
+### B — fallback when the room cannot reach an explorer
+
+Everything A shows is still true here; the difference is that you read the
+digests off the screen instead of opening them. Do not say anything in B about
+a mandate not existing — one is funded and it has both a paid run and a refusal
+against it.
 
 | Time | Screen | Say and do |
 |---|---|---|
 | 0:00–0:20 | Landing | Same opening. |
-| 0:20–0:55 | Landing evidence | Five real Testnet transactions: two allowed, two refused, one package publication. Open a refusal in the explorer. Stress that the agent had a valid capability and was still refused. |
+| 0:20–0:55 | Landing evidence | Seven real Testnet transactions: three allowed, three refused, one package publication. Read the two payroll digests aloud rather than opening them. Stress that the agent held a valid capability and was refused anyway. |
 | 0:55–1:45 | `/claim` | Photograph an RM receipt. Agent reads it, quotes MYR to USDC, treasurer approves the exact payout. Show the payment digest. |
-| 1:45–2:25 | `/payroll` + `/payroll/proof` | The statutory split against the EPF Third Schedule. **Say clearly that the module is published but no funded payroll mandate or execution proof exists yet.** |
-| 2:25–2:45 | `/payroll/setup` | The employer flow that will create, fund, verify and register that mandate once hosted configuration is complete. |
+| 1:45–2:25 | `/payroll` + `/payroll/proof` | The statutory split against the EPF Third Schedule, and the refusal that already happened on chain: budget and total-paid unchanged after abort 24. |
+| 2:25–2:45 | `/payroll` | Enter unpaid leave days. The wage drops, and the split recomputes on the reduced wage rather than being scaled — EPF can fall into a lower Third Schedule band. |
 | 2:45–3:00 | Close | Same close. |
 
 Rehearse on the projector resolution and on a phone. Keep status, reason and
