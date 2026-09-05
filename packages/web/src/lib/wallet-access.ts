@@ -39,11 +39,13 @@ export function walletAccess(
   address: string | null,
   expected: string,
   copy: AccessCopy,
+  options: { requireExpected?: boolean; singleWalletDemo?: boolean } = {},
 ): Access {
   if (!address) {
     return { permitted: false, notice: `Sign in with ${copy.holder} to ${copy.action}.` };
   }
-  if (SINGLE_WALLET_DEMO) return { permitted: true, notice: null };
+  const singleWalletDemo = options.singleWalletDemo ?? SINGLE_WALLET_DEMO;
+  if (singleWalletDemo && !options.requireExpected) return { permitted: true, notice: null };
 
   const configured = expected.trim();
   if (!configured) {

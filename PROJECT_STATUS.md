@@ -12,15 +12,16 @@ salary-stream binding are complete locally.
 Parallel setup implementations were consolidated around one strict digest-only
 verifier, one immutable registry migration and the canonical
 `POST /api/payroll/register` handler while preserving the latest setup UI. The
-post-merge checks pass: 42 Move tests, 48 Sui integration tests, 690 web tests
-(689 passing and one intentional skip), 154 pgTAP assertions, root typecheck,
+post-merge checks pass: 42 Move tests, 48 Sui integration tests, 692 web tests
+(691 passing and one intentional skip), 154 pgTAP assertions, root typecheck,
 production build and a zero-vulnerability audit. A forward migration preserves
 the old local registration read-only and installs the strict registry without a
 database reset. The existing setup digest has been re-verified against its
 historical creation-state objects and stored in that registry. Payroll package
 v2, setup, one successful run and one abort-24 refusal are live. Registered
-stream opening and persistence are complete locally; Testnet stream opening,
-employee withdrawal and hosted-registry verification remain pending.
+stream opening and persistence are live on Testnet. Employer inspection is
+separate from employee-only withdrawal; withdrawal evidence and hosted-registry
+verification remain pending.
 
 ## Complete locally
 
@@ -30,6 +31,7 @@ employee withdrawal and hosted-registry verification remain pending.
 - stream wallet, employee, mandate, package and signer checks before signing;
 - employer-only stream creation from an authorized payroll, exact created-object
   verification, immutable registry persistence and registry-backed earnings lookup;
+- employer-or-employee stream inspection with employee-only withdrawal authority;
 
 - strict Gemini receipt schema and `gemini-3.5-flash-lite` default;
 - SHA-256 hashing and event-scoped immutable storage paths;
@@ -137,6 +139,7 @@ data was changed by this verification.
   and render the authoritative roster after additions;
 - apply the payroll-registry migration, register an already funded creation
   digest, then bind payroll, proof and earnings to an explicitly selected record;
+- sign in as the registered employee and record one accrued stream withdrawal;
 - run the hosted receipt flow end to end after authenticated identity is available.
 
 ## Known limitations

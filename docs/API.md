@@ -23,9 +23,12 @@ employer only. `totalAmount` is explicitly micro-USDC, and the server derives th
 employee, package, capability and signer from the registered payroll. One demo
 stream may be opened per mandate.
 
-Individual stream reads and withdrawals also require `payroll=<mandateId>`. Current Testnet
-stream mandate and employee fields must match the registry and employee session;
-withdrawal additionally requires exact origin and the registered cap owner signer.
+Individual stream reads and withdrawals also require `payroll=<mandateId>`.
+`GET /api/streams/:id` permits either the registered employer or employee to
+inspect a stream after its Testnet mandate and employee fields match the registry.
+`POST /api/streams/:id/withdraw` is stricter: the session must be the immutable
+employee, the origin must match exactly, and the configured signer must own the
+registered cap.
 
 ## Wallet session
 
