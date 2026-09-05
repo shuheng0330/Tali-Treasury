@@ -144,39 +144,44 @@ export function PayrollDesk({
     });
   }
 
+  const live = source === 'live';
+
   return (
-    <div className="flex flex-col gap-6">
-      <DataNotice
-        source={source}
-        reason={reason}
-        live="These figures"
-        plural
-        simulated={`Worked out at the official EPF, SOCSO and EIS rates. ${payrollRunNote(
-          stage,
-          runsAreLive,
-        )}`}
-        fallbackLabel="Figures unavailable."
-        fallbackNote="The rates could not be read just now, so nothing below is safe to run."
-      />
+    <div className="flex flex-col gap-5">
+      {/* Only when something is actually wrong. On the healthy path a saturated
+          green banner was the loudest thing on the screen and said nothing the
+          reader had asked; the same provenance now rides under the button as a
+          quiet line. */}
+      {live ? null : (
+        <DataNotice
+          source={source}
+          reason={reason}
+          live="These figures"
+          plural
+          simulated={`Worked out at the official EPF, SOCSO and EIS rates. ${payrollRunNote(
+            stage,
+            runsAreLive,
+          )}`}
+          fallbackLabel="Figures unavailable."
+          fallbackNote="The rates could not be read just now, so nothing below is safe to run."
+        />
+      )}
 
-      <div className="flex flex-col gap-3">
-        <span className="eyebrow">Who this payroll pays</span>
-
-        <div className="rounded-control border border-ink bg-raised px-4 py-3">
-          <span className="text-body font-medium">Employee</span>
-          <p className="truncate font-mono text-caption text-ink-3">{configuration.employee}</p>
+      <section className="flex flex-col gap-4 rounded-panel border border-rule bg-surface p-5">
+        <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+          <h2 className="text-subhead">This month&rsquo;s wage</h2>
+          {loading ? <span className="text-caption text-ink-3">working it out…</span> : null}
         </div>
 
-        <p className="text-caption text-ink-3">
-          This payroll was set up for one kind of worker. Change the age or citizenship below
-          and the contract may refuse it, even when the sums are right.
-        </p>
-      </div>
-
-      <div className="flex flex-col gap-3">
-        <span className="eyebrow">This month{loading ? ' · working it out' : ''}</span>
-
         <WageClass value={wage} onChange={setWage} disabled={run.status === 'running'} />
+
+        <p className="break-all font-mono text-caption text-ink-3">
+          Paid to {configuration.employee}
+        </p>
+      </section>
+
+      <section className="flex flex-col gap-4 rounded-panel border border-rule bg-surface p-5">
+        <h2 className="text-subhead">What leaves the treasury</h2>
 
         {breakdown ? (
           <>
@@ -186,24 +191,27 @@ export function PayrollDesk({
             <ClassNote breakdown={breakdown} />
           </>
         ) : (
-          <p className="rounded-card border border-rule bg-surface p-4 text-caption text-ink-3">
+          <p className="rounded-card border border-rule bg-canvas p-4 text-caption text-ink-3">
             {invalid
               ? 'Enter a valid monthly wage above to see the split.'
               : `The split could not be worked out${reason ? `: ${reason}` : ''}.`}
           </p>
         )}
-      </div>
 
-      <div className="flex flex-col gap-3 rounded-card border border-rule bg-surface p-5">
-        <div className="flex items-baseline justify-between gap-4">
+        <div className="flex items-baseline justify-between gap-4 border-t border-rule pt-4">
           <span className="flex flex-col">
-            <span className="text-body text-ink-2">Total cost to you</span>
-            <span className="text-caption text-ink-3">
-              Wage plus your share of EPF and SOCSO
-            </span>
+            <span className="text-body font-medium">Total cost to you</span>
+            <span className="text-caption text-ink-3">The wage plus your share</span>
           </span>
           <span className="tnum text-title">
-            {breakdown ? `${toDisplay(breakdown.employerCost, 6)} ${breakdown.currency ?? 'MYR'}` : '—'}
+            {breakdown
+              ? toDisplay(breakdown.employerCost, 6)
+              : '—'}
+            {breakdown ? (
+              <span className="ml-2 text-caption font-normal text-ink-3">
+                {breakdown.currency ?? 'MYR'}
+              </span>
+            ) : null}
           </span>
         </div>
 
@@ -211,7 +219,7 @@ export function PayrollDesk({
 
         <button
           type="button"
-          className="btn btn--primary btn--block"
+          className="btn btn--accent btn--block"
           disabled={
             !access.permitted ||
             run.status === 'running' ||
@@ -225,40 +233,46 @@ export function PayrollDesk({
           {run.status === 'running' ? 'Running…' : 'Run payroll'}
         </button>
 
-        {run.status === 'paid' ? (
-          <p className="text-caption text-ok">
-            Paid in one transaction.{' '}
-            {run.digest ? (
-              <a
-                className="link"
-                href={`https://suiscan.xyz/testnet/tx/${run.digest}`}
-                target="_blank"
-                rel="noreferrer"
-              >
-                View it
-              </a>
-            ) : null}
-          </p>
-        ) : null}
-
-        {run.status === 'refused' ? (
-          <p className="text-caption text-wait">Nobody was paid. {run.message}</p>
-        ) : null}
-
-        {run.status === 'unknown' ? (
-          <p className="text-caption text-no">
-            {run.message} Do not run it again until you have checked.
-          </p>
-        ) : null}
-
         {run.status === 'idle' ? (
           <p className="text-caption text-ink-3">
             {breakdown?.fxConversion
               ? 'All four payments leave together, or none of them do.'
-              : 'Waiting for today\u2019s ringgit rate before this can be run.'}
+              : 'Waiting for today’s ringgit rate before this can be run.'}
+            {live ? ` ${payrollRunNote(stage, runsAreLive)}` : ''}
           </p>
         ) : null}
-      </div>
+      </section>
+
+      {/* The outcome gets the card the ambient banner used to occupy. What
+          actually happened to somebody's wages outranks a status line. */}
+      {run.status === 'paid' ? (
+        <p className="rounded-card border border-ok-line bg-ok-soft p-4 text-body font-medium text-ok">
+          Everyone was paid in one transaction.{' '}
+          {run.digest ? (
+            <a
+              className="link"
+              href={`https://suiscan.xyz/testnet/tx/${run.digest}`}
+              target="_blank"
+              rel="noreferrer"
+            >
+              View it
+            </a>
+          ) : null}
+        </p>
+      ) : null}
+
+      {run.status === 'refused' ? (
+        <p className="rounded-card border border-wait-line bg-wait-soft p-4 text-caption text-wait">
+          <span className="font-medium">Nobody was paid.</span> {run.message}
+        </p>
+      ) : null}
+
+      {run.status === 'unknown' ? (
+        <p className="rounded-card border border-no-line bg-no-soft p-4 text-caption text-no">
+          <span className="font-medium">{run.message}</span> Do not run it again until you
+          have checked.
+        </p>
+      ) : null}
     </div>
   );
 }

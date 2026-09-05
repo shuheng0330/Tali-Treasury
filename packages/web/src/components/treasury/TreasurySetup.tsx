@@ -39,6 +39,24 @@ type Outcome =
   | { kind: 'funded'; digest: string; registering: boolean; reason: string | null }
   | { kind: 'registered'; digest: string; eventId: string };
 
+/**
+ * One bordered object per group, with the fields as rows inside it.
+ *
+ * Every field used to carry its own border on the same fill at the same radius,
+ * which made five separate boxes in a column read as a picket fence rather than
+ * as three decisions. `Breakdown` already groups rows this way, so this is the
+ * house idiom rather than a new one.
+ */
+function Rows({ children, className = '' }: { children: React.ReactNode; className?: string }) {
+  return (
+    <div
+      className={`flex flex-col divide-y divide-rule overflow-hidden rounded-card border border-rule bg-canvas ${className}`}
+    >
+      {children}
+    </div>
+  );
+}
+
 function Field({
   label,
   hint,
@@ -51,8 +69,8 @@ function Field({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex min-w-0 flex-col gap-1">
-      <label className="flex flex-col gap-1 rounded-control border border-rule bg-surface px-3 py-2">
+    <div className="flex min-w-0 flex-col gap-1 px-4 py-3">
+      <label className="flex flex-col gap-1">
         <span className="text-caption text-ink-2">{label}</span>
         {children}
       </label>
@@ -72,22 +90,17 @@ function Field({
  *
  * Expiry, categories and the payer wallet all arrive filled in and almost
  * nobody changes them, but all three were sitting in the middle of the form
- * asking to be read. Folded away they stop competing with the five things
- * somebody actually has to decide — and `alert` reopens the fold rather than
- * leaving a validation error hidden behind a summary line.
+ * asking to be read. `disclosure-card` is the app's own summary control, so it
+ * carries the 44px target and the +/- affordance the hand-rolled version here
+ * was missing. `alert` reopens the fold rather than leaving a validation error
+ * hidden behind a closed summary line.
  */
-function More({
-  alert,
-  children,
-}: {
-  alert: boolean;
-  children: React.ReactNode;
-}) {
+function More({ alert, children }: { alert: boolean; children: React.ReactNode }) {
   return (
-    <details className="border-t border-rule pt-3" open={alert || undefined}>
-      <summary className="cursor-pointer text-caption font-medium text-ink underline underline-offset-4">
+    <details className="disclosure-card bg-canvas" open={alert || undefined}>
+      <summary>
         More settings
-        {alert ? <span className="text-no"> · something needs fixing</span> : null}
+        {alert ? <span className="ml-2 font-normal text-no">something needs fixing</span> : null}
       </summary>
       <div className="mt-4 flex flex-col gap-3">{children}</div>
     </details>
@@ -225,37 +238,40 @@ export function TreasurySetup() {
   );
 
   return (
-    <div className="flex flex-col gap-6">
-      <section className="flex flex-col gap-3">
-        <h2 className="eyebrow">The event</h2>
-        <Field label="Event name" problem={ifFilled(problems.name, form.name)}>
-          <input
-            value={form.name}
-            disabled={funded}
-            placeholder="Orientation Week"
-            onChange={(event) => setForm({ ...form, name: event.target.value })}
-            className={INPUT}
-          />
-        </Field>
-        <Field
-          label="Organisation"
-          problem={ifFilled(problems.organisation, form.organisation)}
-        >
-          <input
-            value={form.organisation}
-            disabled={funded}
-            placeholder="FSKTM"
-            onChange={(event) => setForm({ ...form, organisation: event.target.value })}
-            className={INPUT}
-          />
-        </Field>
+    <div className="flex flex-col gap-5">
+      <section className="flex flex-col gap-4 rounded-panel border border-rule bg-surface p-5">
+        <h2 className="text-subhead">The event</h2>
+        <Rows>
+          <Field label="Event name" problem={ifFilled(problems.name, form.name)}>
+            <input
+              value={form.name}
+              disabled={funded}
+              placeholder="Orientation Week"
+              onChange={(event) => setForm({ ...form, name: event.target.value })}
+              className={INPUT}
+            />
+          </Field>
+          <Field
+            label="Organisation"
+            problem={ifFilled(problems.organisation, form.organisation)}
+          >
+            <input
+              value={form.organisation}
+              disabled={funded}
+              placeholder="FSKTM"
+              onChange={(event) => setForm({ ...form, organisation: event.target.value })}
+              className={INPUT}
+            />
+          </Field>
+        </Rows>
       </section>
 
-      <section className="flex flex-col gap-3">
-        <h2 className="eyebrow">The money</h2>
-        {/* Side by side above 640px: the two figures are read against each
-            other, and stacked they were a scroll apart on a phone. */}
-        <div className="grid gap-3 sm:grid-cols-2">
+      <section className="flex flex-col gap-4 rounded-panel border border-rule bg-surface p-5">
+        <h2 className="text-subhead">The money</h2>
+        {/* Side by side above 640px: a limit per claim only means something next
+            to the amount it is drawn from, and stacked they were a scroll apart
+            on a phone. */}
+        <Rows className="sm:grid sm:grid-cols-2 sm:divide-x sm:divide-y-0">
           <Field
             label="Put in (USDC)"
             problem={ifFilled(problems.budgetUsdc, form.budgetUsdc)}
@@ -266,7 +282,7 @@ export function TreasurySetup() {
               inputMode="decimal"
               disabled={funded}
               onChange={(event) => setForm({ ...form, budgetUsdc: event.target.value })}
-              className={`${INPUT} tnum text-subhead`}
+              className={`${INPUT} tnum text-lead`}
             />
           </Field>
           <Field
@@ -279,44 +295,61 @@ export function TreasurySetup() {
               inputMode="decimal"
               disabled={funded}
               onChange={(event) => setForm({ ...form, maxPerClaimUsdc: event.target.value })}
-              className={`${INPUT} tnum text-subhead`}
+              className={`${INPUT} tnum text-lead`}
             />
           </Field>
-        </div>
+        </Rows>
       </section>
 
-      <section className="flex flex-col gap-3">
-        <h2 className="eyebrow">Who can be paid</h2>
-        <Field
-          label="Wallet addresses"
-          problem={ifFilled(problems.recipients, form.recipients)}
-          hint={`One per line. ${recipientList(form.recipients).length} added so far.`}
-        >
-          <textarea
-            value={form.recipients}
-            disabled={funded}
-            spellCheck={false}
-            rows={3}
-            placeholder="0x…"
-            onChange={(event) => setForm({ ...form, recipients: event.target.value })}
-            className={`${ADDRESS_INPUT} resize-y`}
-          />
-        </Field>
-
-        <More alert={advancedProblem}>
+      <section className="flex flex-col gap-4 rounded-panel border border-rule bg-surface p-5">
+        <h2 className="text-subhead">Who can be paid</h2>
+        <Rows>
           <Field
-            label="Expires in (days)"
-            problem={ifFilled(problems.expiryDays, form.expiryDays)}
-            hint="After this, nothing more can be paid out."
+            label="Wallet addresses"
+            problem={ifFilled(problems.recipients, form.recipients)}
+            hint={`One per line. ${recipientList(form.recipients).length} added so far.`}
           >
-            <input
-              value={form.expiryDays}
-              inputMode="numeric"
+            <textarea
+              value={form.recipients}
               disabled={funded}
-              onChange={(event) => setForm({ ...form, expiryDays: event.target.value })}
-              className={`${INPUT} tnum`}
+              spellCheck={false}
+              rows={3}
+              placeholder="0x…"
+              onChange={(event) => setForm({ ...form, recipients: event.target.value })}
+              className={`${ADDRESS_INPUT} resize-y`}
             />
           </Field>
+        </Rows>
+
+        <More alert={advancedProblem}>
+          <Rows>
+            <Field
+              label="Expires in (days)"
+              problem={ifFilled(problems.expiryDays, form.expiryDays)}
+              hint="After this, nothing more can be paid out."
+            >
+              <input
+                value={form.expiryDays}
+                inputMode="numeric"
+                disabled={funded}
+                onChange={(event) => setForm({ ...form, expiryDays: event.target.value })}
+                className={`${INPUT} tnum`}
+              />
+            </Field>
+            <Field
+              label="Who pays out approved claims"
+              problem={ifFilled(problems.agent, form.agent)}
+              hint="Can spend within your rules, never change them."
+            >
+              <input
+                value={form.agent}
+                disabled={funded}
+                spellCheck={false}
+                onChange={(event) => setForm({ ...form, agent: event.target.value })}
+                className={ADDRESS_INPUT}
+              />
+            </Field>
+          </Rows>
 
           <fieldset className="flex flex-col gap-2">
             <legend className="text-caption text-ink-2">Expenses it covers</legend>
@@ -333,7 +366,7 @@ export function TreasurySetup() {
                     className={`rounded-badge border px-3 py-1.5 text-label uppercase transition-colors ${
                       on
                         ? 'border-accent-line bg-accent-soft text-accent-ink'
-                        : 'border-rule bg-surface text-ink-3 hover:text-ink'
+                        : 'border-rule bg-canvas text-ink-3 hover:text-ink'
                     }`}
                   >
                     {CATEGORY_LABEL[category]}
@@ -349,20 +382,6 @@ export function TreasurySetup() {
               <p className="text-caption text-ink-3">Helps sort receipts.</p>
             )}
           </fieldset>
-
-          <Field
-            label="Who pays out approved claims"
-            problem={ifFilled(problems.agent, form.agent)}
-            hint="Can spend within your rules, never change them."
-          >
-            <input
-              value={form.agent}
-              disabled={funded}
-              spellCheck={false}
-              onChange={(event) => setForm({ ...form, agent: event.target.value })}
-              className={ADDRESS_INPUT}
-            />
-          </Field>
         </More>
       </section>
 
@@ -433,34 +452,44 @@ export function TreasurySetup() {
       ) : null}
 
       {funded ? null : (
-        <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-4">
           {amounts ? (
-            <div className="flex flex-col gap-2 rounded-card border border-rule bg-surface p-4">
-              <dl className="flex flex-col gap-2 text-body">
-                <div className="flex items-baseline justify-between gap-4">
-                  <dt className="text-ink-2">Money in</dt>
-                  <dd className="tnum">{toDisplay(amounts.budget.toString(), 6)} USDC</dd>
+            /* The climax of the screen rather than a sixth field, and the
+               sentence that cannot be undone reads before the figures rather
+               than under them. */
+            <section className="flex flex-col gap-3 rounded-panel border border-accent-line bg-accent-soft p-5">
+              <h2 className="text-body font-medium text-accent-ink">
+                None of this can be changed afterwards.
+              </h2>
+              <dl className="flex flex-col divide-y divide-accent-line">
+                <div className="flex items-baseline justify-between gap-4 py-2">
+                  <dt className="text-body text-ink-2">Money in</dt>
+                  <dd className="tnum text-body">
+                    {toDisplay(amounts.budget.toString(), 6)}{' '}
+                    <span className="text-caption text-ink-3">USDC</span>
+                  </dd>
                 </div>
-                <div className="flex items-baseline justify-between gap-4">
-                  <dt className="text-ink-2">Limit per claim</dt>
-                  <dd className="tnum">{toDisplay(amounts.maxPerClaim.toString(), 6)} USDC</dd>
+                <div className="flex items-baseline justify-between gap-4 py-2">
+                  <dt className="text-body text-ink-2">Limit per claim</dt>
+                  <dd className="tnum text-body">
+                    {toDisplay(amounts.maxPerClaim.toString(), 6)}{' '}
+                    <span className="text-caption text-ink-3">USDC</span>
+                  </dd>
                 </div>
-                <div className="flex items-baseline justify-between gap-4">
-                  <dt className="text-ink-2">People it can pay</dt>
-                  <dd className="tnum">{amounts.approvedRecipients.length}</dd>
+                <div className="flex items-baseline justify-between gap-4 py-2">
+                  <dt className="text-body text-ink-2">People it can pay</dt>
+                  <dd className="tnum text-body">{amounts.approvedRecipients.length}</dd>
                 </div>
               </dl>
-              <p className="text-caption text-ink-3">
-                On Sui Testnet. None of this can be changed afterwards.
-              </p>
-            </div>
+              <p className="text-caption text-ink-3">On Sui Testnet.</p>
+            </section>
           ) : null}
 
           <button
             type="button"
             onClick={() => void sign()}
             disabled={blocker !== null || outcome.kind === 'signing'}
-            className="btn btn--primary btn--block h-12 disabled:cursor-not-allowed disabled:opacity-60"
+            className="btn btn--accent btn--block h-12 disabled:cursor-not-allowed"
           >
             {outcome.kind === 'signing' ? 'Check your wallet…' : 'Create and fund the budget'}
           </button>
@@ -468,29 +497,29 @@ export function TreasurySetup() {
 
           {/* Below the button that creates one, and closed. Above it, an escape
               hatch for a rare failure read as a second way to start. */}
-          <details className="border-t border-rule pt-3">
-            <summary className="cursor-pointer text-caption font-medium text-ink underline underline-offset-4">
-              Already paid but it never finished?
-            </summary>
+          <details className="disclosure-card">
+            <summary>Already paid but it never finished?</summary>
             <div className="mt-4 flex flex-col gap-3">
               <p className="text-caption text-ink-2">
-                Paste the transaction ID from your wallet. This only finishes the setup \u2014
-                no money moves again.
+                Paste the transaction ID from your wallet. This only finishes the setup
+                — no money moves again.
               </p>
-              <Field label="Transaction ID">
-                <input
-                  value={recoveryDigest}
-                  spellCheck={false}
-                  placeholder="Paste the transaction ID"
-                  onChange={(event) => setRecoveryDigest(event.target.value)}
-                  className={`${ADDRESS_INPUT} w-full`}
-                />
-              </Field>
+              <Rows>
+                <Field label="Transaction ID">
+                  <input
+                    value={recoveryDigest}
+                    spellCheck={false}
+                    placeholder="Paste the transaction ID"
+                    onChange={(event) => setRecoveryDigest(event.target.value)}
+                    className={`${ADDRESS_INPUT} w-full`}
+                  />
+                </Field>
+              </Rows>
               <button
                 type="button"
                 onClick={() => void register(recoveryDigest.trim())}
                 disabled={recoveryBlocker !== null}
-                className="btn btn--ghost btn--block h-10 disabled:cursor-not-allowed disabled:opacity-60"
+                className="btn btn--ghost btn--block h-10 disabled:cursor-not-allowed"
               >
                 Finish setting it up
               </button>
