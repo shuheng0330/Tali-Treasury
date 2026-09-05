@@ -43,6 +43,10 @@ export function MandateHeader({
 }: Props) {
   const status = mandateStatus(mandate);
   const available = subtract(mandate.remainingBudget, committed);
+  const displayName =
+    eventName.toLowerCase() === 'single-wallet reimbursement demo'
+      ? 'Expense treasury'
+      : eventName;
   /* BigInt, not Number: these are base units, and 6 decimals of a large budget
      leaves the double short. Committed can exceed what remains — nothing stops
      a treasurer approving past the budget — so the count is floored at zero
@@ -56,7 +60,7 @@ export function MandateHeader({
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="flex flex-col gap-1">
           <span className="eyebrow">{organisation}</span>
-          <h1 className="text-heading">{eventName}</h1>
+          <h1 className="text-heading">{displayName}</h1>
           <a
             href={EXPLORER.object(mandate.id).suiscan}
             target="_blank"

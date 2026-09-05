@@ -376,7 +376,7 @@ export function Wire() {
         <button
           type="button"
           onClick={() => setPlaying((current) => !current)}
-          aria-label={playing ? 'Pause the demonstration' : 'Play the demonstration'}
+          aria-label={playing ? 'Pause the preview' : 'Play the preview'}
           className="ml-auto rounded-badge border border-rule px-4 py-2 text-caption text-ink-3 transition-colors duration-150 hover:bg-raised hover:text-ink"
         >
           {playing ? 'Pause' : 'Play'}

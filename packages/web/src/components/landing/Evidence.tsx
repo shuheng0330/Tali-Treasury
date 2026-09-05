@@ -139,8 +139,8 @@ export function Evidence() {
           >
             {LIVE_MANDATE_ID.slice(0, 8)}…{LIVE_MANDATE_ID.slice(-6)}
           </a>
-          , which holds Circle testnet USDC. The reimbursement below them was paid from the
-          separate single-wallet demo mandate, and the upgrade from no mandate at all.
+          , which holds Circle Testnet USDC. The reimbursement below was paid from its own
+          expense mandate, and the package upgrade introduced payroll enforcement.
         </p>
       </div>
     </div>

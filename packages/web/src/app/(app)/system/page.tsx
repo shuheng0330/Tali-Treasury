@@ -26,7 +26,7 @@ const TYPE_SCALE = [
   { token: 'lead', sample: 'One student should not front the money', className: 'text-lead' },
   { token: 'body', sample: 'The mandate decides, not the app.', className: 'text-body' },
   { token: 'caption', sample: 'submitted by Kian Xiang', className: 'text-caption' },
-  { token: 'control', sample: 'Run simulation', className: 'text-control uppercase' },
+  { token: 'control', sample: 'Run preview', className: 'text-control uppercase' },
   { token: 'label', sample: 'Needs review', className: 'text-label uppercase' },
 ];
 

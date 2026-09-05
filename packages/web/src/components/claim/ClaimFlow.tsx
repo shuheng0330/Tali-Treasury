@@ -17,7 +17,7 @@ import {
   type Source,
 } from '@/lib/api/demo';
 import { useClaims } from '@/lib/api/useClaims';
-import { DEMO_EVENT_ID, DEMO_EVENT_NAME, DEMO_SUBMITTER, SINGLE_WALLET_DEMO } from '@/lib/demo-config';
+import { DEMO_EVENT_ID, DEMO_EVENT_NAME, DEMO_SUBMITTER } from '@/lib/demo-config';
 import { DataNotice } from '@/components/DataNotice';
 import type { ManualClaimRequest } from '@/lib/api/client';
 import { ClaimHome } from './ClaimHome';
@@ -274,12 +274,6 @@ export function ClaimFlow({ apiEnabled, mandate, mandateReadError }: Props) {
 
   return (
     <div className="mx-auto flex w-full max-w-md flex-col px-5 py-6">
-      {SINGLE_WALLET_DEMO ? (
-        <p className="mb-6 text-body text-ink-2">
-          Single-wallet Testnet demo: the same person submits and reviews claims.
-          Payments use test tokens, not real money.
-        </p>
-      ) : null}
       {step === 'reading' ? null : (
         <div className="mb-6">
           <DataNotice
@@ -287,7 +281,7 @@ export function ClaimFlow({ apiEnabled, mandate, mandateReadError }: Props) {
             reason={home ? homeReason : notice}
             live={home ? homeLabel : 'Receipt reading and storage'}
             plural={home && homeLabel.includes(' and ')}
-            simulated="Policy and payment remain server-controlled; wallet authentication is live on Sui Testnet."
+            simulated="Actions requiring live data are unavailable."
           />
         </div>
       )}

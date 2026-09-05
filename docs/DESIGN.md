@@ -96,6 +96,18 @@ The demo runs on a projector, 3–8m away, in a lit room.
 - Respect safe-area insets, prevent horizontal overflow, and make all operational
   buttons at least 44px high. Below 360px, claim actions stack to full width.
 
+## Product language
+
+- Write from the operator's point of view. Labels name the action or financial
+  object, never the implementation stage: `Monthly gross wage`, `Salary stream`,
+  and `Vesting period` replace development-only terminology.
+- Keep one accurate network label at wallet, signing, transaction, and explorer
+  boundaries. Do not repeat generic warnings on every card or page.
+- Local fallback content is `Preview data`, never live data. State that live-only
+  actions are unavailable instead of exposing backend or fixture terminology.
+- Competition credits, rollout notes, and the design-system route do not belong
+  in customer navigation. Verifiable contract and transaction evidence remains.
+
 ## Typeface
 
 **Bricolage Grotesque** for display: headings, the tracked uppercase labels, and any

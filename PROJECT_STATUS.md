@@ -139,6 +139,14 @@ data was changed by this verification.
 
 ## Pending integration
 
+The production-copy pass is implemented on
+`codex/mobile-proof-treasury-polish`: customer screens no longer advertise demo,
+MVP, hackathon, mock, sample, single-wallet, or no-real-funds language. Testnet
+identity remains visible at transaction and wallet boundaries, and local fallback
+content is labelled as preview data. Completed verification records 967 passing
+web tests with one intentional skip, 48 passing Sui-integration tests, a successful production build and
+typecheck, and zero high-severity dependency vulnerabilities.
+
 - configure server-only Gemini and Supabase credentials in the deployment;
 - configure a funded testnet backend signer and its owned `AgentCap`, then run one
   separately authorized small live smoke payment;

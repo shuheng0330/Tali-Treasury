@@ -27,7 +27,7 @@ export interface OnChainRun {
 
 /**
  * The last two are absent from `taliUsdcDemo`: the reimbursement was paid from
- * the separate single-wallet demo mandate, and the upgrade touched no mandate
+ * a separate expense mandate, and the upgrade touched no mandate
  * at all. Both are recorded in docs/SUBMISSION.md and
  * contracts/tali_treasury/DEPLOYMENT.md. `packages/sui-integration` is not this
  * lane's to edit, so they are declared here against those two records.
@@ -62,7 +62,7 @@ export const ON_CHAIN_RUNS: readonly OnChainRun[] = [
     digest: 'J6fWBNa7RQXiLaVVK4ZhZSNphggNLq312HKRyhRbZQq',
     headline: 'Reimbursed an RM6 receipt as 1.484561 USDC',
     detail:
-      'Read off a photo, quoted at 1 USD = 4.0416 MYR, approved by the treasurer at that exact payout, and paid from the separate single-wallet demo mandate.',
+      'Read from a receipt photo, quoted at 1 USD = 4.0416 MYR, approved by the treasurer at that exact payout, and paid from its expense mandate.',
     abort: null,
   },
   /* The two that prove the headline, both against the funded payroll mandate

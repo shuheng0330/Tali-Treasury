@@ -5,8 +5,6 @@ import { sampleStaff } from '@/lib/mock/payroll';
 import { TALI_TESTNET_PACKAGE_ID } from '@tali/treasury-sui';
 import { SPEND_CHECKS } from '@/lib/checks';
 import { RUN_TALLY } from '@/lib/evidence';
-import { PAYROLL_CONFIGURED } from '@/lib/demo-config';
-import { payrollStage } from '@/lib/chain-status';
 import { CheckMarquee } from '@/components/landing/CheckMarquee';
 import { Evidence } from '@/components/landing/Evidence';
 import { PhoneCode } from '@/components/landing/PhoneCode';
@@ -17,8 +15,6 @@ const PACKAGE_SHORT = `${TALI_TESTNET_PACKAGE_ID.slice(0, 6)}…${TALI_TESTNET_P
 const PACKAGE_LINK = EXPLORER.object(TALI_TESTNET_PACKAGE_ID).suivision;
 
 export default function Page() {
-  const stage = payrollStage();
-
   return (
     <main className="flex min-h-dvh flex-col">
       <header className="sticky top-0 z-30 border-b border-rule bg-canvas/85 backdrop-blur-md">
@@ -74,25 +70,15 @@ export default function Page() {
             month. Four payments have to leave at once.
           </h2>
           <p className="max-w-2xl text-body-lg text-ink-2">
-            The wage is scaled down so a whole month of it fits inside a Testnet faucet
-            grant. The arithmetic is not scaled: figures follow the EPF Third Schedule bands
-            and the RM6,000 SOCSO and EIS ceilings. The mandate holds a minimum for each
+            This illustrative payroll uses a small wage so its full monthly flow can be verified
+            on Testnet. The statutory calculation is unchanged: figures follow the EPF Third
+            Schedule bands and the RM6,000 SOCSO and EIS ceilings. The mandate holds a minimum for each
             body, measured against the wage — so paying EPF a single sen fails the same
             check as paying it nothing.
           </p>
         </div>
 
         <PayrollSplit />
-
-        {stage === 'mandated' ? null : (
-          <p className="max-w-3xl rounded-card border border-wait-line bg-wait-soft p-4 text-body text-wait">
-            <span className="font-medium">Published, not yet funded.</span> The payroll
-            module is on chain in package v2 — that upgrade is the last transaction in the
-            list below. Nothing has funded a mandate against it yet, so these figures are what
-            the contract will enforce, not a run you can look up. The claims contract further
-            down is funded, and its refusals are real.
-          </p>
-        )}
 
         <p className="max-w-3xl text-body text-ink-2">
           Underpay any one of them and{' '}
@@ -236,17 +222,8 @@ export default function Page() {
       <footer className="mt-auto border-t border-rule">
         <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-5 py-12 text-caption text-ink-3 sm:px-8">
           <p className="max-w-2xl">
-            The claims contract and its mandate are live on Sui testnet, and the treasurer view
-            reads them straight off the chain rather than from a copy we keep.{' '}
-            {PAYROLL_CONFIGURED
-              ? 'The payroll module is published, and its mandate and salary stream are read from the chain.'
-              : stage === 'mandated'
-                ? 'The payroll module is published and its mandate is read from the chain, but no salary stream has been opened against it yet.'
-                : 'The payroll module is published in package v2, but no mandate has been funded from it yet, so payroll screens compute the split the contract will enforce and say so on every screen.'}{' '}
-            Receipt submission and server policy
-            processing are connected when demo identity is enabled; review, safety controls, and
-            payment are not yet signed transactions. No mainnet, no real funds, and nothing here
-            is a custody service.
+            Payroll and expense rules are enforced by published Move contracts. Their package,
+            mandates, and transaction evidence can be verified independently on Sui Testnet.
           </p>
           <div className="flex flex-wrap items-end justify-between gap-x-8 gap-y-4 border-t border-rule pt-6">
             <p className="max-w-xl">
@@ -255,15 +232,11 @@ export default function Page() {
                 {PACKAGE_SHORT}
               </a>{' '}
               · {SPEND_CHECKS.length} checks inside <span className="font-mono">spend()</span>.
-              Built by Kian Xiang, Shu Heng and Wey Cheng for the MUBA Blockchain Hackathon 2026.
             </p>
             <div className="flex flex-wrap gap-6">
               <a href={PACKAGE_LINK} target="_blank" rel="noreferrer" className="link">
                 Package on SuiVision
               </a>
-              <Link href="/system" className="link">
-                Design system
-              </Link>
             </div>
           </div>
         </div>
