@@ -128,6 +128,18 @@ function workflow(initial: Claim = { ...claim }) {
       stored = { ...stored, state: 'paying', payment: null, paymentAttempt: null };
       return { status: 'saved', claim: stored };
     }),
+    restartExpiredPaymentQuote: vi.fn<ClaimRepository['restartExpiredPaymentQuote']>(async () => {
+      stored = {
+        ...stored,
+        state: 'submitted',
+        decision: null,
+        fxQuote: null,
+        review: null,
+        payment: null,
+        paymentAttempt: null,
+      };
+      return { status: 'saved', claim: stored };
+    }),
     failApprovedPayment: vi.fn(),
     resubmit: vi.fn(),
     getProcessContext: vi.fn(async (): Promise<ClaimProcessContext> => ({ claim: stored, event, paymentAttemptBudgetBefore: stored.paymentAttempt ? '16000000' : null })),
@@ -204,6 +216,34 @@ describe('MYR claim workflow', () => {
     const result = await createProcessClaimService({ ...w, quotes, now: () => later })({ claimId, processor: treasurer });
     expect(result.claim.fxQuote?.id).not.toBe(quote.id);
     expect(result.claim.state).toBe('awaiting_review');
+    expect(w.payments.execute).not.toHaveBeenCalled();
+  });
+  it('restarts a failed MYR payment with an expired quote for fresh approval', async () => {
+    const failed: Claim = {
+      ...claim,
+      fxQuote: quote,
+      decision,
+      review: { action: 'approve', reviewer: treasurer, reason: null, reviewedAtMs: now },
+      state: 'payment_failed',
+      payment: {
+        ok: false, digest: null, checkpoint: null, gasUsed: null, finalityMs: null,
+        abortCode: null, abortKey: 'TRANSACTION_PREPARATION_FAILED', message: 'No transfer',
+        rawError: null, budgetBefore: '16000000', budgetAfter: '16000000',
+      },
+    };
+    const w = workflow(failed);
+    const later = quote.expiresAtMs + 1;
+    const quotes = createClaimQuoter({ rates: w.rates, now: () => later });
+
+    const result = await createProcessClaimService({ ...w, quotes, now: () => later })({
+      claimId,
+      processor: treasurer,
+    });
+
+    expect(w.claims.restartExpiredPaymentQuote).toHaveBeenCalledWith(claimId);
+    expect(result.claim.state).toBe('awaiting_review');
+    expect(result.claim.fxQuote?.id).not.toBe(quote.id);
+    expect(result.claim.review).toBeNull();
     expect(w.payments.execute).not.toHaveBeenCalled();
   });
   it.each([

@@ -151,6 +151,12 @@ export interface ClaimRepository {
     quote: FxQuote;
   }): Promise<PaymentMutationResult>;
   /**
+   * A failed MYR payment cannot reuse an expired quote. This returns the
+   * claim to the treasurer's quote-and-review workflow only after a confirmed
+   * failed attempt, so it never retries an uncertain on-chain submission.
+   */
+  restartExpiredPaymentQuote(claimId: string): Promise<PaymentMutationResult>;
+  /**
    * Takes the claim for a payment attempt.
    *
    * `from` is `payment_failed` on a retry: that state is only ever written

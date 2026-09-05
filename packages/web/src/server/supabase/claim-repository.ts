@@ -608,6 +608,34 @@ export function createSupabaseClaimRepository(
       };
     },
 
+    async restartExpiredPaymentQuote(claimId) {
+      const { data, error } = await query(client, 'claims')
+        .update({
+          state: 'submitted',
+          decision: null,
+          fx_quote: null,
+          review_action: null,
+          reviewer_wallet: null,
+          review_reason: null,
+          reviewed_at: null,
+          payment: null,
+          payment_attempt_digest: null,
+          payment_attempt_budget_before: null,
+          payment_attempt_prepared_at: null,
+          payment_attempt_last_checked_at: null,
+        })
+        .eq('id', claimId)
+        .eq('state', 'payment_failed')
+        .select(claimColumns())
+        .maybeSingle();
+
+      if (error && error.code !== 'PGRST116') throw databaseFailure(error);
+      if (data) return { status: 'saved', claim: mapClaimRow(data).claim };
+
+      const current = await getProcessContext(claimId);
+      return { status: 'lost_race', claim: current.claim };
+    },
+
     async applyReview(input) {
       await ensureReviewColumns();
 

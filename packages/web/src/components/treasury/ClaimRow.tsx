@@ -95,6 +95,10 @@ export function ClaimRow({
 }: Props) {
   const { claim, decision, agentNote, reason } = item;
   const approvalBlocked = approvalBlockReason(claim, decision);
+  const expiredMyrPayment =
+    claim.state === 'payment_failed' &&
+    claim.analysis?.currency === 'MYR' &&
+    (!claim.fxQuote || Date.now() >= claim.fxQuote.expiresAtMs);
 
   /* The cap and the budget are measured in USDC, so for anything else they
      were never evaluated. Decisions stored before the engine started saying so
@@ -220,16 +224,23 @@ export function ClaimRow({
           <>
             <button
               type="button"
-              disabled={paying || actionsDisabled}
-              onClick={() => onPay(claim.id)}
+              disabled={(expiredMyrPayment ? processing : paying) || actionsDisabled}
+              onClick={() => (expiredMyrPayment ? onProcess(claim.id) : onPay(claim.id))}
               className="btn btn--primary min-h-11 w-full px-5 text-label sm:w-fit"
               title={actionsDisabled ? disabledReason : undefined}
             >
-              {paying ? 'Paying…' : 'Try the payment again'}
+              {expiredMyrPayment
+                ? processing
+                  ? 'Refreshing…'
+                  : 'Refresh quote & re-evaluate'
+                : paying
+                  ? 'Paying…'
+                  : 'Try the payment again'}
             </button>
             <p className="text-caption text-ink-3">
-              {claim.payment?.message ?? 'The payment did not go through.'} Nothing left
-              the mandate, so this can be released again.
+              {expiredMyrPayment
+                ? 'The MYR quote expired. Refresh it and approve the new USDC amount before payment.'
+                : `${claim.payment?.message ?? 'The payment did not go through.'} Nothing left the mandate, so this can be released again.`}
             </p>
           </>
         ) : claim.state === 'needs_correction' ? (
