@@ -1,5 +1,13 @@
 # Project status
 
+## 5 September 2026 — submission README checklist
+
+- Added explicit Description, The Problem, Blockchain Used, Testnet Contract
+  Addresses, Setup and Installation, and Team Members sections to the README.
+- Separated deployed object addresses from transaction evidence, corrected team
+  responsibilities, and reconciled outdated safety, correction, and demo-script
+  wording without changing application behavior.
+
 ## 5 September 2026 — employee claim-card polish
 
 - Employee expense history now uses independent claim cards and the shared
