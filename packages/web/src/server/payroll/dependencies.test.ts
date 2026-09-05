@@ -30,21 +30,19 @@ describe('payrollIsLive', () => {
 });
 
 describe('streamsAreLive', () => {
-  const configured: EnvLike = {
-    AGENT_PRIVATE_KEY: 'suiprivkey1abc',
-    PAYROLL_PACKAGE_ID: '0x6',
-    DEMO_STREAM_ID: '0x7',
-  };
+  const configured: EnvLike = { AGENT_PRIVATE_KEY: 'suiprivkey1abc' };
 
-  it('needs both a published stream and a signer', () => {
+  it('needs the signer used for registered stream withdrawals', () => {
     expect(streamsAreLive(configured)).toBe(true);
     expect(streamsAreLive({ ...configured, AGENT_PRIVATE_KEY: '' })).toBe(false);
-    expect(streamsAreLive({ ...configured, DEMO_STREAM_ID: '' })).toBe(false);
-    expect(streamsAreLive({ ...configured, PAYROLL_PACKAGE_ID: '' })).toBe(true);
   });
 
-  it('accepts the public stream id when only that one is set', () => {
-    const { DEMO_STREAM_ID: _unused, ...rest } = configured;
-    expect(streamsAreLive({ ...rest, NEXT_PUBLIC_DEMO_STREAM_ID: '0x7' })).toBe(true);
+  it('does not depend on a global stream or package id', () => {
+    expect(streamsAreLive({
+      ...configured,
+      DEMO_STREAM_ID: '',
+      NEXT_PUBLIC_DEMO_STREAM_ID: '',
+      PAYROLL_PACKAGE_ID: '',
+    })).toBe(true);
   });
 });

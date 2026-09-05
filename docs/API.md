@@ -16,7 +16,14 @@ The server derives the employee and EPF/SOCSO/EIS recipients from the authorized
 snapshot. `GET /api/payroll/runs?payroll=<mandateId>` returns only runs for that
 authorized registration; legacy unscoped rows are excluded.
 
-Stream reads and withdrawals also require `payroll=<mandateId>`. Current Testnet
+`GET /api/payroll/streams?payroll=<mandateId>` returns the immutable stream
+registration for an authorized employer or employee. `POST /api/payroll/streams`
+accepts `{ "mandateId", "totalAmount", "durationMinutes" }` from the configured
+employer only. `totalAmount` is explicitly micro-USDC, and the server derives the
+employee, package, capability and signer from the registered payroll. One demo
+stream may be opened per mandate.
+
+Individual stream reads and withdrawals also require `payroll=<mandateId>`. Current Testnet
 stream mandate and employee fields must match the registry and employee session;
 withdrawal additionally requires exact origin and the registered cap owner signer.
 
