@@ -132,15 +132,6 @@ describe('visibleSections', () => {
     ]);
   });
 
-  it('gives a treasurer the budget without payroll or approvals', () => {
-    expect(labels(roles('treasurer', 'member'))).toEqual([
-      'Requests',
-      'Earnings',
-      'Treasury',
-      'Safety',
-    ]);
-  });
-
   /**
    * The bug this replaced: a wallet holding no configured role saw Requests and
    * Safety and nothing else, so the one screen showing the salary this product
@@ -155,7 +146,6 @@ describe('visibleSections', () => {
       roles('member'),
       roles('employee', 'member'),
       roles('employer', 'member'),
-      roles('treasurer', 'member'),
     ]) {
       expect(labels(set)).toContain('Requests');
       expect(labels(set)).toContain('Earnings');
@@ -164,7 +154,7 @@ describe('visibleSections', () => {
   });
 
   it('never invents a section that is not declared', () => {
-    for (const set of [roles(), roles('member'), roles('employer', 'treasurer', 'member')]) {
+    for (const set of [roles(), roles('member'), roles('employer', 'member')]) {
       for (const section of visibleSections(set)) {
         expect(NAV_SECTIONS).toContain(section);
       }

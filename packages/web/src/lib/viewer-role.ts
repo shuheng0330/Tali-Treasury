@@ -1,9 +1,17 @@
-import { DEMO_TREASURER, EMPLOYER_WALLET, PAYROLL_EMPLOYEE } from './demo-config';
+import { EMPLOYER_WALLET, PAYROLL_EMPLOYEE } from './demo-config';
 
-export type ViewerRole = 'treasurer' | 'employer' | 'employee' | 'member';
+/**
+ * Three answers, because there are three kinds of wallet.
+ *
+ * There was a fourth, `treasurer`, holding the event's expense budget while the
+ * employer held payroll. They are one person here: the same account creates the
+ * treasury, funds payroll, and decides what either of them pays. Splitting them
+ * described an organisation this product does not have, and left the employer
+ * looking at a Treasury tab that was somebody else's.
+ */
+export type ViewerRole = 'employer' | 'employee' | 'member';
 
 export const ROLE_LABEL: Record<ViewerRole, string> = {
-  treasurer: 'Treasurer',
   employer: 'Employer',
   employee: 'Employee',
   member: 'Member',
@@ -47,7 +55,6 @@ export type Capability =
  */
 const CAPABILITIES: Record<ViewerRole, readonly Capability[]> = {
   employer: ['request', 'earn', 'approve', 'runPayroll', 'holdTreasury', 'proof'],
-  treasurer: ['request', 'earn', 'holdTreasury', 'proof'],
   employee: ['request', 'earn', 'proof'],
   member: ['request', 'earn', 'proof'],
 };
@@ -82,20 +89,10 @@ export function can(roles: ReadonlySet<ViewerRole>, capability: Capability): boo
  * employer and treasurer is labelled Employer rather than whichever the set
  * happened to yield first.
  */
-const PRECEDENCE: readonly ViewerRole[] = ['employer', 'treasurer', 'employee', 'member'];
+const PRECEDENCE: readonly ViewerRole[] = ['employer', 'employee', 'member'];
 
-export function viewerRole(
-  address: string | null,
-  /**
-   * The treasurer recorded on the event being looked at. This is the authority
-   * the server checks, so it wins wherever a screen has read an event.
-   * `DEMO_TREASURER` is a build-time constant recorded when the original
-   * mandate was created, and an event whose treasurer is anybody else would
-   * otherwise have its real treasurer labelled a member.
-   */
-  eventTreasurer?: string | null,
-): ViewerRole | null {
-  const roles = viewerRoles(address, { eventTreasurer });
+export function viewerRole(address: string | null): ViewerRole | null {
+  const roles = viewerRoles(address);
   return PRECEDENCE.find((role) => roles.has(role)) ?? null;
 }
 
@@ -110,6 +107,14 @@ export function viewerRole(
  * flag still names the expense demo it was written for, and no longer decides
  * who anybody is.
  *
+ * The employer is the configured wallet and nothing else. It is deliberately
+ * not also granted to whoever an event happens to record as its treasurer: the
+ * server checks each action against its own authority — `TALI_EMPLOYER_WALLET`
+ * for payroll, the event's own `treasurer_wallet` for claims — and handing the
+ * role to two wallets would put the Treasury tab in front of one of them and a
+ * 403 behind it. Where those two differ, the treasury screen still says so on
+ * the controls themselves rather than pretending.
+ *
  * The employee address is passed in where a caller has read one, because the
  * authority is the `employee` field on the salary stream. No screen can read
  * that until a stream exists, and the account control has no stream in scope at
@@ -122,14 +127,11 @@ export function viewerRole(
  */
 export function viewerRoles(
   address: string | null,
-  sources: { eventTreasurer?: string | null; employee?: string | null } = {},
+  sources: { employee?: string | null } = {},
 ): ReadonlySet<ViewerRole> {
   if (!address) return new Set();
 
   const roles = new Set<ViewerRole>();
-  if (sameAddress(address, sources.eventTreasurer?.trim() || DEMO_TREASURER)) {
-    roles.add('treasurer');
-  }
   if (sameAddress(address, EMPLOYER_WALLET)) roles.add('employer');
   /* Absent means the caller had nothing to pass and the configured wallet
      stands in; an explicit null means they read a stream and it named nobody,
