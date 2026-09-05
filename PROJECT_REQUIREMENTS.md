@@ -219,6 +219,22 @@ The payroll setup backend must:
 - Demo membership migrations must be idempotent and must not delete unrelated
   event members.
 
+## Mobile presentation requirements
+
+- The payroll proof screen must explain the deficient-EPF test before exposing
+  its detailed calculation, select underpayment by default, and prevent its
+  valid-payroll comparison from initiating a payment.
+- A confirmed abort-24 refusal is a successful safety result: the UI must show
+  the abort, zero USDC movement, and the failed-transaction explorer link.
+- The treasury overview must prioritize available, settled, and committed funds;
+  contract rules and member creation remain accessible through semantic
+  disclosures instead of occupying the primary reading path.
+- Treasury history and review queues must use individually bounded cards. Each
+  card keeps its status, primary reason, payout, and available action visible,
+  while policy checks and FX evidence expand on demand.
+- Operational controls must be at least 44px high, remain keyboard accessible,
+  wrap safely at 320px, preserve visible focus, and announce asynchronous results.
+
 ## Explicitly out of scope for this increment
 
 - trusted MYR-to-USDC quote ingestion, quote expiry and converted payout storage;
@@ -228,7 +244,6 @@ The payroll setup backend must:
   injected fake operations and never broadcasts);
 - member correction and resubmission after `request_correction`;
 - event-member deactivation, reactivation, renaming, or payroll Move roster changes;
-- selecting a registered payroll and binding payroll/proof/earnings pages to it;
 - an authoritative roster list in the Treasury Dashboard (frontend handoff);
 - live browser presentation for payments initiated outside the review flow;
 - production rollout of this new migration and hosted wallet-flow verification.

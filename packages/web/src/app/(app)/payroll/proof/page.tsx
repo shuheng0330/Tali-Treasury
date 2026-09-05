@@ -3,20 +3,19 @@ import { Suspense } from 'react';
 import { PayrollProofContent } from '@/components/payroll/PayrollProofContent';
 
 export const metadata = {
-  title: 'Underpaying EPF · Tali Treasury',
+  title: 'Payroll Safety Test · Tali Treasury',
 };
 
 export const dynamic = 'force-dynamic';
 
 export default function PayrollProofPage() {
   return (
-    <div className="mx-auto flex w-full max-w-md flex-col gap-6 px-5 py-6">
+    <div className="page-safe mx-auto flex w-full max-w-xl flex-col gap-6 px-5 py-6 sm:py-10">
       <header className="flex flex-col gap-2">
-        <p className="eyebrow">Payroll</p>
-        <h1 className="text-display">Try to underpay EPF</h1>
-        <p className="text-body text-ink-2">
-          An employer who wants to keep the EPF money has to get it past the contract, not
-          past the interface. Take the money and see.
+        <p className="eyebrow text-accent-ink">Payroll Safety Test</p>
+        <h1 className="text-title text-balance">Can payroll skip EPF?</h1>
+        <p className="max-w-lg text-body text-ink-2">
+          Set EPF below the required amount. Sui should block the entire payroll.
         </p>
       </header>
 
