@@ -72,10 +72,11 @@ function repo() {
       status: 'paid' as const,
       digest,
     })),
-    markFailed: vi.fn(async (id, abortCode) => ({
+    markFailed: vi.fn(async (id, abortCode, digest) => ({
       ...runs.find((r) => r.id === id)!,
       status: 'failed' as const,
       abortCode,
+      digest: digest ?? null,
     })),
     listRecent: vi.fn(async () => runs),
     listRecentForMandate: vi.fn(async () => runs),
@@ -146,6 +147,7 @@ describe('createPayrollService', () => {
     const sent = run.mock.calls[0]![0];
     expect(sent.statutoryAmounts[0]).toBe('1');
     expect(sent.statutoryAmounts[1]).not.toBe('1');
+    expect(sent.recordRefusal).toBe(true);
   });
 
   it('records a refusal with its abort code instead of throwing', async () => {
@@ -202,6 +204,27 @@ describe('createPayrollService', () => {
 
     await expect(service.run(EMPLOYER, request)).rejects.toThrow('not configured');
     expect(runs.impl.create).not.toHaveBeenCalled();
+  });
+
+  it('stores the digest of an on-chain refusal', async () => {
+    const runs = repo();
+    const { port } = chain({
+      status: 'refused',
+      abortCode: 24,
+      message: 'statutory short',
+      digest: '0xfailed',
+    });
+    const service = createPayrollService({
+      runs: runs.impl,
+      chain: port,
+      configurations: CONFIGURATIONS,
+      ...fx,
+    });
+
+    const result = await service.run(EMPLOYER, { ...request, underpay: 'epf' });
+
+    expect(runs.impl.markFailed).toHaveBeenCalledWith('run-1', 24, '0xfailed');
+    expect(result.digest).toBe('0xfailed');
   });
 
   it('requires the run to approve the exact rate shown by preview', async () => {

@@ -74,8 +74,8 @@ function memoryRepository(): PayrollRunRepository {
     async markPaid(id, digest) {
       return update(id, { status: 'paid', digest });
     },
-    async markFailed(id, abortCode) {
-      return update(id, { status: 'failed', abortCode });
+    async markFailed(id, abortCode, digest) {
+      return update(id, { status: 'failed', abortCode, ...(digest ? { digest } : {}) });
     },
     async listRecentForMandate(mandateId, limit) {
       return [...runs.values()]

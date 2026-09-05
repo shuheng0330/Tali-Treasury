@@ -8,7 +8,12 @@ import type { Source } from '@/lib/api/demo';
 import { DataNotice } from '@/components/DataNotice';
 import { Breakdown } from './Breakdown';
 import { ClassNote } from './ClassNote';
-import { grossProblem, grossToBaseUnits, type WageClassValue } from '@/lib/payroll-wage';
+import {
+  grossAfterUnpaidLeave,
+  grossProblem,
+  unpaidLeaveProblem,
+  type WageClassValue,
+} from '@/lib/payroll-wage';
 import { WageClass } from './WageClass';
 import { RoleNotice } from '@/components/RoleNotice';
 import { useWalletSession } from '@/components/wallet/WalletSessionProvider';
@@ -40,6 +45,7 @@ export function PayrollDesk({
     gross: '3000.00',
     age: 30,
     citizenship: 'local',
+    unpaidLeaveDays: 0,
   });
   const [breakdown, setBreakdown] = useState<PayrollBreakdown | null>(null);
   const [source, setSource] = useState<Source>('live');
@@ -47,11 +53,16 @@ export function PayrollDesk({
   const [loading, setLoading] = useState(false);
   const [run, setRun] = useState<RunState>({ status: 'idle' });
 
-  const base = grossToBaseUnits(wage.gross);
-  /* True while the inputs still describe the sample this screen shipped with,
-     which is the only case a stored breakdown legitimately answers. */
+  /* The wage after unpaid leave, which is the figure everything downstream is
+     about: the split is computed on what is actually payable, never scaled
+     afterwards. With no leave entered this is the typed gross unchanged. */
+  const base = grossAfterUnpaidLeave(wage);
   const invalid =
-    grossProblem(wage.gross) !== null || wage.age < 16 || wage.age > 100 || base === null;
+    grossProblem(wage.gross) !== null ||
+    unpaidLeaveProblem(wage) !== null ||
+    wage.age < 16 ||
+    wage.age > 100 ||
+    base === null;
 
   useEffect(() => {
     if (invalid || base === null) {

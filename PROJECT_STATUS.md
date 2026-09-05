@@ -8,20 +8,19 @@ The registered-payroll binding increment is implemented on
 `codex/registered-payroll-binding`: authenticated configuration listing, URL
 selection, configuration-scoped preview/run/history, per-run mandate persistence,
 signer/cap-owner validation and fail-closed salary-stream binding are complete
-locally. Fresh verification passed 48 Sui tests and 654 web tests with one
-intentional skip, root typecheck, production build and a zero-vulnerability
-high-severity audit. The new pgTAP test is authored; local replay is blocked only
-because Docker Desktop's Linux engine is not running.
+locally and are integrated with `origin/main` through `05e8cd2`. Fresh
+post-merge verification results are recorded below. The new pgTAP test is
+authored; local replay still depends on Docker Desktop's Linux engine.
 
-The payroll-registration branch now includes `origin/main` through `a2cda1b`.
 Parallel setup implementations were consolidated around one strict digest-only
 verifier, one immutable registry migration and the canonical
 `POST /api/payroll/register` handler while preserving the latest setup UI. The
-post-merge checks pass: 48 Sui integration tests, 644 web tests with one intentional
-skip, root typecheck, production build and a zero-vulnerability high-severity audit.
-The database replay could not be repeated because Docker Desktop's Linux engine
-was not running; the same 141 pgTAP assertions passed immediately before this
-merge. Payroll publication and hosted migration remain pending.
+post-merge checks pass: 42 Move tests, 48 Sui integration tests, 673 web tests
+(672 passing and one intentional skip), 141 pgTAP assertions, root typecheck,
+production build and a zero-vulnerability audit. A forward migration preserves
+the old local registration read-only and installs the strict registry without a
+database reset. Payroll package v2, setup, one successful run and one abort-24
+refusal are live; salary-stream and hosted-registry verification remain pending.
 
 ## Complete locally
 

@@ -1,6 +1,9 @@
 import { convertMyrToUsdc, type PayrollFxConversion, type StatutorySplit } from '@tali/shared';
 
 import type { FxRate } from '../fx/rates';
+import { CONFIGURED_FLOOR_BPS } from './floors';
+
+const BPS_DENOMINATOR = 10_000n;
 
 function convert(value: string, rate: string): bigint {
   return value === '0' ? 0n : BigInt(convertMyrToUsdc(value, rate));
@@ -19,7 +22,20 @@ export function quotePayrollSplit(
   const gross = convert(source.gross, rate.myrPerUsd);
   const bodies = source.bodies.map((body) => {
     const employee = convert(body.employee, rate.myrPerUsd);
-    const employer = convert(body.employer, rate.myrPerUsd);
+    const convertedEmployer = convert(body.employer, rate.myrPerUsd);
+    const convertedTotal = employee + convertedEmployer;
+    /* Move compares each transferred total with ceil(gross * floor / 10,000).
+       Converting the two MYR contribution legs independently with half-up
+       rounding can leave their sum one micro-USDC below that ceiling. Put the
+       minimal rounding adjustment on the employer side so employee deductions
+       and gross-to-net accounting remain exact. */
+    const minimumTotal =
+      (gross * CONFIGURED_FLOOR_BPS[body.body] + BPS_DENOMINATOR - 1n) /
+      BPS_DENOMINATOR;
+    const employer =
+      convertedTotal < minimumTotal
+        ? convertedEmployer + (minimumTotal - convertedTotal)
+        : convertedEmployer;
     return {
       body: body.body,
       employee: employee.toString(),

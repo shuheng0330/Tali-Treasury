@@ -65,6 +65,25 @@ export const ON_CHAIN_RUNS: readonly OnChainRun[] = [
       'Read off a photo, quoted at 1 USD = 4.0416 MYR, approved by the treasurer at that exact payout, and paid from the separate single-wallet demo mandate.',
     abort: null,
   },
+  /* The two that prove the headline, both against the funded payroll mandate
+     0xa04894…f1100 rather than the expense mandate above. Recorded in
+     docs/PAYROLL_TESTNET_EVIDENCE.md. */
+  {
+    kind: 'allowed',
+    digest: 'HpUwPspN9QgoXBmLARh8iJDFSxEACSwZNxhzz3zXr27y',
+    headline: 'Paid an RM30 salary and all three contributions at once',
+    detail:
+      'One transaction, four recipients: 6.129767 USDC to the worker, 2.719944 to EPF, 0.166906 to SOCSO and 0.029673 to EIS. Emitted one PayrollRun event.',
+    abort: null,
+  },
+  {
+    kind: 'refused',
+    digest: 'Hqw44T6qTsQKW5ooPGM8BQmN6uNgaXk6TYNvw9tgFT8V',
+    headline: 'Tried to pay the same salary with EPF one micro-USDC short',
+    detail:
+      'The wage was correct and the worker would have been paid. EPF was below the floor, so nothing moved — not the contributions, and not the wage either.',
+    abort: { code: 24, key: 'E_CONTRIBUTION_BELOW_FLOOR' },
+  },
   {
     kind: 'published',
     digest: '86914sL2wFj9s7sfcMqdYx9ekST8FRU8Y1tLT5SAaSfN',
@@ -86,7 +105,23 @@ export const RUN_TALLY = {
   refused: ON_CHAIN_RUNS.filter((run) => run.kind === 'refused').length,
 } as const;
 
-/** Measured after both refusals, from the same deployment record. */
+/**
+ * The funded payroll mandate, and what it reported after refusing the deficient
+ * run. Separate from AFTERMATH below: that one is the expense mandate, and
+ * merging the two would let a reader attribute one's balance to the other.
+ */
+export const PAYROLL_MANDATE_ID =
+  '0xa04894a0d3852092d08df2476bb36e47992ec13ad78ba2a6e38cb891f77f1100';
+
+export const PAYROLL_AFTERMATH = {
+  budgetRemaining: '3.317095 USDC',
+  totalPaid: '9.046290 USDC',
+  runCount: 1,
+  /** Charged to the backend signer for the refusal alone. */
+  gasBurnedByRefusal: '0.001062852 SUI',
+} as const;
+
+/** Measured after the two expense refusals, from the same deployment record. */
 export const AFTERMATH = {
   budgetRemaining: '17 USDC',
   amountSpent: '3 USDC',

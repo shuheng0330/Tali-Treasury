@@ -110,6 +110,7 @@ export function createPayrollService(deps: {
         gross: breakdown.gross,
         net: breakdown.net,
         statutoryAmounts: STATUTORY_BODIES.map(amountFor),
+        recordRefusal: request.underpay !== undefined,
       });
 
       /* A refusal is the contract deciding. It is recorded with its code and
@@ -117,7 +118,7 @@ export function createPayrollService(deps: {
          which rule spoke, and no retry is attempted because a duplicate payroll
          run is worse than a failed one. */
       if (submission.status === 'refused') {
-        return deps.runs.markFailed(record.id, submission.abortCode);
+        return deps.runs.markFailed(record.id, submission.abortCode, submission.digest);
       }
 
       return deps.runs.markPaid(record.id, submission.digest);

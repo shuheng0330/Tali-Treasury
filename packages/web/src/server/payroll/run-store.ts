@@ -63,8 +63,8 @@ export function fallbackStore(
     create: (input) => attempt((repository) => repository.create(input), true),
     markPaid: (runId, digest) =>
       attempt((repository) => repository.markPaid(runId, digest), true),
-    markFailed: (runId, abortCode) =>
-      attempt((repository) => repository.markFailed(runId, abortCode), true),
+    markFailed: (runId, abortCode, digest) =>
+      attempt((repository) => repository.markFailed(runId, abortCode, digest), true),
     listRecentForMandate: (mandateId, limit) =>
       attempt((repository) => {
         if (!repository.listRecentForMandate) return Promise.resolve([]);

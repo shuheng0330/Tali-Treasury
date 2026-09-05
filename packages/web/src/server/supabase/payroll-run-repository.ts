@@ -130,8 +130,12 @@ export function createSupabasePayrollRunRepository(
       return update(runId, { status: 'paid', digest });
     },
 
-    async markFailed(runId, abortCode) {
-      return update(runId, { status: 'failed', abort_code: abortCode });
+    async markFailed(runId, abortCode, digest) {
+      return update(runId, {
+        status: 'failed',
+        abort_code: abortCode,
+        ...(digest ? { digest } : {}),
+      });
     },
 
     async listRecentForMandate(mandateId, limit) {

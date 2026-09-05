@@ -8,7 +8,10 @@
 
   --ink: 8 13 16;
   --ink-2: 74 84 90;
-  --ink-3: 100 110 117;
+  /* Measured, not chosen. 4.74:1 on the failed-row soft red, which is the
+     tightest of the five backgrounds it lands on; 100 110 117 read 4.44:1
+     there and missed AA on the one row a judge is most likely to read. */
+  --ink-3: 96 105 116;
 
   --rule: 232 233 234;
   --rule-strong: 212 214 216;

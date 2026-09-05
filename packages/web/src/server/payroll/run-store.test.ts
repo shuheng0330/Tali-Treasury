@@ -74,6 +74,15 @@ describe('fallbackStore', () => {
     expect(primary.markPaid).toHaveBeenCalledTimes(0);
   });
 
+  it('preserves the failed transaction digest when forwarding a refusal', async () => {
+    const primary = repository();
+    const store = fallbackStore(primary, repository());
+
+    await store.markFailed('db-1', 24, 'failed-digest');
+
+    expect(primary.markFailed).toHaveBeenCalledWith('db-1', 24, 'failed-digest');
+  });
+
   it('retries the database on a read, so applying the migration needs no restart', async () => {
     let tableExists = false;
     const primary = repository({
