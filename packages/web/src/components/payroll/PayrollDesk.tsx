@@ -9,7 +9,12 @@ import type { SampleEmployee } from '@/lib/mock/payroll';
 import { DataNotice } from '@/components/DataNotice';
 import { Breakdown } from './Breakdown';
 import { ClassNote } from './ClassNote';
-import { grossProblem, grossToBaseUnits, type WageClassValue } from '@/lib/payroll-wage';
+import {
+  grossAfterUnpaidLeave,
+  grossProblem,
+  unpaidLeaveProblem,
+  type WageClassValue,
+} from '@/lib/payroll-wage';
 import { WageClass } from './WageClass';
 import { RoleNotice } from '@/components/RoleNotice';
 import { useWalletSession } from '@/components/wallet/WalletSessionProvider';
@@ -42,6 +47,7 @@ export function PayrollDesk({
     gross: toDisplay(staff[0].breakdown.gross),
     age: 30,
     citizenship: 'local',
+    unpaidLeaveDays: 0,
   });
   const [breakdown, setBreakdown] = useState<PayrollBreakdown | null>(staff[0].breakdown);
   const [source, setSource] = useState<Source>('mock');
@@ -49,17 +55,27 @@ export function PayrollDesk({
   const [loading, setLoading] = useState(false);
   const [run, setRun] = useState<RunState>({ status: 'idle' });
 
-  const base = grossToBaseUnits(wage.gross);
+  /* The wage after unpaid leave, which is the figure everything downstream is
+     about: the split is computed on what is actually payable, never scaled
+     afterwards. With no leave entered this is the typed gross unchanged. */
+  const base = grossAfterUnpaidLeave(wage);
   /* True while the inputs still describe the sample this screen shipped with,
-     which is the only case a stored breakdown legitimately answers. */
+     which is the only case a stored breakdown legitimately answers. Leave makes
+     it false through `base`, which is what we want: a stored split for the full
+     month does not describe a month with days taken out of it. */
   const untouched =
     wage.age === 30 &&
     wage.citizenship === 'local' &&
+    wage.unpaidLeaveDays === 0 &&
     base !== null &&
     base.toString() ===
       (selected.breakdown.fxConversion?.source.gross ?? selected.breakdown.gross);
   const invalid =
-    grossProblem(wage.gross) !== null || wage.age < 16 || wage.age > 100 || base === null;
+    grossProblem(wage.gross) !== null ||
+    unpaidLeaveProblem(wage) !== null ||
+    wage.age < 16 ||
+    wage.age > 100 ||
+    base === null;
 
   useEffect(() => {
     if (invalid || base === null) {
@@ -173,6 +189,7 @@ export function PayrollDesk({
                     gross: toDisplay(person.breakdown.gross),
                     age: 30,
                     citizenship: 'local',
+                    unpaidLeaveDays: 0,
                   });
                 }}
                 aria-pressed={active}

@@ -49,7 +49,16 @@ Every digest below opens in a public explorer.
 | Asked for 15 USDC against a 5 USDC cap | Refused, abort 5 | `5fMDNz9dAxJFiamg5Bi5iXnPjnHv2HTUB3hv2wJ2PNpU` |
 | Asked to pay an address not on the allowlist | Refused, abort 7 | `2htVB5NJCxhz1QXQtLGDjJ6kLVAwit6MLqzghzGDnk5e` |
 | RM6 receipt reimbursed from the browser | Paid 1.484561 USDC | `J6fWBNa7RQXiLaVVK4ZhZSNphggNLq312HKRyhRbZQq` |
-| Published payroll module in package v2 | Allowed | `86914sL2wFj9s7sfcMqdYx9ekST8FRU8Y1tLT5SAaSfN` |
+| Published payroll module in package v2 | Published | `86914sL2wFj9s7sfcMqdYx9ekST8FRU8Y1tLT5SAaSfN` |
+| Paid an RM30 salary and EPF, SOCSO and EIS in one transaction | Allowed | `HpUwPspN9QgoXBmLARh8iJDFSxEACSwZNxhzz3zXr27y` |
+| Same run with EPF one micro-USDC under the floor | Refused, abort 24 | `Hqw44T6qTsQKW5ooPGM8BQmN6uNgaXk6TYNvw9tgFT8V` |
+
+The payroll mandate `0xa04894a0d3852092d08df2476bb36e47992ec13ad78ba2a6e38cb891f77f1100`
+was created and funded by the employer's own wallet in
+`85PdAXLeVT82SetGWUK9a98vX3UAEcrarRRtUv8ne73`, and the backend verified finality,
+sender, package, coin type, mandate fields and `PayrollCap` owner before
+registering it. Full figures in
+[PAYROLL_TESTNET_EVIDENCE.md](PAYROLL_TESTNET_EVIDENCE.md).
 
 Both refusals were signed by the agent's real capability. The mandate refused
 them anyway, burning 0.002095 SUI in gas and moving no USDC. Budget after:
@@ -63,12 +72,13 @@ the exact payout before it was sent.
 
 Say this plainly if asked; it is the honest half of the story.
 
-- **The payroll module is published, but no demo `PayrollMandate` exists yet.**
-  The statutory arithmetic, contract and screens exist, but payroll figures remain
-  previews until the authenticated setup flow creates and registers the funded object.
-- **Set Up Payroll has a complete local signing, verification and idempotent
-  registration path**, but the hosted payroll-registration migrations and runtime
-  configuration are not yet verified, so it cannot yet create the final demo mandate.
+- **No salary stream has been opened yet.** `SalaryStream` is published and
+  tested, and the earnings screen says plainly that its accrual is computed with
+  the contract's arithmetic rather than read from chain. An employee withdrawal
+  is the one piece of the payroll story with no Testnet proof behind it.
+- **Set Up Payroll was run locally, not hosted.** The mandate above was created
+  and registered through the authenticated local application; the hosted
+  payroll-registration migration and runtime configuration are still unverified.
 - **Interactive safety attempts fall back to a local prediction**, labelled as
   one. The two refusals in the table above are real and are what the screen
   links to.
@@ -108,11 +118,13 @@ in the README.
 
 ## Demo script — 3 minutes
 
-Two versions. The module is published and the statutory recipients are
-configured, so the remaining condition for A is a **funded mandate, its
-`PayrollCap` and an open salary stream**. Those do not exist as of 5 September,
-so B is the script unless that changes before the pitch. B needs nothing that is
-not already on chain.
+**A is now the script.** The funded mandate, the `PayrollCap`, a real atomic
+payroll and a real abort-24 refusal all exist as of 5 September. The single gap
+is the salary stream, so A's `/earnings` step is the one to soften — show the
+accrual and say the withdrawal has no Testnet proof yet, or drop the step and
+give the time back to the refusal.
+
+Keep B below as the fallback if the room's network cannot reach an explorer.
 
 ### A — payroll published
 

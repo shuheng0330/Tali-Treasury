@@ -53,11 +53,12 @@ switch to the app.
 
 ## 4 — Live demo · 0:40–2:25
 
-**No slide. Switch to the app.** Follow script A or B from
-[SUBMISSION.md](SUBMISSION.md). Payroll is published, so the question is no
-longer publication — it is whether a **funded mandate, its cap and a salary
-stream exist** by the time you present. They do not as of 5 September, which
-makes B the honest script. Decide before you walk up; do not choose live.
+**No slide. Switch to the app.** Follow script A from
+[SUBMISSION.md](SUBMISSION.md). The funded mandate, a real atomic payroll and a
+real abort-24 refusal all exist — A is the strong script and it is now true.
+The only gap is the salary stream, so soften A's `/earnings` step or drop it.
+Keep B as the fallback if the room's network cannot reach an explorer. Decide
+before you walk up; do not choose live.
 
 Leave this slide in the deck as a black frame so a mis-click does not reveal the
 closing slide early.
@@ -66,24 +67,27 @@ closing slide early.
 
 ## 5 — What is actually on chain · 2:25–2:45
 
-> **Five transactions. Two allowed, two refused, one publication.**
+> **The same payroll, twice.**
 >
-> `5fMDNz…` asked for 15 against a 5 cap → **abort 5**
-> `2htVB5…` paid an address not on the list → **abort 7**
+> `HpUwPs…` wage + EPF + SOCSO + EIS, one transaction → **paid**
+> `Hqw44T…` EPF one micro-USDC short → **abort 24, nothing moved**
 >
-> Signed with a valid capability. Refused anyway.
+> Not even the wage. That is the product.
 >
-> `Aksj8w…` paid 3 USDC · `J6fWBNa7…` reimbursed RM6 as 1.484561 USDC
-> `86914s…` published payroll in package v2
+> Four more on the expense mandate: two paid, two refused on cap and allowlist.
 
 **Notes:** This is the slide that answers "your app could just be pretending".
-The agent held a real capability both times. The contract refused, burned
-0.002095 SUI doing it, and moved no USDC. Every digest opens in a public
-explorer, and these are the same five the landing page lists — never quote a
-count here that the screen behind you contradicts.
+Two runs against the same funded mandate, differing only in the EPF leg. The
+second was signed by a capability that was genuinely allowed to run payroll, and
+the contract refused it anyway: mandate budget unchanged at 3.317095 USDC,
+total paid unchanged at 9.046290, one run on the counter both before and after.
+It cost 0.001062852 SUI to be told no, which is the part that is hard to fake.
 
-Payroll code is now published in package v2. Until the funded mandate and execution
-evidence exist, say that boundary plainly here rather than being asked.
+Every digest opens in a public explorer, and these are the same seven the landing
+page lists — never quote a count here that the screen behind you contradicts.
+
+The one thing with no Testnet proof is the salary stream withdrawal. Say so here
+rather than being asked.
 
 ---
 

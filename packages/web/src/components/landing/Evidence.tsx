@@ -1,5 +1,12 @@
 import { EXPLORER } from '@tali/shared';
-import { AFTERMATH, LIVE_MANDATE_ID, ON_CHAIN_RUNS, type OnChainRun } from '@/lib/evidence';
+import {
+  AFTERMATH,
+  LIVE_MANDATE_ID,
+  ON_CHAIN_RUNS,
+  PAYROLL_AFTERMATH,
+  PAYROLL_MANDATE_ID,
+  type OnChainRun,
+} from '@/lib/evidence';
 
 const CHIP: Record<OnChainRun['kind'], { label: string; className: string }> = {
   allowed: { label: 'Allowed', className: 'border-ok-line bg-ok-soft text-ok' },
@@ -94,7 +101,26 @@ export function Evidence() {
 
       <div className="flex flex-col gap-2 border-t border-rule px-6 py-6 sm:px-8">
         <p className="text-body text-ink-2">
-          After both refusals the mandate still held{' '}
+          After the short-EPF run was refused, the payroll mandate still held{' '}
+          <span className="tnum font-medium">{PAYROLL_AFTERMATH.budgetRemaining}</span> and had
+          still paid exactly{' '}
+          <span className="tnum font-medium">{PAYROLL_AFTERMATH.totalPaid}</span> across{' '}
+          <span className="tnum">{PAYROLL_AFTERMATH.runCount}</span> run — the figures from
+          before it was submitted. The wage did not go out either, which is the whole point:
+          the worker and the three bodies move together or not at all. It ran against mandate{' '}
+          <a
+            href={EXPLORER.object(PAYROLL_MANDATE_ID).suivision}
+            target="_blank"
+            rel="noreferrer"
+            className="link font-mono"
+          >
+            {PAYROLL_MANDATE_ID.slice(0, 8)}…{PAYROLL_MANDATE_ID.slice(-6)}
+          </a>
+          , and cost the signer <span className="tnum">{PAYROLL_AFTERMATH.gasBurnedByRefusal}</span>{' '}
+          in gas to be told no.
+        </p>
+        <p className="text-body text-ink-2">
+          After the two expense refusals that mandate still held{' '}
           <span className="tnum font-medium">{AFTERMATH.budgetRemaining}</span> and had spent{' '}
           <span className="tnum font-medium">{AFTERMATH.amountSpent}</span> — the same figures
           as before they were submitted. Neither refusal emitted a{' '}
@@ -104,7 +130,7 @@ export function Evidence() {
           The agent still paid{' '}
           <span className="tnum">{AFTERMATH.gasBurnedByRefusals}</span> in gas to be turned
           down, which is the part that is hard to fake: a refusal that costs nothing did not
-          happen on a chain. Those three ran against mandate{' '}
+          happen on a chain. The first three ran against mandate{' '}
           <a
             href={EXPLORER.object(LIVE_MANDATE_ID).suivision}
             target="_blank"
