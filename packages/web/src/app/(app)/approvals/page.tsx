@@ -10,7 +10,7 @@ import { ApprovalQueue } from '@/components/overtime/ApprovalQueue';
 import type { MandateBudget } from '@/lib/approval-summary';
 
 export const metadata = {
-  title: 'Approve overtime · Tali Treasury',
+  title: 'Approvals · Tali Treasury',
 };
 
 export const dynamic = 'force-dynamic';
@@ -69,19 +69,19 @@ export default async function OvertimeApprovalsPage() {
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-6 px-5 py-6">
       <header className="flex flex-col gap-2">
-        <p className="eyebrow">Overtime</p>
         <h1 className="text-display">Approvals</h1>
         <p className="text-body text-ink-2">
-          Approving raises the wage the next payroll run pays, and that run spends a
-          budget fixed on chain. Every decision here shows what it commits before it is
-          recorded, because the contract will not renegotiate afterwards.
+          Overtime and leave, waiting on you. Approving overtime raises the wage the next
+          payroll run pays, and that run spends a budget fixed on chain. Every decision here
+          shows what it commits before it is recorded, because the contract will not
+          renegotiate afterwards.
         </p>
       </header>
 
       <ApprovalQueue mandate={mandate} mandateError={reason} />
 
       <Link href="/payroll" className="link self-start">
-        Back to payroll
+        Run payroll
       </Link>
     </div>
   );

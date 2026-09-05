@@ -19,7 +19,6 @@ export default function PayrollHistoryPage() {
   return (
     <div className="mx-auto flex w-full max-w-md flex-col gap-6 px-5 py-6">
       <header className="flex flex-col gap-2">
-        <p className="eyebrow">Payroll</p>
         <h1 className="text-display">What has been run</h1>
         <p className="text-body text-ink-2">
           A run that reaches the contract is written down before it is signed, so a
@@ -29,9 +28,6 @@ export default function PayrollHistoryPage() {
 
       <Suspense fallback={<p className="text-caption text-ink-3">Loading payroll…</p>}><PayrollHistoryContent /></Suspense>
 
-      <Link href="/payroll" className="link self-start">
-        Back to payroll
-      </Link>
     </div>
   );
 }

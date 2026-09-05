@@ -99,7 +99,7 @@ export default function Page() {
           <span className="font-mono">run_payroll</span> aborts on code{' '}
           <span className="tnum">24</span> before a single coin moves. The wage does not go out
           and get corrected later; the whole run reverts.{' '}
-          <Link href="/payroll/proof" className="link">
+          <Link href="/safety/payroll" className="link">
             Take the EPF money and see
           </Link>
           .
@@ -220,10 +220,12 @@ export default function Page() {
       <section className="mx-auto w-full max-w-6xl px-5 pb-20 sm:px-8 md:pb-28">
         <p className="mb-6 text-body text-ink-2">
           Look around as the <Link href="/payroll" className="link">employer</Link>, as{' '}
-          <Link href="/earnings" className="link">someone being paid</Link>, as a{' '}
-          <Link href="/claim" className="link">member claiming an expense</Link>, as the{' '}
-          <Link href="/treasury" className="link">treasurer</Link>, set up{' '}
-          <Link href="/treasury/setup" className="link">an expense treasury</Link>, or in the{' '}
+          <Link href="/earnings" className="link">someone being paid</Link>, or as a member{' '}
+          <Link href="/requests/expense" className="link">claiming an expense</Link>,{' '}
+          <Link href="/requests/overtime" className="link">an hour worked late</Link> or{' '}
+          <Link href="/requests/leave" className="link">a day off</Link>. Decide them in the{' '}
+          <Link href="/approvals" className="link">approval queue</Link>, hold the budget as the{' '}
+          <Link href="/treasury" className="link">treasurer</Link>, or watch the chain refuse in the{' '}
           <Link href="/safety" className="link">safety test</Link>.
         </p>
         <div className="rounded-panel border border-rule bg-surface p-6 md:p-8">
