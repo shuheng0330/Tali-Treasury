@@ -41,6 +41,10 @@ export function quotePayrollSplit(
       employee: employee.toString(),
       employer: employer.toString(),
       total: (employee + employer).toString(),
+      /* Carried through the conversion because the three are not the same
+         number once a month holds overtime, and a breakdown that shows one
+         wage for all three cannot show why EPF did not move. */
+      base: body.base === undefined ? undefined : convert(body.base, rate.myrPerUsd).toString(),
     };
   });
   const employeeSide = bodies.reduce((sum, body) => sum + BigInt(body.employee), 0n);
@@ -51,6 +55,14 @@ export function quotePayrollSplit(
 
   return {
     gross: gross.toString(),
+    baseWage:
+      source.baseWage === undefined ? undefined : convert(source.baseWage, rate.myrPerUsd).toString(),
+    overtime:
+      source.overtime === undefined ? undefined : convert(source.overtime, rate.myrPerUsd).toString(),
+    unpaidLeave:
+      source.unpaidLeave === undefined
+        ? undefined
+        : convert(source.unpaidLeave, rate.myrPerUsd).toString(),
     net: net.toString(),
     employerCost: employerCost.toString(),
     bodies,

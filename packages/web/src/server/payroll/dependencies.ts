@@ -10,6 +10,7 @@ import { createSupabasePayrollRunRepository } from '../supabase/payroll-run-repo
 import { createSupabasePayrollConfigurationRepository } from '../supabase/payroll-configuration-repository';
 import { createPayrollConfigurationService } from './configurations';
 import { requireEmployerWallet } from '../auth/authorization';
+import { getOvertimeService } from '../overtime/dependencies';
 import { createPayrollService, type PayrollService } from './service';
 import { fallbackStore, memoryOnlyStore, type PayrollRunStore } from './run-store';
 import type {
@@ -171,6 +172,24 @@ export function getPayrollService(): PayrollService {
         employer: requireEmployerWallet(),
       }),
       rates: getPayrollRateReader(),
+      /* Approved overtime and approved unpaid leave are part of the wage a run
+         owes, so payroll reads them where they live rather than asking the
+         employer to retype them. The employer wallet is passed as the actor
+         because settling a run is an employer action; assemblePeriod filters
+         by employee regardless of who asked. */
+      period: {
+        listOvertime: ({ employee }) =>
+          getOvertimeService()
+            .listClaims(requireEmployerWallet())
+            .then((claims) => claims.filter((claim) => claim.employee === employee)),
+        listLeave: ({ employee }) =>
+          getOvertimeService()
+            .listLeave(requireEmployerWallet())
+            .then((requests) => requests.filter((request) => request.employee === employee)),
+        markOvertimePaid: async ({ employee, runId }) => {
+          await getOvertimeService().settleClaims(requireEmployerWallet(), { employee, runId });
+        },
+      },
     });
   }
   return service;

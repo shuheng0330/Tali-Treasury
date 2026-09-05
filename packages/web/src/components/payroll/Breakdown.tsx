@@ -1,4 +1,4 @@
-import type { PayrollBreakdown } from '@tali/shared';
+import type { PayrollBreakdown, StatutoryBody } from '@tali/shared';
 import { STATUTORY_BODY_LABEL, toDisplay } from '@tali/shared';
 
 function Row({
@@ -37,6 +37,19 @@ function Row({
 }
 
 /**
+ * Why each body's wage base is what it is.
+ *
+ * Only a month carrying overtime shows these, because that is the only month
+ * where the three bases differ — and that difference is the thing the employer
+ * is being asked to approve.
+ */
+const OVERTIME_BASE_NOTE: Record<StatutoryBody, string> = {
+  epf: 'overtime excluded, EPF Act 1991 s.2(b)',
+  socso: 'overtime included, Act 4 s.2(24)',
+  eis: 'overtime included, Act 800 s.3',
+};
+
+/**
  * Shows the four amounts that actually leave the treasury, and the two figures
  * either side of them. The gap between gross and employer cost is the point of
  * the screen: statutory contributions sit on top of the wage, not inside it.
@@ -51,6 +64,29 @@ export function Breakdown({
 }) {
   const unit = breakdown.currency ?? 'MYR';
   const source = breakdown.fxConversion?.source;
+
+  /* The law is written in ringgit. Once a quote exists the rows above carry
+     micro-USDC, so the wage bases and the overtime line keep reading off the
+     MYR calculation the quote converted rather than being converted twice. */
+  const basis = source ?? breakdown;
+  const basisUnit = source ? 'MYR' : unit;
+  const basisDigits = basisUnit === 'USDC' ? 6 : 2;
+  const overtime = BigInt(basis.overtime ?? '0');
+  const unpaidLeave = BigInt(basis.unpaidLeave ?? '0');
+  const composed = overtime > 0n || unpaidLeave > 0n;
+
+  const parts: string[] = [];
+  if (overtime > 0n) parts.push('plus approved overtime');
+  if (unpaidLeave > 0n) parts.push('less approved unpaid leave');
+  /* The rows above this one are in ringgit and this one is in the token, so
+     the ringgit total goes in the caption. Otherwise the three figures read
+     as an addition that does not come out. */
+  const grossDetail = composed
+    ? `Base wage ${parts.join(', ')}${source ? ` · RM ${toDisplay(source.gross)}` : ''}`
+    : undefined;
+
+  const baseOf = (body: StatutoryBody): string | undefined =>
+    basis.bodies.find((entry) => entry.body === body)?.base;
 
   return (
     <div className="flex flex-col rounded-card border border-rule bg-surface px-5">
@@ -68,10 +104,43 @@ export function Breakdown({
       ) : null}
 
       <div className="flex flex-col divide-y divide-rule">
-      <Row label={`Gross wage (${unit})`} amount={breakdown.gross} strong fractionDigits={unit === 'USDC' ? 6 : 2} />
+      {composed ? (
+        <Row
+          label={`Base wage (${basisUnit})`}
+          amount={basis.baseWage ?? basis.gross}
+          fractionDigits={basisDigits}
+        />
+      ) : null}
+
+      {overtime > 0n ? (
+        <Row
+          label={`Approved overtime (${basisUnit})`}
+          detail="Outside EPF wages, inside SOCSO and EIS wages"
+          amount={basis.overtime ?? '0'}
+          fractionDigits={basisDigits}
+        />
+      ) : null}
+
+      {unpaidLeave > 0n ? (
+        <Row
+          label={`Approved unpaid leave (${basisUnit})`}
+          detail="Off all three wage bases"
+          amount={`-${basis.unpaidLeave ?? '0'}`}
+          fractionDigits={basisDigits}
+        />
+      ) : null}
+
+      <Row
+        label={`Gross wage (${unit})`}
+        detail={grossDetail}
+        amount={breakdown.gross}
+        strong
+        fractionDigits={unit === 'USDC' ? 6 : 2}
+      />
 
       {breakdown.bodies.map((body) => {
         const shorted = shortedBody === body.body;
+        const base = baseOf(body.body);
         return (
           <div key={body.body} className={shorted ? '-mx-5 border-l-2 border-no bg-no-soft px-5' : undefined}>
             <Row
@@ -84,6 +153,15 @@ export function Breakdown({
               muted={shorted}
               fractionDigits={shorted || unit === 'USDC' ? 6 : 2}
             />
+            {base && overtime > 0n ? (
+              <p className="pb-2 text-caption text-ink-3">
+                Wage base{' '}
+                <span className="tnum">
+                  {toDisplay(base, basisDigits)} {basisUnit}
+                </span>{' '}
+                · {OVERTIME_BASE_NOTE[body.body]}
+              </p>
+            ) : null}
             {shorted ? (
               <p className="pb-2 text-caption text-no">
                 Set to one base unit instead of {toDisplay(body.total)}.

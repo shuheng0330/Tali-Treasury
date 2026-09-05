@@ -10,6 +10,7 @@ describe('activeTab', () => {
     expect(activeTab('/payroll')?.label).toBe('Payroll');
     expect(activeTab('/claim')?.label).toBe('Claim');
     expect(activeTab('/safety')?.label).toBe('Safety');
+    expect(activeTab('/overtime')?.label).toBe('Overtime');
   });
 
   it('marks the parent tab on a sub-route', () => {
@@ -20,6 +21,7 @@ describe('activeTab', () => {
 
   it('gives the longest match the tab, so setup is not also payroll', () => {
     expect(activeTab('/payroll/setup')?.label).toBe('Set up');
+    expect(activeTab('/overtime/approvals')?.label).toBe('Approve');
   });
 
   it('ignores a trailing slash', () => {
@@ -39,7 +41,14 @@ describe('activeTab', () => {
   });
 
   it('never marks two tabs for one route', () => {
-    for (const path of ['/payroll', '/payroll/setup', '/payroll/proof', '/treasury/setup']) {
+    for (const path of [
+      '/payroll',
+      '/payroll/setup',
+      '/payroll/proof',
+      '/treasury/setup',
+      '/overtime',
+      '/overtime/approvals',
+    ]) {
       const matches = NAV_TABS.filter((tab) => activeTab(path) === tab);
       expect(matches, path).toHaveLength(1);
     }
@@ -74,10 +83,17 @@ describe('orderTabs', () => {
       'Set up',
       'Payroll',
       'Safety',
+      'Approve',
       'Claim',
       'Earn',
       'Treasury',
+      'Overtime',
     ]);
+  });
+
+  it('leads the employee with their own two screens', () => {
+    const ordered = orderTabs(roles('employee', 'member'));
+    expect(ordered.slice(0, 3).map((tab) => tab.label)).toEqual(['Earn', 'Overtime', 'Claim']);
   });
 });
 
@@ -88,8 +104,17 @@ describe('otherRolesNote', () => {
 
   it('names the employer’s screens to an employee', () => {
     const note = otherRolesNote(roles('employee', 'member'));
-    expect(note).toContain("Set up payroll, Run payroll and Safety test are the employer's.");
+    expect(note).toContain(
+      "Set up payroll, Run payroll, Safety test and the approval queue are the employer's.",
+    );
     expect(note).toContain("Treasurer view is the treasurer's.");
+  });
+
+  /* A subject that carried its own capital read as a title once a role owned
+     two screens: "the earnings screen and The overtime claim form". */
+  it('capitalises only the subject that opens the sentence', () => {
+    const note = otherRolesNote(roles('employer', 'treasurer', 'member'))!;
+    expect(note).toBe("The earnings screen and the overtime claim form are the employee's.");
   });
 
   it('agrees the verb with the count', () => {
@@ -99,10 +124,10 @@ describe('otherRolesNote', () => {
 
   it('names a screen in the third person, never handing the reader their own', () => {
     expect(otherRolesNote(roles('employer', 'member'))).toBe(
-      "Treasurer view is the treasurer's. The earnings screen is the employee's.",
+      "Treasurer view is the treasurer's. The earnings screen and the overtime claim form are the employee's.",
     );
     expect(otherRolesNote(roles('treasurer', 'member'))).toBe(
-      "Set up payroll, Run payroll and Safety test are the employer's. The earnings screen is the employee's.",
+      "Set up payroll, Run payroll, Safety test and the approval queue are the employer's. The earnings screen and the overtime claim form are the employee's.",
     );
   });
 
@@ -113,6 +138,10 @@ describe('otherRolesNote', () => {
 
 describe('parentOf', () => {
   it('sends a sub-route up to its own section, not the overview', () => {
+    expect(parentOf('/overtime/approvals')).toMatchObject({
+      href: '/overtime',
+      label: 'Overtime',
+    });
     expect(parentOf('/treasury/setup')).toMatchObject({ href: '/treasury', label: 'Treasury' });
     expect(parentOf('/payroll/setup')).toMatchObject({ href: '/payroll', label: 'Payroll' });
     expect(parentOf('/payroll/proof')).toMatchObject({ href: '/payroll', label: 'Payroll' });
@@ -120,7 +149,15 @@ describe('parentOf', () => {
   });
 
   it('sends a top-level screen to the overview', () => {
-    for (const path of ['/payroll', '/treasury', '/claim', '/earnings', '/safety', '/start']) {
+    for (const path of [
+      '/payroll',
+      '/treasury',
+      '/claim',
+      '/earnings',
+      '/safety',
+      '/start',
+      '/overtime',
+    ]) {
       expect(parentOf(path)).toMatchObject({ href: '/', label: 'Overview' });
     }
   });

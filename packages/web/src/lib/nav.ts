@@ -8,7 +8,9 @@ export interface NavTab {
   full: string;
   /**
    * How the note names this screen. `full` addresses the reader, which in the
-   * note would hand them somebody else's earnings. Singular, so the verb agrees.
+   * note would hand them somebody else's earnings. Singular, so the verb agrees,
+   * and lower case: a role can own more than one screen, and the note
+   * capitalises whichever subject opens its sentence.
    */
   subject?: string;
   /** Whose screen this primarily is. Every route stays reachable by URL. */
@@ -18,10 +20,16 @@ export interface NavTab {
 export const NAV_TABS: readonly NavTab[] = [
   { href: '/payroll/setup', label: 'Set up', full: 'Set up payroll', role: 'employer' },
   { href: '/payroll', label: 'Payroll', full: 'Run payroll', role: 'employer' },
-  { href: '/earnings', label: 'Earn', full: 'Your earnings', subject: 'The earnings screen', role: 'employee' },
+  { href: '/earnings', label: 'Earn', full: 'Your earnings', subject: 'the earnings screen', role: 'employee' },
   { href: '/treasury', label: 'Treasury', full: 'Treasurer view', role: 'treasurer' },
-  { href: '/claim', label: 'Claim', full: 'Submit a claim', subject: 'The claim form', role: 'member' },
+  { href: '/claim', label: 'Claim', full: 'Submit a claim', subject: 'the claim form', role: 'member' },
   { href: '/safety', label: 'Safety', full: 'Safety test', role: 'employer' },
+  /* Two tabs rather than one. Submitting overtime and deciding it are not the
+     same screen and are not the same person: one pill for both would put the
+     employer's queue behind an employee's form, and `orderTabs` could no longer
+     lead each of them with their own work. */
+  { href: '/overtime', label: 'Overtime', full: 'Claim overtime', subject: 'the overtime claim form', role: 'employee' },
+  { href: '/overtime/approvals', label: 'Approve', full: 'Approve overtime and leave', subject: 'the approval queue', role: 'employer' },
 ];
 
 const OWNER: Record<ViewerRole, string> = {
@@ -97,8 +105,12 @@ export function otherRolesNote(
     if (roles.has(role)) continue;
     const theirs = tabs.filter((tab) => tab.role === role);
     if (theirs.length === 0) continue;
+    /* Capitalised here rather than in the constant. A subject that carried its
+       own capital read as a title in the middle of the list once a role owned
+       two screens — "the earnings screen and The overtime claim form". */
+    const named = list(theirs.map((tab) => tab.subject ?? tab.full));
     sentences.push(
-      `${list(theirs.map((tab) => tab.subject ?? tab.full))} ${theirs.length > 1 ? 'are' : 'is'} ${OWNER[role]}.`,
+      `${named.charAt(0).toUpperCase()}${named.slice(1)} ${theirs.length > 1 ? 'are' : 'is'} ${OWNER[role]}.`,
     );
   }
 

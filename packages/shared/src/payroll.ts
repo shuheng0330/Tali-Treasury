@@ -23,11 +23,27 @@ export interface StatutoryBodyAmount {
   employer: Amount;
   /** What the body receives on chain: employee plus employer. */
   total: Amount;
+  /**
+   * The wage this body's contribution was measured against.
+   *
+   * The three do not share one. EPF Act 1991 s.2(b) excludes overtime from
+   * wages; SOCSO (Act 4 s.2(24)) and EIS (Act 800 s.3) name overtime as
+   * included. A single wage base is wrong for at least one body on any month
+   * containing overtime.
+   */
+  base?: Amount;
 }
 
 /** What the calculator returns. Pure arithmetic, no addresses. */
 export interface StatutorySplit {
+  /** Total wages payable: base, plus overtime, less unpaid leave. */
   gross: Amount;
+  /** The base wage before overtime and before any unpaid-leave deduction. */
+  baseWage?: Amount;
+  /** Approved overtime included in this period. */
+  overtime?: Amount;
+  /** Unpaid leave taken off this period. */
+  unpaidLeave?: Amount;
   /** Gross minus the employee-side deductions. */
   net: Amount;
   /** Gross plus the employer-side contributions: what the treasury pays out. */
