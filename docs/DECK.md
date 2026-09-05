@@ -54,8 +54,10 @@ switch to the app.
 ## 4 — Live demo · 0:40–2:25
 
 **No slide. Switch to the app.** Follow script A or B from
-[SUBMISSION.md](SUBMISSION.md) depending on whether payroll is published on the
-day. Decide which before you walk up; do not choose live.
+[SUBMISSION.md](SUBMISSION.md). Payroll is published, so the question is no
+longer publication — it is whether a **funded mandate, its cap and a salary
+stream exist** by the time you present. They do not as of 5 September, which
+makes B the honest script. Decide before you walk up; do not choose live.
 
 Leave this slide in the deck as a black frame so a mis-click does not reveal the
 closing slide early.
@@ -64,18 +66,21 @@ closing slide early.
 
 ## 5 — What is actually on chain · 2:25–2:45
 
-> **Three transactions. One allowed, two refused.**
+> **Five transactions. Two allowed, two refused, one publication.**
 >
-> `Aksj8w…` paid 3 USDC to an approved member
 > `5fMDNz…` asked for 15 against a 5 cap → **abort 5**
 > `2htVB5…` paid an address not on the list → **abort 7**
 >
 > Signed with a valid capability. Refused anyway.
+>
+> `Aksj8w…` paid 3 USDC · `J6fWBNa7…` reimbursed RM6 as 1.484561 USDC
+> `86914s…` published payroll in package v2
 
 **Notes:** This is the slide that answers "your app could just be pretending".
 The agent held a real capability both times. The contract refused, burned
 0.002095 SUI doing it, and moved no USDC. Every digest opens in a public
-explorer.
+explorer, and these are the same five the landing page lists — never quote a
+count here that the screen behind you contradicts.
 
 Payroll code is now published in package v2. Until the funded mandate and execution
 evidence exist, say that boundary plainly here rather than being asked.
