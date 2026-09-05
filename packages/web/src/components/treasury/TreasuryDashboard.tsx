@@ -11,7 +11,6 @@ import {
   DEMO_TREASURER,
   SINGLE_WALLET_DEMO,
 } from '@/lib/demo-config';
-import { viewerRole } from '@/lib/viewer-role';
 import { reviewQueue, settledClaims } from '@/lib/mock/api';
 import { committedFrom, settledFrom, toReviewQueue } from '@/lib/queue';
 import { useClaims } from '@/lib/api/useClaims';
@@ -27,7 +26,12 @@ import { RevokeDialog } from './RevokeDialog';
 import { ReviewActionDialog } from './ReviewActionDialog';
 import { useWalletSession } from '@/components/wallet/WalletSessionProvider';
 import { RoleNotice } from '@/components/RoleNotice';
-import { REVIEW_COPY, REVOKE_COPY, walletAccess } from '@/lib/wallet-access';
+import {
+  eventTreasurerAccess,
+  REVIEW_COPY,
+  REVOKE_COPY,
+  walletAccess,
+} from '@/lib/wallet-access';
 import { reviewRequestForClaim } from '@/lib/review-actions';
 
 type Tab = 'review' | 'paid' | 'rejected' | 'all';
@@ -72,6 +76,7 @@ export function TreasuryDashboard({
   const treasurer = eventTreasurer?.trim() || DEMO_TREASURER;
   const reviewAccess = walletAccess(wallet.address, treasurer, REVIEW_COPY);
   const revokeAccess = walletAccess(wallet.address, treasurer, REVOKE_COPY);
+  const memberManagementAccess = eventTreasurerAccess(wallet.address, eventTreasurer);
   const router = useRouter();
   const [refreshing, startRefresh] = useTransition();
   const [tab, setTab] = useState<Tab>('review');
@@ -324,7 +329,7 @@ export function TreasuryDashboard({
         revokeNotice={revokeAccess.notice}
       />
 
-      {viewerRole(wallet.address, eventTreasurer) === 'treasurer' ? (
+      {memberManagementAccess.permitted ? (
         <AddMemberForm eventId={DEMO_EVENT_ID} onAdded={() => live.reload()} />
       ) : null}
 

@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { EMPLOYEE_COPY, EMPLOYER_COPY, REVIEW_COPY, REVOKE_COPY, SETUP_COPY, walletAccess } from './wallet-access';
+import {
+  EMPLOYEE_COPY,
+  EMPLOYER_COPY,
+  REVIEW_COPY,
+  REVOKE_COPY,
+  SETUP_COPY,
+  eventTreasurerAccess,
+  walletAccess,
+} from './wallet-access';
 
 const EMPLOYER = '0x939194a716226335b1089c5b36088ebc0b57a928c206d63c9ddcad70ff76b471';
 const SOMEBODY = '0x405200312d4c8ee0159d44429ca69ef0cf035f4a00c12f2035a0bdef882bb16e';
@@ -73,6 +81,18 @@ describe('walletAccess', () => {
     );
     expect(walletAccess(null, EMPLOYER, REVOKE_COPY).notice).toBe(
       "Sign in with the event treasurer's wallet to revoke this mandate.",
+    );
+  });
+
+  it('keeps event-treasurer access strict in single-wallet demo mode', () => {
+    expect(
+      eventTreasurerAccess(EMPLOYER, EMPLOYER, { singleWalletDemo: true }).permitted,
+    ).toBe(true);
+    expect(
+      eventTreasurerAccess(SOMEBODY, EMPLOYER, { singleWalletDemo: true }).permitted,
+    ).toBe(false);
+    expect(eventTreasurerAccess(EMPLOYER, null, { singleWalletDemo: true }).permitted).toBe(
+      false,
     );
   });
 });
