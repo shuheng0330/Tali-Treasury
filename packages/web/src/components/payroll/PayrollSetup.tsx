@@ -243,14 +243,33 @@ export function PayrollSetup() {
               RM50 at today&rsquo;s rate of {preview.rate.myrPerUsd} to the dollar
             </p>
           </div>
-          {/* `truncate` alone does not shrink a flex item: its default
-              min-width is its content, so a 66-character address pushed the row
-              wider than the card it sits in. */}
-          <dl className="grid gap-2 text-caption text-ink-2">
-            <div className="flex justify-between gap-4"><dt className="shrink-0">Employee</dt><dd className="min-w-0 truncate font-mono">{preview.employee}</dd></div>
-            <div className="flex justify-between gap-4"><dt className="shrink-0">Runs the payroll</dt><dd className="min-w-0 truncate font-mono">{preview.capRecipient}</dd></div>
-            <div className="flex justify-between gap-4"><dt className="shrink-0">Expires</dt><dd>{new Date(preview.expiryMs).toLocaleDateString('en-MY')}</dd></div>
-            <div className="flex justify-between gap-4"><dt className="shrink-0">Covers</dt><dd>EPF · SOCSO · EIS</dd></div>
+          {/* An address gets a line of its own and wraps on it.
+              This was a `grid` of `justify-between` rows, and a grid column is
+              sized to its widest content: a 66-character address stretched the
+              whole column past the card, which pushed Expires and Covers off
+              the right-hand edge with their values invisible. `truncate` could
+              not save it either, since a flex item's default min-width is its
+              own content. Wrapping shows the whole address, which is the point
+              of a screen somebody reads before signing. */}
+          <dl className="flex flex-col gap-3 text-caption text-ink-2">
+            <div className="flex flex-col gap-0.5">
+              <dt>Employee</dt>
+              <dd className="break-all font-mono text-ink">{preview.employee}</dd>
+            </div>
+            <div className="flex flex-col gap-0.5">
+              <dt>Runs the payroll</dt>
+              <dd className="break-all font-mono text-ink">{preview.capRecipient}</dd>
+            </div>
+            <div className="flex items-baseline justify-between gap-4 border-t border-ok-line pt-3">
+              <dt>Expires</dt>
+              <dd className="tnum text-ink">
+                {new Date(preview.expiryMs).toLocaleDateString('en-MY')}
+              </dd>
+            </div>
+            <div className="flex items-baseline justify-between gap-4">
+              <dt>Covers</dt>
+              <dd className="text-ink">EPF · SOCSO · EIS</dd>
+            </div>
           </dl>
           <p className="text-caption text-ink-2">
             None of this can be changed afterwards.
