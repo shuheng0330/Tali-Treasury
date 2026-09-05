@@ -1,6 +1,14 @@
 'use client';
 
-import { grossProblem, type WageClassValue } from '@/lib/payroll-wage';
+import { toDisplay } from '@tali/shared';
+
+import {
+  grossAfterUnpaidLeave,
+  grossProblem,
+  MAX_UNPAID_LEAVE_DAYS,
+  unpaidLeaveProblem,
+  type WageClassValue,
+} from '@/lib/payroll-wage';
 
 function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
   return (
@@ -31,6 +39,9 @@ export function WageClass({
   disabled?: boolean;
 }) {
   const problem = grossProblem(value.gross);
+  const leaveProblem = unpaidLeaveProblem(value);
+  const afterLeave = grossAfterUnpaidLeave(value);
+  const reduced = value.unpaidLeaveDays > 0 && afterLeave !== null && problem === null;
 
   return (
     <div className="flex flex-col gap-2">
@@ -82,6 +93,38 @@ export function WageClass({
           </select>
         </Field>
       </div>
+
+      <Field
+        label="Unpaid leave (days this month)"
+        hint={`A day not worked is a day not paid. Prorated at one twenty-sixth of the month, the ordinary rate of pay.`}
+      >
+        <input
+          type="number"
+          min={0}
+          max={MAX_UNPAID_LEAVE_DAYS}
+          value={value.unpaidLeaveDays}
+          disabled={disabled}
+          onChange={(event) =>
+            onChange({ ...value, unpaidLeaveDays: Math.trunc(Number(event.target.value)) || 0 })
+          }
+          className="tnum bg-transparent text-body outline-none disabled:opacity-60"
+        />
+      </Field>
+
+      {leaveProblem ? (
+        <p className="text-caption text-no" role="alert">
+          {leaveProblem}
+        </p>
+      ) : reduced ? (
+        <p className="text-caption text-ink-2">
+          <span className="font-medium">
+            Payable this month: <span className="tnum">{toDisplay(afterLeave.toString())}</span> MYR
+          </span>{' '}
+          — down from <span className="tnum">{value.gross}</span>. The statutory split below is
+          computed on the reduced wage, not scaled down afterwards, so EPF can fall into a
+          lower Third Schedule band.
+        </p>
+      ) : null}
 
       {value.age < 16 || value.age > 100 ? (
         <p className="text-caption text-no" role="alert">
