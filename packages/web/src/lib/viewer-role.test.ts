@@ -109,11 +109,14 @@ describe('capabilities', () => {
     expect(can(roles('employee'), 'holdTreasury')).toBe(false);
   });
 
-  /* A salary stream belongs to the person being paid, not to their employer. */
-  it('gives earning to the employee alone', () => {
-    expect(can(roles('employee'), 'earn')).toBe(true);
-    for (const role of ['employer', 'treasurer', 'member']) {
-      expect(can(roles(role), 'earn'), role).toBe(false);
+  /**
+   * The product's whole idea is that a salary accrues by the second and you
+   * withdraw what you have already earned. Gating that on one configured wallet
+   * left everybody else unable to see their own pay.
+   */
+  it('lets every signed-in wallet reach its own earnings', () => {
+    for (const role of ['employer', 'treasurer', 'employee', 'member']) {
+      expect(can(roles(role), 'earn'), role).toBe(true);
     }
   });
 
@@ -122,6 +125,16 @@ describe('capabilities', () => {
       expect(can(roles(role), 'request'), role).toBe(true);
       expect(can(roles(role), 'proof'), role).toBe(true);
     }
+  });
+
+  /* The line the table actually draws: authority over other people. */
+  it('restricts only the powers held over somebody else', () => {
+    for (const role of ['treasurer', 'employee', 'member']) {
+      expect(can(roles(role), 'approve'), role).toBe(false);
+      expect(can(roles(role), 'runPayroll'), role).toBe(false);
+    }
+    expect(can(roles('member'), 'holdTreasury')).toBe(false);
+    expect(can(roles('employee'), 'holdTreasury')).toBe(false);
   });
 
   it('unions what two roles carry rather than taking the first', () => {

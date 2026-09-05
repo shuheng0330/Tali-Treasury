@@ -1,6 +1,7 @@
 'use client';
 
 import type { PayrollConfigurationView } from '@tali/shared';
+import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 
@@ -76,7 +77,26 @@ export function PayrollSelection({
   if (!state.address) return <p className="rounded-card border border-rule p-4 text-caption">Connect and sign in with your Sui wallet to access payroll.</p>;
   if (state.status === 'loading') return <p className="text-caption text-ink-3">Loading registered payrolls…</p>;
   if (state.status === 'error') return <p className="rounded-card border border-no-line bg-no-soft p-4 text-caption text-no">Registered payrolls could not be loaded.</p>;
-  if (state.configurations.length === 0) return <p className="rounded-card border border-dashed border-rule p-4 text-caption text-ink-3">No registered payroll is available to this wallet. The employer can register one from payroll setup.</p>;
+  /* The headline screen of the product lands here whenever nothing has been
+     registered yet, so it says which two steps are missing rather than only
+     that something is. Both are the employer's, and both are on chain. */
+  if (state.configurations.length === 0)
+    return (
+      <div className="flex flex-col gap-2 rounded-card border border-dashed border-rule p-4">
+        <p className="text-caption text-ink-2">
+          No payroll is registered for this wallet yet, so there is no salary accruing to
+          show.
+        </p>
+        <p className="text-caption text-ink-3">
+          The employer creates one from{' '}
+          <Link href="/payroll/setup" className="link">
+            payroll setup
+          </Link>{' '}
+          and then opens a salary stream against it. Pay starts accruing the second that
+          stream exists.
+        </p>
+      </div>
+    );
   if (state.configurations.length === 1) return null;
   return (
     <Select

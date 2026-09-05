@@ -104,6 +104,32 @@ describe('createManualDraftService', () => {
   });
 
   /**
+   * The conversion multiplies whatever follows the dot by 10,000, so it is
+   * reading hundredths. One digit is not hundredths: unpadded, "7.5" became
+   * 7,050,000 base units — RM7.05 for an expense of RM7.50, and the schema
+   * accepts one decimal at every layer.
+   */
+  it('reads a single decimal as tenths, not hundredths', async () => {
+    for (const [typed, expected] of [
+      ['7.5', '7500000'],
+      ['0.5', '500000'],
+      ['24.5', '24500000'],
+      ['12', '12000000'],
+      ['3.05', '3050000'],
+      ['24.50', '24500000'],
+    ]) {
+      const response = await deps().service(fields({ amount: typed }));
+      expect(response.analysis.amount, typed).toBe(expected);
+    }
+  });
+
+  it('treats the same amount typed two ways as one claim', () => {
+    expect(manualClaimHash(fields({ amount: '7.50' }))).toBe(
+      manualClaimHash(fields({ amount: '7.50' })),
+    );
+  });
+
+  /**
    * The routing threshold decides whether a claim may be paid with nobody
    * looking. A claim whose only evidence is that somebody typed it must not be.
    */
