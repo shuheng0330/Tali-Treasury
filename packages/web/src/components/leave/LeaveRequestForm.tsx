@@ -199,10 +199,11 @@ export function LeaveRequestForm() {
           live="Your leave requests"
           plural
           simulated="Approval is the employer's."
-          fallbackLabel={listing.reached ? 'Held in memory.' : 'Nothing loaded.'}
           brief={{
-            live: 'Your requests are live.',
-            fallback: 'Live requests are unavailable — saved temporarily. Employer approval is still required.',
+            live: 'Your leave requests are saved. Your employer decides them.',
+            fallback: listing.reached
+              ? 'Not saved yet — these will be lost if the app restarts. Your employer still decides them.'
+              : 'Nothing could be loaded just now. Try again in a moment.',
           }}
         />
       )}

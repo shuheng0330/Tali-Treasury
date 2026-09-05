@@ -15,20 +15,19 @@ export default function PayrollSetupPage() {
       <header className="flex flex-col gap-2">
         <h1 className="text-display">Set up payroll</h1>
         <p className="text-body text-ink-2">
-          This creates one payroll mandate on Sui and funds it from your wallet. The
-          employee, the contribution floors and the spending limits are fixed at creation
-          and cannot be edited afterwards.
+          Put money aside for one employee&rsquo;s wages. Once created, the employee and the
+          limits cannot be changed.
         </p>
       </header>
 
       <PayrollSetup />
 
       <p className="text-caption text-ink-3">
-        Reimbursing receipts is a separate mandate with its own rules.{' '}
+        Paying back receipts is separate.{' '}
         <Link href="/treasury/setup" className="link">
-          Create an expense treasury
+          Set up an expense budget
         </Link>{' '}
-        instead; it is not created here.
+        for that.
       </p>
     </div>
   );

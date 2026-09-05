@@ -414,9 +414,10 @@ export function ApprovalQueue({ mandate, mandateError }: Props) {
               source="mock"
               reason={storage.reason}
               live="These decisions"
-              simulated="They are real decisions; they just will not outlive a restart."
+              simulated="Approved overtime joins the next payroll run."
               plural
-              fallbackLabel="Held in memory."
+              fallbackLabel="Not saved yet."
+              fallbackNote="Your decisions still work. They will be lost if the app restarts, so approve again after that."
             />
           ) : null}
           {loadError ? (

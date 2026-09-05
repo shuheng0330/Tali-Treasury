@@ -149,32 +149,32 @@ export function PayrollDesk({
       <DataNotice
         source={source}
         reason={reason}
-        live="The statutory split"
-        simulated={`Figures follow the EPF Third Schedule bands and the RM6,000 SOCSO and EIS ceilings. ${payrollRunNote(
+        live="These figures"
+        plural
+        simulated={`Worked out at the official EPF, SOCSO and EIS rates. ${payrollRunNote(
           stage,
           runsAreLive,
         )}`}
+        fallbackLabel="Figures unavailable."
+        fallbackNote="The rates could not be read just now, so nothing below is safe to run."
       />
 
       <div className="flex flex-col gap-3">
-        <span className="eyebrow">Staff on this mandate</span>
+        <span className="eyebrow">Who this payroll pays</span>
 
         <div className="rounded-control border border-ink bg-raised px-4 py-3">
-          <span className="text-body font-medium">Registered employee</span>
+          <span className="text-body font-medium">Employee</span>
           <p className="truncate font-mono text-caption text-ink-3">{configuration.employee}</p>
         </div>
 
         <p className="text-caption text-ink-3">
-          The mandate&rsquo;s floors are fixed on chain for one class of worker, so a
-          class it was not created for can be refused by the contract even when the
-          arithmetic below is right.
+          This payroll was set up for one kind of worker. Change the age or citizenship below
+          and the contract may refuse it, even when the sums are right.
         </p>
       </div>
 
       <div className="flex flex-col gap-3">
-        <span className="eyebrow">
-          Employee payroll run{loading ? ' · reading' : ''}
-        </span>
+        <span className="eyebrow">This month{loading ? ' · working it out' : ''}</span>
 
         <WageClass value={wage} onChange={setWage} disabled={run.status === 'running'} />
 
@@ -186,10 +186,10 @@ export function PayrollDesk({
             <ClassNote breakdown={breakdown} />
           </>
         ) : (
-          <p className="rounded-card border border-dashed border-rule bg-surface p-4 text-caption text-ink-3">
+          <p className="rounded-card border border-rule bg-surface p-4 text-caption text-ink-3">
             {invalid
-              ? 'No split is shown while the figures above cannot be read as a monthly wage.'
-              : `The statutory split could not be computed${reason ? `: ${reason}` : ''}.`}
+              ? 'Enter a valid monthly wage above to see the split.'
+              : `The split could not be worked out${reason ? `: ${reason}` : ''}.`}
           </p>
         )}
       </div>
@@ -197,9 +197,9 @@ export function PayrollDesk({
       <div className="flex flex-col gap-3 rounded-card border border-rule bg-surface p-5">
         <div className="flex items-baseline justify-between gap-4">
           <span className="flex flex-col">
-            <span className="text-body text-ink-2">This run costs the employer</span>
+            <span className="text-body text-ink-2">Total cost to you</span>
             <span className="text-caption text-ink-3">
-              One employee registered on this mandate
+              Wage plus your share of EPF and SOCSO
             </span>
           </span>
           <span className="tnum text-title">
@@ -242,9 +242,7 @@ export function PayrollDesk({
         ) : null}
 
         {run.status === 'refused' ? (
-          <p className="text-caption text-wait">
-            Nothing was paid: {run.message}
-          </p>
+          <p className="text-caption text-wait">Nobody was paid. {run.message}</p>
         ) : null}
 
         {run.status === 'unknown' ? (
@@ -256,8 +254,8 @@ export function PayrollDesk({
         {run.status === 'idle' ? (
           <p className="text-caption text-ink-3">
             {breakdown?.fxConversion
-              ? 'Approve the displayed MYR-to-USDC quote. The wage and all three statutory payments then leave together, or not at all.'
-              : 'A live MYR-to-USDC quote is required before payroll can be submitted.'}
+              ? 'All four payments leave together, or none of them do.'
+              : 'Waiting for today\u2019s ringgit rate before this can be run.'}
           </p>
         ) : null}
       </div>

@@ -81,7 +81,7 @@ export function SalaryStreamSetup({ configuration }: { configuration: PayrollCon
             View opening transaction
           </a>
           <Link className="link" href={`/earnings?payroll=${encodeURIComponent(stream.mandateId)}`}>
-            Open employee earnings
+            See it accruing
           </Link>
         </div>
       </section>

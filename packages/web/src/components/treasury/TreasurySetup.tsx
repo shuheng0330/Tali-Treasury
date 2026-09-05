@@ -106,11 +106,11 @@ export function TreasurySetup() {
   const sameAccount = address !== null && address === connectedAddress;
 
   const blocker = !authenticated
-    ? 'Sign in with the treasurer wallet first.'
+    ? 'Sign in with your wallet first.'
     : !sameAccount
-      ? 'The connected wallet is not the one this session was signed with.'
+      ? 'Your wallet has switched accounts. Sign in again.'
       : !amounts
-        ? 'Some of the details above still need fixing.'
+        ? 'Some details above still need fixing.'
         : null;
 
   const recoveryBlocker = registrationRecoveryBlocker({
@@ -196,7 +196,7 @@ export function TreasurySetup() {
   return (
     <div className="flex flex-col gap-6">
       <section className="flex flex-col gap-3">
-        <h2 className="eyebrow">What this treasury is for</h2>
+        <h2 className="eyebrow">What this budget is for</h2>
         <Field label="Event name" problem={ifFilled(problems.name, form.name)}>
           <input
             value={form.name}
@@ -248,8 +248,7 @@ export function TreasurySetup() {
             </p>
           ) : (
             <p className="text-caption text-ink-3">
-              Metadata for review, not a contract rule. The chain enforces the cap and the
-              allowlist; categories decide what the agent will read a receipt as.
+              Helps sort receipts. The spending limit is the rule that is actually enforced.
             </p>
           )}
         </fieldset>
@@ -258,9 +257,9 @@ export function TreasurySetup() {
       <section className="flex flex-col gap-3">
         <h2 className="eyebrow">What it may spend</h2>
         <Field
-          label="Fund the mandate with (USDC)"
+          label="Money to put in (USDC)"
           problem={ifFilled(problems.budgetUsdc, form.budgetUsdc)}
-          hint="Taken from your wallet when you sign. Claims in ringgit are quoted into this at approval."
+          hint="Taken from your wallet when you sign."
         >
           <input
             value={form.budgetUsdc}
@@ -271,9 +270,9 @@ export function TreasurySetup() {
           />
         </Field>
         <Field
-          label="Most one claim may spend (USDC)"
+          label="Limit for one claim (USDC)"
           problem={ifFilled(problems.maxPerClaimUsdc, form.maxPerClaimUsdc)}
-          hint="The contract refuses anything above this, whoever asks."
+          hint="Anything above this is refused, whoever asks."
         >
           <input
             value={form.maxPerClaimUsdc}
@@ -286,7 +285,7 @@ export function TreasurySetup() {
         <Field
           label="Expires in (days)"
           problem={ifFilled(problems.expiryDays, form.expiryDays)}
-          hint="After this nothing more can be paid, whatever is left in it."
+          hint="After this, nothing more can be paid out."
         >
           <input
             value={form.expiryDays}
@@ -299,11 +298,11 @@ export function TreasurySetup() {
       </section>
 
       <section className="flex flex-col gap-3">
-        <h2 className="eyebrow">Who it may pay</h2>
+        <h2 className="eyebrow">Who it can pay</h2>
         <Field
-          label="Approved recipients"
+          label="Wallet addresses"
           problem={ifFilled(problems.recipients, form.recipients)}
-          hint={`One Sui address per line. ${recipientList(form.recipients).length} listed.`}
+          hint={`One per line. ${recipientList(form.recipients).length} added so far.`}
         >
           <textarea
             value={form.recipients}
@@ -316,9 +315,9 @@ export function TreasurySetup() {
           />
         </Field>
         <Field
-          label="Backend signer"
+          label="Who pays out approved claims"
           problem={ifFilled(problems.agent, form.agent)}
-          hint="Receives the AgentCap and pays approved claims. You keep the AdminCap, so it can spend within the rules but never change them."
+          hint="Can spend within your rules, but can never change them. You stay in control."
         >
           <input
             value={form.agent}
@@ -332,38 +331,36 @@ export function TreasurySetup() {
 
       {amounts ? (
         <section className="flex flex-col gap-2 rounded-card border border-rule bg-surface p-4">
-          <h2 className="eyebrow">What you are about to sign</h2>
+          <h2 className="eyebrow">Before you sign</h2>
           <dl className="flex flex-col gap-2 text-body">
             <div className="flex items-baseline justify-between gap-4">
               <dt className="text-ink-2">Network</dt>
               <dd>Sui Testnet</dd>
             </div>
             <div className="flex items-baseline justify-between gap-4">
-              <dt className="text-ink-2">Funding</dt>
+              <dt className="text-ink-2">Money in</dt>
               <dd className="tnum">{toDisplay(amounts.budget.toString(), 6)} USDC</dd>
             </div>
             <div className="flex items-baseline justify-between gap-4">
-              <dt className="text-ink-2">Cap per claim</dt>
+              <dt className="text-ink-2">Limit per claim</dt>
               <dd className="tnum">{toDisplay(amounts.maxPerClaim.toString(), 6)} USDC</dd>
             </div>
             <div className="flex items-baseline justify-between gap-4">
-              <dt className="text-ink-2">Recipients</dt>
+              <dt className="text-ink-2">People it can pay</dt>
               <dd className="tnum">{amounts.approvedRecipients.length}</dd>
             </div>
           </dl>
           <p className="text-caption text-ink-3">
-            The cap, the expiry and the allowlist are fixed at creation and cannot be
-            edited afterwards. Gas comes from your wallet as well as the funding.
+            None of this can be changed afterwards.
           </p>
         </section>
       ) : null}
 
       {outcome.kind === 'registered' ? (
         <section className="flex flex-col gap-2 rounded-card border border-ok-line bg-ok-soft p-4">
-          <p className="text-body font-medium text-ok">The treasury is live.</p>
-          <p className="text-caption text-ink-2">
-            Event <span className="font-mono">{outcome.eventId}</span> is funded and
-            registered. Members can claim against it now.
+          <p className="text-body font-medium text-ok">The budget is live.</p>
+          <p className="break-words text-caption text-ink-2">
+            {form.name.trim() || 'Your event'} is funded. Staff can claim against it now.
           </p>
           <a
             className="link self-start text-caption"
@@ -377,16 +374,14 @@ export function TreasurySetup() {
       ) : outcome.kind === 'funded' ? (
         <section className="flex flex-col gap-3 rounded-card border border-wait-line bg-wait-soft p-4">
           <p className="text-body font-medium text-wait">
-            {outcome.registering
-              ? 'Funded on chain. Registering it…'
-              : 'Funded on chain, but not registered.'}
+            {outcome.registering ? 'Paid. Setting it up…' : 'Paid, but not set up yet.'}
           </p>
           <p className="text-caption text-ink-2">
             {outcome.registering
-              ? 'The money has moved. Leave this open.'
-              : `The mandate exists and holds your USDC${
+              ? 'Your money has moved. Leave this page open.'
+              : `Your money is safe in the budget${
                   outcome.reason ? `, but ${outcome.reason}` : ''
-                }. Retry the registration — do not create the treasury again, which would fund a second mandate.`}
+                }. Try again below — do not start over, or you will pay in twice.`}
           </p>
           <a
             className="link self-start text-caption"
@@ -394,7 +389,7 @@ export function TreasurySetup() {
             target="_blank"
             rel="noreferrer"
           >
-            View the funding transaction
+            View the payment
           </a>
           {outcome.registering ? null : (
             <button
@@ -402,15 +397,15 @@ export function TreasurySetup() {
               onClick={() => void register(outcome.digest)}
               className="btn btn--primary h-9 w-fit px-5 text-label"
             >
-              Retry registration
+              Try again
             </button>
           )}
         </section>
       ) : outcome.kind === 'aborted' ? (
         <section className="flex flex-col gap-2 rounded-card border border-no-line bg-no-soft p-4">
-          <p className="text-body font-medium text-no">The contract refused it.</p>
+          <p className="text-body font-medium text-no">It was refused.</p>
           <p className="text-caption text-ink-2">
-            No treasury was created and nothing was funded. Gas was still spent.
+            Nothing was created and no money moved.
           </p>
           <a
             className="link self-start text-caption"
@@ -469,8 +464,8 @@ export function TreasurySetup() {
             className="btn btn--primary btn--block h-12 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {outcome.kind === 'signing'
-              ? 'Waiting for your wallet…'
-              : 'Create and fund the treasury'}
+              ? 'Check your wallet…'
+              : 'Create and fund the budget'}
           </button>
           {blocker ? <p className="text-caption text-ink-3">{blocker}</p> : null}
         </div>
