@@ -1,14 +1,15 @@
 'use client';
 
-import type { ListPayrollConfigurationsResponse, PayrollConfigurationView } from '@tali/shared';
+import type { PayrollConfigurationView } from '@tali/shared';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 
 import { useWalletSession } from '@/components/wallet/WalletSessionProvider';
+import { loadPayrollConfigurations } from '@/lib/payroll-configurations-client';
 import { resolvePayrollSelection } from '@/lib/payroll-selection';
 
 export function usePayrollSelection() {
-  const { address } = useWalletSession();
+  const { address, signOut } = useWalletSession();
   const params = useSearchParams();
   const router = useRouter();
   const [configurations, setConfigurations] = useState<PayrollConfigurationView[]>([]);
@@ -23,19 +24,26 @@ export function usePayrollSelection() {
     }
     let current = true;
     setStatus('loading');
-    fetch('/api/payroll/configurations', { cache: 'no-store' })
-      .then(async (response) => {
-        if (!response.ok) throw new Error('unavailable');
-        return response.json() as Promise<ListPayrollConfigurationsResponse>;
-      })
-      .then((body) => {
+    loadPayrollConfigurations()
+      .then(async (result) => {
         if (!current) return;
-        setConfigurations(body.configurations);
+        if (result.status === 'unauthorized') {
+          /* The server session can be revoked by another tab or a wallet account
+             transition before the provider's local state notices. Clear both
+             sides so the user gets a real Sign in action instead of a dead-end
+             payroll error. */
+          await signOut();
+          if (!current) return;
+          setConfigurations([]);
+          setStatus('ready');
+          return;
+        }
+        setConfigurations(result.configurations);
         setStatus('ready');
       })
       .catch(() => current && setStatus('error'));
     return () => { current = false; };
-  }, [address]);
+  }, [address, signOut]);
 
   const resolution = useMemo(
     () => resolvePayrollSelection(configurations, requested),
