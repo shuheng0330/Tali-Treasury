@@ -28,12 +28,14 @@ export function AppNav({ className = '' }: { className?: string }) {
           an accident rather than a layout. Equal columns split them evenly
           whatever the width.
 
-          Two columns before 380px and three after, which is where APPROVALS —
-          nine tracked uppercase characters — stops fitting a third of the row.
-          Both give six sections whole rows; `NAV_SECTIONS` is tested for that
-          count so a seventh cannot quietly leave one pill stranded alone. */}
+          Two columns below 360px and three from there, which is where
+          APPROVALS — nine tracked uppercase characters, the longest label —
+          starts fitting a third of the row. 360px is the width the rest of the
+          design already turns on. Both counts give six sections whole rows;
+          `NAV_SECTIONS` is tested for that count so a seventh cannot quietly
+          leave one pill stranded alone on the last row. */}
       <nav
-        className="grid grid-cols-2 gap-1 rounded-badge border border-rule bg-surface p-1 min-[380px]:grid-cols-3 sm:flex sm:flex-wrap sm:items-center"
+        className="grid grid-cols-2 gap-1 rounded-badge border border-rule bg-surface p-1 min-[360px]:grid-cols-3 sm:flex sm:flex-wrap sm:items-center"
         aria-label="Sections"
       >
         {sections.map((section) => {
@@ -50,7 +52,7 @@ export function AppNav({ className = '' }: { className?: string }) {
                 active
                   ? 'bg-ink text-canvas'
                   : theirs
-                    ? 'text-ink-3 hover:bg-raised hover:text-ink'
+                    ? 'text-ink-2 hover:bg-raised hover:text-ink'
                     : 'text-ink hover:bg-raised'
               }`}
             >
