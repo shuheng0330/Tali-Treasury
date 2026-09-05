@@ -5,24 +5,46 @@ import { usePathname } from 'next/navigation';
 
 import { PAYROLL_EMPLOYEE } from '@/lib/demo-config';
 import { activeSection, visibleSections } from '@/lib/nav';
-import { ROLE_LABEL, can, viewerRole, viewerRoles, type Capability } from '@/lib/viewer-role';
+import { ROLE_LABEL, canAny, viewerRole, viewerRoles, type Capability } from '@/lib/viewer-role';
 import { useWalletSession } from './wallet/WalletSessionProvider';
 
 /** Whose screen this is, said in the words the reader would use. */
 const HOLDER: Record<Capability, string> = {
-  request: 'anyone signed in',
+  request: 'the people being paid',
   approve: 'the employer',
   runPayroll: 'the employer',
-  holdTreasury: 'the treasurer',
-  earn: 'the employee being paid',
+  holdTreasury: 'the employer',
+  earn: 'the people being paid',
+  overseeEarnings: 'the employer',
   proof: 'anyone',
 };
+
+/**
+ * The one sentence naming who a screen belongs to.
+ *
+ * A section can answer to more than one capability, and two of them often name
+ * the same person — the employer holds four — so this says each holder once and
+ * joins the rest with "or" rather than reading a list back at somebody who has
+ * already been told no.
+ */
+function holders(capabilities: readonly Capability[]): string {
+  const names = [...new Set(capabilities.map((capability) => HOLDER[capability]))];
+  if (names.length === 0) return 'somebody else';
+  if (names.length === 1) return names[0]!;
+  return `${names.slice(0, -1).join(', ')} or ${names[names.length - 1]}`;
+}
 
 function short(address: string): string {
   return address.length > 12 ? `${address.slice(0, 6)}…${address.slice(-4)}` : address;
 }
 
-function NoAccess({ capability, address }: { capability: Capability; address: string }) {
+function NoAccess({
+  capabilities,
+  address,
+}: {
+  capabilities: readonly Capability[];
+  address: string;
+}) {
   const roles = viewerRoles(address, { employee: PAYROLL_EMPLOYEE });
   const role = viewerRole(address);
   const mine = visibleSections(roles);
@@ -32,7 +54,7 @@ function NoAccess({ capability, address }: { capability: Capability; address: st
       <section className="flex flex-col gap-3 rounded-panel border border-rule bg-surface p-5">
         <h1 className="eyebrow">Not your screen</h1>
         <p className="text-body-lg">
-          This one belongs to {HOLDER[capability]}.
+          This one belongs to {holders(capabilities)}.
         </p>
         <p className="text-body text-ink-2">
           You are signed in as{' '}
@@ -84,10 +106,10 @@ function NoAccess({ capability, address }: { capability: Capability; address: st
  * that looks broken.
  */
 export function RequireCapability({
-  capability,
+  capabilities,
   children,
 }: {
-  capability: Capability;
+  capabilities: readonly Capability[];
   children: React.ReactNode;
 }) {
   const session = useWalletSession();
@@ -104,9 +126,9 @@ export function RequireCapability({
   if (!address) return <>{children}</>;
 
   const roles = viewerRoles(address, { employee: PAYROLL_EMPLOYEE });
-  if (can(roles, capability)) return <>{children}</>;
+  if (canAny(roles, capabilities)) return <>{children}</>;
 
-  return <NoAccess capability={capability} address={address} />;
+  return <NoAccess capabilities={capabilities} address={address} />;
 }
 
 /**
@@ -122,5 +144,7 @@ export function SectionGuard({ children }: { children: React.ReactNode }) {
   const section = activeSection(pathname);
   if (!section) return <>{children}</>;
 
-  return <RequireCapability capability={section.capability}>{children}</RequireCapability>;
+  return (
+    <RequireCapability capabilities={section.capabilities}>{children}</RequireCapability>
+  );
 }
