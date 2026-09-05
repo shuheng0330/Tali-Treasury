@@ -253,16 +253,30 @@ describe('production-ready application copy', () => {
     expect(html).not.toContain('Live data is temporarily unavailable.');
   });
 
-  it('puts overtime rates and statutory evidence behind calculation details', () => {
+  it('puts overtime results and contribution bases before progressive legal evidence', () => {
     const overtime = source('../components/overtime/OvertimePreview.tsx');
 
     expect(overtime).toContain('Estimated overtime');
     expect(overtime).toContain('Added to next payroll if approved.');
-    expect(overtime).toContain('SOCSO and EIS include overtime · EPF excludes it.');
-    expect(overtime).toContain('View calculation details');
+    expect(overtime).toContain('Contribution bases');
+    expect(overtime).toContain('Overtime excluded');
+    expect(overtime).toContain('Overtime included');
+    for (const step of [
+      'Monthly wage',
+      'Daily rate',
+      'Hourly rate',
+      'Overtime rate',
+      'Hours worked',
+    ]) expect(overtime).toContain(step);
+    expect(overtime).toContain('Monthly wage ÷ 26');
+    expect(overtime).toContain('Daily rate ÷ 8 hours');
+    expect(overtime).toContain('detail={`${multiplier} hourly rate`}');
+    expect(overtime).toContain('How is this calculated?');
+    expect(overtime).toContain('Why are these calculated differently?');
+    expect(overtime).toContain('Employment Act 1955 s.60I(1A)');
     expect(overtime).toContain('<details');
     expect(overtime).not.toContain('<details open');
-    expect(overtime.indexOf('<details')).toBeLessThan(
+    expect(overtime.indexOf('Why are these calculated differently?')).toBeLessThan(
       overtime.indexOf('EPF Act 1991'),
     );
   });
@@ -287,7 +301,7 @@ describe('production-ready application copy', () => {
     expect(leaveForm.indexOf('<details')).toBeLessThan(
       leaveForm.indexOf('Unpaid leave lowers the wage base'),
     );
-    expect(overtimePreview.indexOf('<details')).toBeLessThan(
+    expect(overtimePreview.indexOf('Why are these calculated differently?')).toBeLessThan(
       overtimePreview.indexOf('EPF Act 1991'),
     );
   });

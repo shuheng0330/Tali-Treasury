@@ -47,7 +47,7 @@ function Line({
   strong?: boolean;
 }) {
   return (
-    <div className="flex items-baseline justify-between gap-4 py-2.5">
+    <li className="flex items-baseline justify-between gap-4 py-2.5">
       <span className="flex min-w-0 flex-col">
         <span className={strong ? 'text-body font-medium' : 'text-body text-ink-2'}>{label}</span>
         {detail ? <span className="text-caption text-ink-3">{detail}</span> : null}
@@ -56,7 +56,7 @@ function Line({
         <span className={`tnum ${strong ? 'text-subhead font-medium' : 'text-body'}`}>{value}</span>
         {unit ? <span className="text-caption text-ink-3">{unit}</span> : null}
       </span>
-    </div>
+    </li>
   );
 }
 
@@ -99,11 +99,11 @@ function BodyBase({
   delta: string | null;
 }) {
   return (
-    <div className="flex flex-col gap-1.5 py-3">
+    <div className="flex min-w-0 flex-col gap-2 rounded-control bg-canvas p-3">
       <div className="flex items-baseline justify-between gap-3">
-        <span className="font-display text-subhead font-medium">{STATUTORY_BODY_LABEL[body]}</span>
+        <span className="text-caption font-medium text-ink-2">{STATUTORY_BODY_LABEL[body]}</span>
         <span className="flex items-baseline gap-1.5">
-          <span className="tnum font-display text-heading">{toDisplay(base)}</span>
+          <span className="tnum text-subhead font-medium">{toDisplay(base)}</span>
           <span className="text-caption text-ink-3">MYR</span>
         </span>
       </div>
@@ -128,6 +128,7 @@ export function OvertimePreview({ monthlyWage, wageIsOnRecord, kind, hours }: Pr
   const bases = statutoryBases(monthlyWage, pay);
   const delta = worked ? toDisplay(pay) : null;
   const readableHours = centihours === null ? '0' : fromCentihours(centihours);
+  const multiplier = OVERTIME_KIND_RATE[kind].replace('x', '×');
 
   return (
     <section className="flex flex-col gap-3 rounded-panel border border-rule bg-surface p-5">
@@ -136,73 +137,58 @@ export function OvertimePreview({ monthlyWage, wageIsOnRecord, kind, hours }: Pr
 
       <p className="text-body text-ink-2">
         {worked
-          ? `${readableHours} ${readableHours === '1' ? 'hour' : 'hours'} · ${OVERTIME_KIND_LABEL[kind]} · ${OVERTIME_KIND_RATE[kind]}. Added to next payroll if approved.`
+          ? `${readableHours} ${readableHours === '1' ? 'hour' : 'hours'} · ${OVERTIME_KIND_LABEL[kind]} · ${multiplier}. Added to next payroll if approved.`
           : 'Enter overtime hours to see your estimate.'}
       </p>
-      <p className="text-caption text-ink-3">SOCSO and EIS include overtime · EPF excludes it.</p>
+
+      <div className="flex flex-col gap-2 border-t border-rule pt-3">
+        <p className="eyebrow">Contribution bases</p>
+        <div className="grid gap-2 sm:grid-cols-3">
+          <BodyBase body="epf" base={bases.epf} counted={false} delta={null} />
+          <BodyBase body="socso" base={bases.socso} counted delta={delta} />
+          <BodyBase body="eis" base={bases.eis} counted delta={delta} />
+        </div>
+      </div>
 
       <details className="border-t border-rule pt-3">
         <summary className="cursor-pointer text-caption font-medium text-ink underline underline-offset-4">
-          View calculation details
+          How is this calculated?
         </summary>
         <div className="mt-4 flex flex-col gap-4">
           <div>
-            <h3 className="eyebrow">Pay rate</h3>
-            <div className="mt-2 flex flex-col divide-y divide-rule">
+            <h3 className="eyebrow">Calculation steps</h3>
+            <ol className="mt-2 flex flex-col divide-y divide-rule">
               <Line
-                label="Monthly wage of record"
+                label="Monthly wage"
                 value={toDisplay(monthlyWage)}
                 unit="MYR"
               />
               <Line
-                label="Ordinary rate of pay"
-                detail="Monthly wage ÷ 26 · s.60I(1A)"
+                label="Daily rate"
+                detail="Monthly wage ÷ 26"
                 value={toDisplay(ordinaryRate(monthlyWage))}
                 unit="a day"
               />
               <Line
                 label="Hourly rate"
-                detail="Ordinary rate ÷ 8 normal hours"
+                detail="Daily rate ÷ 8 hours"
                 value={toDisplay(hourlyRate(monthlyWage))}
                 unit="an hour"
               />
               <Line
-                label={`${OVERTIME_KIND_LABEL[kind]} at ${OVERTIME_KIND_RATE[kind]}`}
-                detail={KIND_AUTHORITY[kind]}
+                label={`Overtime rate · ${OVERTIME_KIND_LABEL[kind]}`}
+                detail={`${multiplier} hourly rate`}
                 value={toDisplay(overtimeHourlyRate(monthlyWage, kind))}
                 unit="an hour"
               />
               <Line
-                label={`${readableHours} ${readableHours === '1' ? 'hour' : 'hours'} worked`}
-                value={toDisplay(pay)}
-                unit="MYR"
-                strong
+                label="Hours worked"
+                value={readableHours}
+                unit={readableHours === '1' ? 'hour' : 'hours'}
               />
-            </div>
+              <Line label="Estimated overtime" value={toDisplay(pay)} unit="MYR" strong />
+            </ol>
           </div>
-
-          <div>
-            <h3 className="eyebrow">Statutory wage bases</h3>
-            <div className="mt-2 flex flex-col divide-y divide-rule">
-              <BodyBase body="epf" base={bases.epf} counted={false} delta={null} />
-              <BodyBase body="socso" base={bases.socso} counted delta={delta} />
-              <BodyBase body="eis" base={bases.eis} counted delta={delta} />
-            </div>
-          </div>
-
-          {bases.deemed ? (
-            <p className="text-caption text-ink-2">
-              SOCSO and EIS count{' '}
-              <span className="tnum">{toDisplay(INSURED_WAGE_CAP.toString())}</span> MYR at most.
-              Act 4 s.5(2) deems a higher wage to be that figure rather than capping the
-              contribution afterwards, so overtime counts toward reaching it.
-            </p>
-          ) : null}
-
-          <p className="text-caption text-ink-2">
-            EPF Act 1991 s.2(b) excludes overtime payment from wages. SOCSO (Act 4 s.2(24))
-            and EIS (Act 800 s.3) include payment for overtime.
-          </p>
 
           {wageIsOnRecord ? null : (
             <p className="text-caption text-ink-3">
@@ -210,6 +196,42 @@ export function OvertimePreview({ monthlyWage, wageIsOnRecord, kind, hours }: Pr
               prices your submitted claim against the same figure.
             </p>
           )}
+        </div>
+      </details>
+
+      <details className="border-t border-rule pt-3">
+        <summary className="cursor-pointer text-caption font-medium text-ink underline underline-offset-4">
+          Why are these calculated differently?
+        </summary>
+        <div className="mt-4 flex flex-col gap-3 text-caption text-ink-2">
+          <p>
+            <span className="font-medium text-ink">Daily rate.</span> Monthly wage is divided by
+            26 working days. Employment Act 1955 s.60I(1A).
+          </p>
+          <p>
+            <span className="font-medium text-ink">Overtime multiplier.</span> The selected{' '}
+            {OVERTIME_KIND_LABEL[kind].toLowerCase()} rate follows {KIND_AUTHORITY[kind]}.
+          </p>
+          <p>
+            <span className="font-medium text-ink">EPF.</span> Overtime is excluded from wages.
+            {' '}EPF Act 1991 s.2(b).
+          </p>
+          <p>
+            <span className="font-medium text-ink">SOCSO.</span> Payment for overtime is included
+            in wages. SOCSO (Act 4 s.2(24)).
+          </p>
+          <p>
+            <span className="font-medium text-ink">EIS.</span> Payment for overtime is included in
+            wages. EIS (Act 800 s.3).
+          </p>
+          {bases.deemed ? (
+            <p>
+              SOCSO and EIS count{' '}
+              <span className="tnum">{toDisplay(INSURED_WAGE_CAP.toString())}</span> MYR at most.
+              Act 4 s.5(2) deems a higher wage to be that figure rather than capping the
+              contribution afterwards, so overtime counts toward reaching it.
+            </p>
+          ) : null}
         </div>
       </details>
     </section>
