@@ -20,8 +20,10 @@
 - Bound payroll, history, proof and earnings to authorized `?payroll=` selection.
 - New runs derive chain IDs and recipients from the registry, store their mandate,
   and verify capability ownership before signing.
-- Opened and registered a 1 USDC stream on Testnet. Employer and employee can
-  inspect the verified stream; withdrawal remains employee-only.
+- Opened and registered a 1 USDC stream on Testnet, displayed its accrual, and
+  withdrew the full 1 USDC as the immutable employee. Withdrawal transaction
+  `DHcoXyjw9PP11EQPefAfffZoHWWX3Nz3ZWACvxvmrX6H` completed at checkpoint
+  `380020001`.
 - Hosted migration and team Testnet end-to-end verification remain rollout work.
 
 This is the authoritative implementation checklist. A UI phase marked complete
@@ -134,13 +136,13 @@ the submission time against the organiser channel; older notes used 23:59.
 | Payroll and treasury write RBAC | ✅ Complete locally | Employer-only payroll/revoke/safety APIs and employee-only stream withdrawal | Configure hosted employer wallet and verify both roles |
 | Event-member roster backend | ✅ Complete locally | Treasurer-only active roster GET and add-only POST, safe duplicate handling, shared contracts, and dashboard transport adapter | Deploy; verify treasurer success/non-treasurer 403; render authoritative roster in Treasury UI |
 | Payroll registration backend | ✅ Complete locally | Employer-only digest registration, finalized Sui object verification, immutable service-role registry and idempotent recovery | Apply migration and implement explicit registered-payroll selection |
-| Payroll contract and chain boundary | ✅ Live on Testnet | Package v2, funded mandate, atomic RM30 payroll, abort-24 deficient-EPF refusal and 1 USDC salary stream are verified | Record employee-withdrawal evidence |
-| Payroll application | 🟡 Live payroll and stream; withdrawal pending | Authenticated setup, RM30 run, refusal and registered stream opening use the immutable employee; employer inspection is separated from employee-only withdrawal | Verify employee withdrawal, then host |
+| Payroll contract and chain boundary | ✅ Live on Testnet | Package v2, funded mandate, atomic RM30 payroll, abort-24 deficient-EPF refusal, 1 USDC stream and employee withdrawal are verified | Hosted-registry verification |
+| Payroll application | ✅ Live locally and on Testnet | Authenticated setup, RM30 run, refusal, stream accrual and employee-only withdrawal use the immutable employee | Host and verify a fresh deployment |
 | Authenticated Set Up Payroll | ✅ Live via local app; binding and hosted rollout pending | Slush funded `0xa04894…f1100`; its historical creation state passed strict verification and immutable, idempotent Supabase registration | Apply the hosted migration, repeat from a fresh browser and bind payroll pages to the selected record |
 | Create Expense Treasury | 🟡 Screen built and able to sign | `/treasury/setup`: treasurer form, USDC funding preview, wallet-signed creation against the published package, AdminCap retained and AgentCap issued, registration retry that never refunds | Add `POST /api/events`, then event selection/routing and event-aware capability mapping |
 | Safety Test UI | ✅ Complete locally | Employer-only signed deficient-EPF attempt, concise expected result, abort-24 success treatment, and failed-transaction evidence | Hosted fresh-wallet verification |
 | Deployment | ✅ Live reads; auth rollout pending | Vercel production and live Sui dashboard verified | Push wallet migration, configure exact HTTPS origin, verify protected writes |
-| Payroll and salary streams | 🟡 Payroll and stream live; withdrawal pending | Funded mandate, atomic payroll and a registered 1 USDC stream are live without global stream IDs | Record employee withdrawal proof |
+| Payroll and salary streams | ✅ Live on Testnet | Funded mandate, atomic payroll, registered 1 USDC stream, accrual and employee withdrawal are live without global stream IDs | Host and verify a fresh deployment |
 | Submission | 🟡 Written, not recorded | `docs/SUBMISSION.md` (verified evidence, two demo scripts, Q and A) and `docs/DECK.md` (six slides with timings); AI tooling disclosed | Record the video, build the slides, rehearse on the projector |
 
 ## Real versus simulated
@@ -195,8 +197,8 @@ Updated 4 September. See [payroll launch plan](PAYROLL_LAUNCH_PLAN.md) and
    idempotent registration are complete.
 4. ✅ Replace `sampleStaff` and global payroll/stream assumptions with an explicitly
    selected registered payroll; employer and employee write authorization is enforced.
-5. ✅ Verify one successful payroll and one deficient-contribution refusal.
-   One accrued-salary withdrawal from a fresh browser remains.
+5. ✅ Verify one successful payroll, one deficient-contribution refusal, and one
+   accrued-salary withdrawal from the registered employee wallet.
 6. Preserve the working expense-claim demo. Add protected registration and
    selection behind the separate **Create Expense Treasury** screen.
 7. Deploy and verify the event-member roster API, including one new member who can

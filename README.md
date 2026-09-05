@@ -49,7 +49,7 @@ Status words are intentionally precise:
 | Payroll MYR → USDC valuation | **Complete locally** | RM statutory calculation is converted leg-by-leg with one approved live-reference rate; hosted proof pending |
 | Authenticated Set Up Payroll | **Live via local app; hosted migration pending** | Slush created and funded a verified 12.363385 USDC mandate; its creation digest was verified against historical creation-state objects, stored in the strict immutable registry, and can be selected by authorized payroll pages |
 | Registered payroll page binding | **Complete locally** | Role-aware registry views, URL selection, derived inputs, scoped history and fail-closed stream matching |
-| Live payroll run and salary stream | **Live; withdrawal pending** | RM30 payroll paid 9.046290 USDC atomically; a 1 USDC stream was opened and registered on Testnet, while employee withdrawal evidence remains |
+| Live payroll run and salary stream | **Live** | RM30 payroll paid 9.046290 USDC atomically; a 1 USDC stream was opened, accrued, and withdrawn by the registered employee on Testnet |
 | Create Expense Treasury | **Complete locally through wallet execution** | Separate reimbursement setup screen can sign against the existing package; verified event registration remains pending |
 | Revoke and Safety Test interactions | **Complete locally; live proof pending** | Employer-authorized APIs can submit through the server signer; unsupported scenarios remain clearly labelled predictions |
 | Gemini receipt analysis and Supabase claims | **Complete locally; rollout pending** | Private drafts, authenticated access and 154 pgTAP assertions across the current schema |
