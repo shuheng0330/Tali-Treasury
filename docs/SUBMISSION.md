@@ -29,9 +29,17 @@ worker and EPF, SOCSO and EIS in one transaction. Underpay any one of them and
 the whole run aborts on code 24 — the wage does not go out and get corrected
 later.
 
+Unpaid leave reduces the wage before the split is computed rather than scaling a
+finished one. That ordering is the point: EPF follows the Third Schedule, which
+states a ringgit figure per band rather than a percentage, so a reduced wage can
+fall into a lower band. No contract change was needed — every mandate rule that
+could object to a smaller wage is proportional, so leave is a wage input.
+
 Expense reimbursement is a separate `Mandate` with its own cap and allowlist. A
 member photographs a receipt, an agent reads it, and payment is bounded by rules
-the agent cannot exceed even holding a valid capability.
+the agent cannot exceed even holding a valid capability. It is kept separate on
+purpose: payroll's single `PayrollCap` can both run and revoke, and merging the
+two would put salary behind the same key as receipt reimbursement.
 
 ## Live right now
 
@@ -126,15 +134,31 @@ give the time back to the refusal.
 
 Keep B below as the fallback if the room's network cannot reach an explorer.
 
+#### The mandate cannot fund another run
+
+The funded mandate holds **3.317095 USDC**. One RM30 run costs **9.046290**, and
+the smallest wage the app accepts, RM20, costs **6.030860**. There is no payroll
+run left in it, and its rules are immutable, so this is not something to fix on
+the day.
+
+This does not weaken the demo, because of the order `run_payroll` checks things
+in: the statutory floors are verified in the payment loop, and the budget only
+afterwards. A deliberately deficient run therefore still aborts on **24**, the
+code the whole pitch turns on, and never reaches the budget guard. A *valid*
+run would clear the floors and then abort on **26**.
+
+So: the refusal is live, the successful run is a recorded digest. Say which is
+which — it is a better answer than being caught by it.
+
 ### A — payroll published
 
 | Time | Screen | Say and do |
 |---|---|---|
 | 0:00–0:20 | Landing | "Unpaid EPF is the quietest way a payroll goes wrong." Read the headline. |
 | 0:20–0:50 | `/payroll/setup` | The screen that created the funded mandate. Point at the rules fixed at creation — do not sign a second one live; the mandate has 3.317095 USDC left and a run costs 9.046290. |
-| 0:50–1:40 | `/payroll` | Run the payroll. Show the four payments leaving in one transaction. Open the digest. |
-| 1:40–2:20 | `/payroll/proof` | Underpay EPF. Contract aborts on 24. Show that no balance moved. |
-| 2:20–2:45 | `/earnings` | Accrual, computed with the contract's own arithmetic. **This is the one step with no Testnet proof — say so, or drop it and give the time to the refusal.** |
+| 0:50–1:40 | `/payroll` | **Do not run a payroll live — it will abort on 26.** Show the split, then open the recorded run `HpUwPs…`: four payments, one transaction. See [the budget note](#the-mandate-cannot-fund-another-run) below. |
+| 1:40–2:20 | `/payroll/proof` | **This one you can run live.** Underpay EPF; the contract aborts on 24 before it ever looks at the budget. Show that no balance moved. |
+| 2:20–2:45 | `/payroll` | Enter unpaid leave days. The wage drops and the split recomputes on the reduced wage rather than being scaled, so EPF can fall into a lower Third Schedule band. Stronger than `/earnings`, whose withdrawal has no Testnet proof. |
 | 2:45–3:00 | Close | "Wages and EPF leave together, or neither does. That is a contract, not a policy." |
 
 ### B — fallback when the room cannot reach an explorer

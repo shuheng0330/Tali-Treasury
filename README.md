@@ -45,6 +45,7 @@ Status words are intentionally precise:
 | MYR → USDC reimbursement quotes | **Live via local app** | RM6 → 1.484561 USDC browser payment verified; hosted rollout pending |
 | Claim outcomes | **Complete locally** | Paid with Auto-paid / Paid after review chips; Rejected tab; correction/rejection reasons on both screens |
 | Payroll Move module and integration | **Live** | Package v2, funded `PayrollMandate`, atomic RM30 payroll and `PayrollRun` event are verified on Testnet |
+| Unpaid leave | **Complete locally** | A day not worked is deducted at one twenty-sixth of the month before the statutory split is computed, so EPF can fall into a lower Third Schedule band. Overtime and the claim/payroll relationship are reasoned through in [`docs/LEAVE_OT_CLAIMS_PLAN.md`](docs/LEAVE_OT_CLAIMS_PLAN.md) |
 | Payroll MYR → USDC valuation | **Complete locally** | RM statutory calculation is converted leg-by-leg with one approved live-reference rate; hosted proof pending |
 | Authenticated Set Up Payroll | **Live via local app; hosted migration pending** | Slush created and funded a verified 12.363385 USDC mandate; strict digest-only registration is ready and pages select an authorized registration by mandate |
 | Registered payroll page binding | **Complete locally** | Role-aware registry views, URL selection, derived inputs, scoped history and fail-closed stream matching |
