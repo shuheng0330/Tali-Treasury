@@ -82,7 +82,8 @@ Owner: frontend + backend, with Sui integration support.
    fields and cap owners before inserting the event and members in Supabase.
 4. ✅ Make registration idempotent by mandate and recover when funding succeeds
    but database registration fails. Retrying registration never funds another
-   mandate. Cancelled wallet prompts still create no event.
+   mandate; the setup page also accepts the existing funding digest after a
+   refresh or navigation. Cancelled wallet prompts still create no event.
 5. Replace fixed demo selection with event selection/routing. Bind every claim,
    dashboard read and backend capability to the same selected event. The current
    single global AgentCap setting needs an event-aware mapping before multiple

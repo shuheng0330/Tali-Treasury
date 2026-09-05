@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
+import type { ExpenseCategory } from '@tali/shared';
 import {
   expiryMsFromDays,
+  registrationRecoveryBlocker,
   recipientList,
   treasuryAmounts,
   treasuryProblems,
@@ -109,5 +111,37 @@ describe('treasuryAmounts', () => {
 
   it('refuses to produce amounts for a form that does not validate', () => {
     expect(() => treasuryAmounts(form({ budgetUsdc: 'lots' }), NOW)).toThrow();
+  });
+});
+
+describe('registrationRecoveryBlocker', () => {
+  const base = {
+    digest: '9gYExampleDigest',
+    name: 'MUBA Hack',
+    organisation: 'MMU',
+    categories: ['food'] as ExpenseCategory[],
+    authenticated: true,
+    sameAccount: true,
+  };
+
+  it('allows recovery without the funding form fields', () => {
+    expect(
+      registrationRecoveryBlocker({
+        ...base,
+        categories: ['food'],
+      }),
+    ).toBeNull();
+  });
+
+  it('requires the existing funding digest', () => {
+    expect(registrationRecoveryBlocker({ ...base, digest: ' ' })).toBe(
+      'Paste the funding transaction digest.',
+    );
+  });
+
+  it('does not let an unauthenticated wallet recover a mandate', () => {
+    expect(registrationRecoveryBlocker({ ...base, authenticated: false })).toBe(
+      'Sign in with the treasurer wallet first.',
+    );
   });
 });
