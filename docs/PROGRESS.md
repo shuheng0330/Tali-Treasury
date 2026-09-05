@@ -1,5 +1,19 @@
 # Team build progress
 
+## 5 September — mobile judging polish
+
+- Reframed the EPF proof as a short safety test with underpayment selected by
+  default, zero-movement evidence, progressive calculation disclosure, and a
+  successful treatment for abort 24.
+- Condensed the expense-treasury overview and moved Sui rules/member creation
+  behind accessible disclosures.
+- Rebuilt review and history rows as mobile claim cards with concise outcomes,
+  failed-first checks, compact quote evidence, and 48px actions.
+- Responsive inspection found no horizontal overflow at 320, 375, 430, 768, or
+  1280px. Fresh verification passes 48 Sui integration tests, 685 web tests with
+  one intentional skip, type checking, the production build, and a
+  zero-vulnerability audit.
+
 ## 5 September — registered payroll binding and live stream
 
 - Added authenticated employer/employee registry listing without capability data.
@@ -114,7 +128,7 @@ the submission time against the organiser channel; older notes used 23:59.
 | Sui Move | ✅ Live | Package, 17 tests, USDC mandate, valid payment, two rejected safety attempts | Live revoke/withdraw evidence only if needed for the demo |
 | Sui TypeScript boundary | ✅ Ready | Reads, builders, config, USDC helpers, abort mapping, backend signer and native-USDC payment/recovery smoke | Hosted end-to-end verification |
 | Shared contracts | ✅ Ready | Claim, event, policy, audit, mandate and endpoint types | Evolve only with team agreement |
-| Web dashboard | ✅ Complete locally; live chain data | Mandate reads, review actions, paid/rejected views, reasons and payment evidence | Hosted verification and backend claim totals |
+| Web dashboard | ✅ Complete locally; live chain data | Mandate reads, review actions, mobile card hierarchy, compact rules/FX evidence and payment evidence | Hosted verification and backend claim totals |
 | Receipt and claim backend | ✅ Complete locally | Wallet sessions, one-time analysis drafts, private storage, deterministic policy, atomic review/payment states, and safe exact-digest reconciliation | Apply latest migrations and configure hosted API/origin/signer |
 | Claim and review UX | ✅ Complete locally | Browser MYR reimbursement verified, readable outcomes and reasons, exact quote approval, payment-status polling | Hosted verification and member correction/resubmission |
 | Payroll and treasury write RBAC | ✅ Complete locally | Employer-only payroll/revoke/safety APIs and employee-only stream withdrawal | Configure hosted employer wallet and verify both roles |
@@ -124,7 +138,7 @@ the submission time against the organiser channel; older notes used 23:59.
 | Payroll application | 🟡 Live payroll and stream; withdrawal pending | Authenticated setup, RM30 run, refusal and registered stream opening use the immutable employee; employer inspection is separated from employee-only withdrawal | Verify employee withdrawal, then host |
 | Authenticated Set Up Payroll | ✅ Live via local app; binding and hosted rollout pending | Slush funded `0xa04894…f1100`; its historical creation state passed strict verification and immutable, idempotent Supabase registration | Apply the hosted migration, repeat from a fresh browser and bind payroll pages to the selected record |
 | Create Expense Treasury | 🟡 Screen built and able to sign | `/treasury/setup`: treasurer form, USDC funding preview, wallet-signed creation against the published package, AdminCap retained and AgentCap issued, registration retry that never refunds | Add `POST /api/events`, then event selection/routing and event-aware capability mapping |
-| Safety Test UI | 🟡 Mocked with live evidence links | Local preview plus links to two real rejected transactions; API is employer-only | Interactive signed attempts and revocation scenario |
+| Safety Test UI | ✅ Complete locally | Employer-only signed deficient-EPF attempt, concise expected result, abort-24 success treatment, and failed-transaction evidence | Hosted fresh-wallet verification |
 | Deployment | ✅ Live reads; auth rollout pending | Vercel production and live Sui dashboard verified | Push wallet migration, configure exact HTTPS origin, verify protected writes |
 | Payroll and salary streams | 🟡 Payroll and stream live; withdrawal pending | Funded mandate, atomic payroll and a registered 1 USDC stream are live without global stream IDs | Record employee withdrawal proof |
 | Submission | 🟡 Written, not recorded | `docs/SUBMISSION.md` (verified evidence, two demo scripts, Q and A) and `docs/DECK.md` (six slides with timings); AI tooling disclosed | Record the video, build the slides, rehearse on the projector |
@@ -139,7 +153,9 @@ the submission time against the organiser channel; older notes used 23:59.
   claim persistence/listing, treasurer-triggered deterministic policy, and
   race-safe testnet backend payment for USDC automatic or human-approved claims. The payment code is
   covered by automated tests and the recorded local Testnet payment checks.
-- **Simulated in the current UI:** revoke preview and interactive safety controls.
+- **Simulated in the current UI:** revoke preview only. The payroll safety test is
+  a real employer-authenticated Testnet attempt when the selected payroll and
+  signer configuration are available.
 - **Never simulated without a label:** digests, checkpoints, gas, finality, wallet signatures, or chain state.
 
 ## Frontend phase history

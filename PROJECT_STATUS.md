@@ -1,5 +1,19 @@
 # Project status
 
+## 5 September 2026 — mobile proof and treasury polish
+
+- Simplified the registered-payroll EPF safety journey into a default
+  underpayment scenario, immediate expected outcome, collapsed calculation, and
+  a success treatment for the confirmed contract refusal.
+- Condensed the treasury overview around usable funds and moved Sui rules and
+  member creation behind semantic disclosures.
+- Replaced divider-based claim rows with responsive cards, concise reasons,
+  ordered checks, compact FX evidence, and a clear mobile action hierarchy.
+- Responsive inspection at 320, 375, 430, 768, and 1280px found no horizontal
+  overflow and measured 48px claim actions. Fresh verification passes 48 Sui
+  integration tests, 685 web tests with one intentional skip, type checking,
+  the production build, and a zero-vulnerability audit.
+
 Last updated: 5 September 2026 (MYT)
 
 ## Latest integrated verification

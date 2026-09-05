@@ -176,6 +176,7 @@ body {
   background: rgb(var(--canvas));
   color: rgb(var(--ink));
   -webkit-font-smoothing: antialiased;
+  touch-action: manipulation;
 }
 
 h1,
@@ -327,6 +328,59 @@ h4 {
     font-weight: 600;
     text-transform: uppercase;
     color: rgb(var(--ink-3));
+  }
+
+  .page-safe {
+    padding-bottom: max(1.5rem, env(safe-area-inset-bottom));
+    padding-left: max(1.25rem, env(safe-area-inset-left));
+    padding-right: max(1.25rem, env(safe-area-inset-right));
+  }
+
+  .disclosure-card {
+    border: 1px solid rgb(var(--rule));
+    border-radius: var(--radius-card);
+    background: rgb(var(--surface));
+    padding: 1rem;
+  }
+
+  .disclosure-card > summary,
+  .disclosure-row {
+    min-height: 2.75rem;
+    cursor: pointer;
+    align-items: center;
+    font-family: var(--font-display);
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 1.3;
+  }
+
+  .disclosure-card > summary {
+    display: flex;
+  }
+
+  .disclosure-card > summary::after {
+    content: '+';
+    margin-left: auto;
+    padding-left: 1rem;
+    color: rgb(var(--ink-3));
+  }
+
+  .disclosure-card[open] > summary::after {
+    content: '−';
+  }
+
+  .disclosure-row {
+    display: inline-flex;
+    text-decoration: underline;
+    text-decoration-color: rgb(var(--ink) / 0.28);
+    text-underline-offset: 0.25em;
+  }
+
+  @media (max-width: 359px) {
+    .claim-actions > .btn {
+      flex-basis: 100%;
+      width: 100%;
+    }
   }
 
   /* Signature move from the reference: the whole card floods on hover and its

@@ -4,10 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useMemo, useState, useTransition } from 'react';
 import type { ClaimReviewAction, MandateView } from '@tali/shared';
-import { Money } from '@/components/Money';
 import { event } from '@/lib/mock/data';
-import { ClaimStatusSummary } from '../claim/ClaimStatusSummary';
-import { FxQuoteSummary } from '../claim/FxQuoteSummary';
 import {
   DEMO_EVENT_ID,
   DEMO_EVENT_NAME,
@@ -23,11 +20,11 @@ import { reconcileClaim, TaliApiError } from '@/lib/api/client';
 import { pollPaymentReconciliation } from '@/lib/api/reconciliation';
 import { DataNotice } from '@/components/DataNotice';
 import { ClaimRow } from './ClaimRow';
+import { ClaimHistoryCard } from './ClaimHistoryCard';
 import { AddMemberForm } from './AddMemberForm';
 import { MandateHeader } from './MandateHeader';
 import { RevokeDialog } from './RevokeDialog';
 import { ReviewActionDialog } from './ReviewActionDialog';
-import { PaymentReconciliationStatus } from './PaymentReconciliationStatus';
 import { useWalletSession } from '@/components/wallet/WalletSessionProvider';
 import { RoleNotice } from '@/components/RoleNotice';
 import { REVIEW_COPY, REVOKE_COPY, walletAccess } from '@/lib/wallet-access';
@@ -310,12 +307,12 @@ export function TreasuryDashboard({
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-4xl flex-col gap-6 px-5 py-8">
+    <div className="page-safe mx-auto flex w-full max-w-4xl flex-col gap-6 px-5 py-8">
       {SINGLE_WALLET_DEMO ? (
-        <p className="text-body text-ink-2">
-          Single-wallet Testnet demo: the same person submits and reviews claims.
-          This demonstrates the workflow, not separation of duties. Payments use test tokens.
-        </p>
+        <div className="flex items-center gap-3 rounded-card border border-accent-line bg-accent-soft px-4 py-3">
+          <span className="h-2 w-2 shrink-0 rounded-full bg-accent" aria-hidden />
+          <p className="text-caption text-ink-2"><strong className="font-display text-ink">Demo Mode</strong><span className="mx-2 text-ink-3">·</span>One Testnet wallet submits and reviews claims.</p>
+        </div>
       ) : null}
       <MandateHeader
         eventName={DEMO_EVENT_NAME}
@@ -338,27 +335,27 @@ export function TreasuryDashboard({
         Create another expense treasury
       </Link>
 
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-card border border-ok-line bg-ok-soft px-4 py-3 sm:px-6">
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-card border border-ok-line bg-ok-soft px-4 py-3 sm:px-5">
         <div>
-          <p className="text-body font-medium text-ok">Live from Sui Testnet</p>
+          <p className="text-body font-medium text-ok">Sui Testnet · Live</p>
           {/* The server formats this in its own timezone and the browser in the
               viewer's, so the two renders legitimately differ. */}
           <p className="text-caption text-ink-2" suppressHydrationWarning>
-            Read at {new Date(mandate.fetchedAtMs).toLocaleTimeString('en-GB')} · Circle Testnet USDC
+            Last refreshed {new Date(mandate.fetchedAtMs).toLocaleTimeString('en-GB')}
           </p>
         </div>
         <button
           type="button"
           disabled={refreshing || refreshingPayments}
           onClick={refreshChainState}
-          className="btn btn--ghost h-10 px-5 text-label"
+          className="btn btn--ghost min-h-11 px-5 text-label"
         >
           {refreshing || refreshingPayments ? 'Refreshing…' : 'Refresh chain state'}
         </button>
       </div>
 
-      <section className="flex flex-col overflow-hidden rounded-panel border border-rule bg-surface">
-        <div className="flex flex-col gap-3 border-b border-rule p-4 empty:hidden">
+      <section className="flex flex-col gap-4">
+        <div className="flex flex-col gap-3 empty:hidden">
           {/* Silent when the queue is live: the "Live from Sui Testnet" card
               above and a populated, working queue below already say so. This
               box only needs to speak up when something fell back, which is
@@ -396,14 +393,14 @@ export function TreasuryDashboard({
           ) : null}
           <RoleNotice access={reviewAccess} />
         </div>
-        <div className="flex flex-wrap items-center gap-1 border-b border-rule px-3 py-2">
+        <div className="flex max-w-full items-center gap-1 overflow-x-auto rounded-card border border-rule bg-surface p-2">
           {TABS.map((entry) => (
             <button
               key={entry.id}
               type="button"
               onClick={() => setTab(entry.id)}
               aria-pressed={tab === entry.id}
-              className={`rounded-badge px-4 py-2 font-display text-label uppercase transition-colors duration-150 ${
+              className={`min-h-11 shrink-0 rounded-badge px-4 py-2 font-display text-label uppercase transition-colors duration-150 ${
                 tab === entry.id ? 'bg-ink text-canvas' : 'text-ink-3 hover:bg-raised hover:text-ink'
               }`}
             >
@@ -415,7 +412,7 @@ export function TreasuryDashboard({
 
         {tab === 'review' ? (
           queue.length === 0 ? (
-            <div className="flex flex-col items-center gap-3 px-6 py-14 text-center">
+            <div className="flex flex-col items-center gap-3 rounded-card border border-rule bg-surface px-6 py-14 text-center">
               <span className="text-heading text-ok" aria-hidden>
                 ✓
               </span>
@@ -433,7 +430,7 @@ export function TreasuryDashboard({
               </Link>
             </div>
           ) : (
-            <ul className="flex flex-col divide-y divide-rule">
+            <ul className="grid gap-4">
               {queue.map((item) => (
                 <ClaimRow
                   key={item.claim.id}
@@ -463,29 +460,19 @@ export function TreasuryDashboard({
         ) : null}
 
         {tab !== 'review' ? (
-          <ul className="flex flex-col divide-y divide-rule">
+          <ul className="grid gap-4">
             {history.length === 0 ? (
-              <li className="px-6 py-10 text-center text-body text-ink-2">
+              <li className="rounded-card border border-rule bg-surface px-6 py-10 text-center text-body text-ink-2">
                 {tab === 'rejected' ? 'No rejected claims.' : tab === 'paid' ? 'No payments yet.' : 'No claims yet.'}
               </li>
             ) : null}
             {history.map((claim) => (
-              <li key={claim.id} className="flex flex-col gap-3 px-4 py-4">
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <span className="break-words text-body font-medium">{claim.merchant}</span>
-                  <Money amount={claim.amount} unit={claim.analysis?.currency ?? 'USDC'} size="row" />
-                </div>
-                <div className="flex min-w-0 flex-1 flex-col gap-1">
-                  <ClaimStatusSummary claim={claim} />
-                  <span className="text-body text-ink-3">{claim.submitterName}</span>
-                  <FxQuoteSummary claim={claim} />
-                </div>
-                <PaymentReconciliationStatus
-                  claim={claim}
-                  pending={reconcilingId === claim.id}
-                  onCheck={checkPayment}
-                />
-              </li>
+              <ClaimHistoryCard
+                key={claim.id}
+                claim={claim}
+                pending={reconcilingId === claim.id}
+                onCheck={checkPayment}
+              />
             ))}
           </ul>
         ) : null}

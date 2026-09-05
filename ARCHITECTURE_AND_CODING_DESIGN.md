@@ -119,6 +119,27 @@ Disconnect/account change revokes the current client session. Local compatibilit
 identity is possible only with no cookie and an explicit insecure flag; hosted
 deployments disable it.
 
+## Mobile presentation architecture
+
+The payroll proof and treasury surfaces use summary-first rendering without
+changing their service boundaries. `EnforcementProof` owns the semantic scenario
+fieldset, an always-visible expected outcome, a collapsed full calculation, and
+an `aria-live` terminal result. Only the deficient-EPF scenario calls the run API;
+the valid comparison links to the normal payroll route.
+
+`MandateHeader` renders the operational balance hierarchy and keeps immutable
+Sui safeguards in a native `details` disclosure. `ClaimRow` and
+`ClaimHistoryCard` are separate card presentations over the existing claim
+contracts. Review checks are copied before sorting into failed, pending, and
+passed groups, so domain objects remain immutable. `FxQuoteSummary` exposes a
+compact treasury variant while its full confirmation-dialog variant remains the
+approval evidence source.
+
+Reusable disclosure styling and safe-area padding live in `globals.css`; no new
+runtime dependency or animation layer is introduced. Buttons retain the shared
+button system and meet a 44px minimum target. Responsive behavior is CSS-driven,
+so no viewport subscription or client rendering branch is required.
+
 ## Event-member roster design
 
 `GET /api/events/:id/members` resolves the fixed-expiry wallet session, validates

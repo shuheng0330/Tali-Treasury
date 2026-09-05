@@ -73,7 +73,7 @@ export function Breakdown({
       {breakdown.bodies.map((body) => {
         const shorted = shortedBody === body.body;
         return (
-          <div key={body.body} className={shorted ? '-mx-5 border-l-2 border-stop bg-stop-soft px-5' : undefined}>
+          <div key={body.body} className={shorted ? '-mx-5 border-l-2 border-no bg-no-soft px-5' : undefined}>
             <Row
               label={STATUTORY_BODY_LABEL[body.body]}
               detail={`${toDisplay(body.employee, unit === 'USDC' ? 6 : 2)} ${unit} from wages · ${toDisplay(
@@ -85,7 +85,7 @@ export function Breakdown({
               fractionDigits={shorted || unit === 'USDC' ? 6 : 2}
             />
             {shorted ? (
-              <p className="pb-2 text-caption text-stop">
+              <p className="pb-2 text-caption text-no">
                 Set to one base unit instead of {toDisplay(body.total)}.
               </p>
             ) : null}
