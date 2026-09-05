@@ -60,9 +60,29 @@ stand-ins and are not Malaysian government remittance addresses.
   `5Efev63VTUXKbpmuZavJyqy27J91w7k9yykY4LLHVieR`
 - Employer balance after funding: `12.640845 USDC` and `0.1 SUI`
 
-The funded payroll mandate, `PayrollCap`, salary stream and execution evidence do
-not exist yet. Create them through the authenticated Set Up Payroll flow and append
-their identifiers here after finality and server verification.
+The funded payroll mandate, `PayrollCap`, first payroll run, deliberate refusal,
+and salary stream now exist. Their verified identifiers are recorded below and in
+`docs/PAYROLL_TESTNET_EVIDENCE.md`.
+
+## Live payroll and salary stream
+
+- Payroll setup transaction: `85PdAXLeVT82SetGWUK9a98vX3UAEcrarRRtUv8ne73`
+- Payroll mandate: `0xa04894a0d3852092d08df2476bb36e47992ec13ad78ba2a6e38cb891f77f1100`
+- PayrollCap: `0x02ac8f2f667d699adfed56e094997755722b0f9e98994bc6b157242ebe80ef06`
+- Successful RM30 payroll: `HpUwPspN9QgoXBmLARh8iJDFSxEACSwZNxhzz3zXr27y`
+- Deliberate deficient-EPF refusal: `Hqw44T6qTsQKW5ooPGM8BQmN6uNgaXk6TYNvw9tgFT8V`
+- Stream-opening transaction: `2tLwnYYVZkdn3QVAvYhSwixJkyAKb9cDJH12Z2RQq1Tq`
+- SalaryStream: `0x64aa6def14dc646831b3fa3b820c042a7dd8cbcb65c110b8e56e58ca6b26eef8`
+- Reserved stream amount: `1.000000 USDC`
+- Stream employee: `0x405200312d4c8ee0159d44429ca69ef0cf035f4a00c12f2035a0bdef882bb16e`
+- Stream period: `2026-09-05T07:01:50.330Z` to `2026-09-05T07:11:50.330Z`
+- Opening checkpoint: `379993839`
+- Net opening gas: `0.003527304 SUI`
+
+After opening, the mandate reported `3.317095 USDC` budget,
+`1.000000 USDC` committed, `2.317095 USDC` spendable,
+`9.046290 USDC` total paid, and one payroll run. The registered employer may
+inspect the stream and its accrual, but only the immutable employee may withdraw.
 
 ## First live SUI mandate
 

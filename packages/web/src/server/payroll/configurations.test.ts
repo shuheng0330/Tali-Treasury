@@ -44,4 +44,16 @@ describe('registered payroll access', () => {
     await expect(service.requireAuthorized(outsider, snapshot.mandateId)).rejects.toMatchObject({ status: 403 });
     await expect(service.requireAuthorized(employer, `0x${'9'.repeat(64)}`)).rejects.toMatchObject({ status: 404 });
   });
+
+  it('allows one wallet to act as the immutable employee when it is also the employer', async () => {
+    const dualRole = { ...snapshot, approvedEmployees: [employer] };
+    const current = repository();
+    current.findByMandateId = vi.fn(async () => dualRole);
+    const service = createPayrollConfigurationService({ configurations: current, employer });
+
+    await expect(service.requireAuthorized(employer, snapshot.mandateId, 'employee'))
+      .resolves.toMatchObject({ role: 'employee', view: { role: 'employee', employee: employer } });
+    await expect(service.requireAuthorized(employer, snapshot.mandateId, 'employer'))
+      .resolves.toMatchObject({ role: 'employer' });
+  });
 });

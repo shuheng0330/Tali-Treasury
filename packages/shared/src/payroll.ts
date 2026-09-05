@@ -119,6 +119,18 @@ export interface SalaryStreamView {
   available: Amount;
 }
 
+/** Durable link between a registered payroll and the stream created for it. */
+export interface SalaryStreamRegistrationView {
+  streamId: ObjectId;
+  mandateId: ObjectId;
+  employee: Address;
+  totalAmount: Amount;
+  startedAtMs: number;
+  endsAtMs: number;
+  creationDigest: string;
+  createdAtMs: number;
+}
+
 export type WithdrawEarnedResult =
   | { ok: true; digest: string; amount: Amount }
   | { ok: false; abortCode: number; message: string };

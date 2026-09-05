@@ -1,4 +1,9 @@
-import type { PayrollBreakdown, PayrollRunView } from '@tali/shared';
+import type {
+  OpenSalaryStreamRequest,
+  PayrollBreakdown,
+  PayrollRunView,
+  SalaryStreamRegistrationResponse,
+} from '@tali/shared';
 import { TaliApiError, responseJson } from '@/lib/api/client';
 import type { Sourced } from '@/lib/api/demo';
 
@@ -83,4 +88,15 @@ export async function tryRunPayroll(request: RunRequest): Promise<RunAttempt> {
       error instanceof TaliApiError && error.code === 'payment_submission_uncertain';
     return { data: null, source: 'mock', reason: describe(error), uncertain };
   }
+}
+
+export async function getRegisteredSalaryStream(mandateId: string) {
+  const response = await fetch(`/api/payroll/streams?payroll=${encodeURIComponent(mandateId)}`, {
+    cache: 'no-store',
+  });
+  return responseJson<SalaryStreamRegistrationResponse>(response);
+}
+
+export async function openSalaryStream(request: OpenSalaryStreamRequest) {
+  return post<SalaryStreamRegistrationResponse>('/api/payroll/streams', request);
 }

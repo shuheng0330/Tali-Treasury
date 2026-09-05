@@ -37,7 +37,10 @@ export async function GET(
     const identity = await resolveWalletIdentity({ request, auth: services.auth });
     const mandateId = new URL(request.url).searchParams.get('payroll');
     if (!mandateId) throw new ServerError('invalid_request', 400, 'Select a registered payroll');
-    const configuration = await services.payrollConfigurations.requireAuthorized(identity.address, mandateId, 'employee');
+    /* Employers may inspect the stream they funded; only the withdrawal route
+       requires the immutable employee role. The object itself is public Sui
+       state, while this endpoint still scopes it to an authorized payroll. */
+    const configuration = await services.payrollConfigurations.requireAuthorized(identity.address, mandateId);
     if (!streamsAreLive()) throw new ServerError('payment_configuration_failed', 503, 'Salary stream chain state is unavailable');
     const { id } = await context.params;
     if (!id) throw new ServerError('invalid_request', 400, 'A stream id is required');
@@ -48,8 +51,8 @@ export async function GET(
       if (error instanceof ServerError) throw error;
       throw new ServerError('mandate_read_failed', 502, 'Salary stream state could not be read from Sui', { cause: error });
     }
-    if (stream.mandateId !== configuration.view.mandateId || stream.employee !== configuration.view.employee || stream.employee !== identity.address) {
-      throw new ServerError('payroll_forbidden', 403, 'This stream does not belong to the selected payroll and wallet');
+    if (stream.mandateId !== configuration.view.mandateId || stream.employee !== configuration.view.employee) {
+      throw new ServerError('payroll_forbidden', 403, 'This stream does not belong to the selected payroll');
     }
     return Response.json(stream);
   } catch (error) {
