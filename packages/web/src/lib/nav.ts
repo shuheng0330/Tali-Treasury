@@ -104,3 +104,42 @@ export function otherRolesNote(
 
   return sentences.length > 0 ? sentences.join(' ') : null;
 }
+
+export interface NavParent {
+  href: string;
+  /** What the button reads. Naming the destination beats a bare "Back". */
+  label: string;
+  description: string;
+}
+
+const OVERVIEW: NavParent = {
+  href: '/',
+  label: 'Overview',
+  description: 'Back to the overview',
+};
+
+/**
+ * One level up from a path, which is not the same as the overview.
+ *
+ * Every screen in the app group used to send Back to `/`, so leaving Create
+ * expense treasury dropped the reader on the landing page rather than the
+ * treasury they were setting up — three clicks from where they had been. The
+ * sub-routes are the ones that suffer: `/treasury/setup`, `/payroll/setup`,
+ * `/payroll/proof` and `/payroll/history` all sit under a section that is
+ * itself a destination.
+ *
+ * Derived from `NAV_TABS` rather than a second hand-written map, because a map
+ * would be the thing that goes stale when a route moves.
+ */
+export function parentOf(pathname: string, tabs: readonly NavTab[] = NAV_TABS): NavParent {
+  const path = pathname.replace(/\/+$/, '') || '/';
+  const cut = path.lastIndexOf('/');
+  if (cut <= 0) return OVERVIEW;
+
+  const up = path.slice(0, cut);
+  const tab = tabs.find((candidate) => candidate.href === up);
+
+  return tab
+    ? { href: tab.href, label: tab.label, description: `Back to ${tab.label}` }
+    : OVERVIEW;
+}

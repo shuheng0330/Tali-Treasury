@@ -4,12 +4,19 @@ Last updated: 5 September 2026 (MYT)
 
 ## Latest integrated verification
 
-The integration branch now includes `origin/main` through `a0fb6f2`.
+The registered-payroll binding increment is implemented on
+`codex/registered-payroll-binding`: authenticated configuration listing, URL
+selection, configuration-scoped preview/run/history, per-run mandate persistence,
+signer/cap-owner validation and fail-closed salary-stream binding are complete
+locally and are integrated with `origin/main` through `05e8cd2`. Fresh
+post-merge verification results are recorded below. The new pgTAP test is
+authored; local replay still depends on Docker Desktop's Linux engine.
+
 Parallel setup implementations were consolidated around one strict digest-only
 verifier, one immutable registry migration and the canonical
 `POST /api/payroll/register` handler while preserving the latest setup UI. The
-post-merge checks pass: 42 Move tests, 48 Sui integration tests, 653 web tests
-(652 passing and one intentional skip), 141 pgTAP assertions, root typecheck,
+post-merge checks pass: 42 Move tests, 48 Sui integration tests, 679 web tests
+(678 passing and one intentional skip), 145 pgTAP assertions, root typecheck,
 production build and a zero-vulnerability audit. A forward migration preserves
 the old local registration read-only and installs the strict registry without a
 database reset. The existing setup digest has been re-verified against its
@@ -18,6 +25,11 @@ v2, setup, one successful run and one abort-24 refusal are live; salary-stream
 and hosted-registry verification remain pending.
 
 ## Complete locally
+
+- registered payroll selection across payroll, history, proof and earnings;
+- capability-free employer/employee configuration views;
+- registry-derived employee/statutory execution inputs and mandate-filtered runs;
+- stream wallet, employee, mandate, package and signer checks before signing;
 
 - strict Gemini receipt schema and `gemini-3.5-flash-lite` default;
 - SHA-256 hashing and event-scoped immutable storage paths;

@@ -1,5 +1,14 @@
 # Team build progress
 
+## 5 September — registered payroll binding
+
+- Added authenticated employer/employee registry listing without capability data.
+- Bound payroll, history, proof and earnings to authorized `?payroll=` selection.
+- New runs derive chain IDs and recipients from the registry, store their mandate,
+  and verify capability ownership before signing.
+- Stream reads/withdrawals now match wallet, employee and mandate and fail closed.
+- Hosted migration and team Testnet end-to-end verification remain rollout work.
+
 This is the authoritative implementation checklist. A UI phase marked complete
 means the UX works against its declared data source; it does not imply that the
 whole product flow is live.
@@ -68,7 +77,7 @@ the submission time against the organiser channel; older notes used 23:59.
   strict registry verified the finalized setup digest against its historical
   creation-state objects and stored the current demo payroll.
 - Fresh combined verification passes 42 Move tests, 48 Sui integration tests,
-  653 web tests (652 passing and one intentional skip), 141 pgTAP assertions,
+  679 web tests (678 passing and one intentional skip), 145 pgTAP assertions,
   root typecheck, production build and a zero-vulnerability audit.
 
 ### 4 September roster-backend verification

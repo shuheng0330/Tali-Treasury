@@ -8,7 +8,10 @@
 
   --ink: 8 13 16;
   --ink-2: 74 84 90;
-  --ink-3: 100 110 117;
+  /* Measured, not chosen. 4.74:1 on the failed-row soft red, which is the
+     tightest of the five backgrounds it lands on; 100 110 117 read 4.44:1
+     there and missed AA on the one row a judge is most likely to read. */
+  --ink-3: 96 105 116;
 
   --rule: 232 233 234;
   --rule-strong: 212 214 216;
@@ -280,6 +283,19 @@ h4 {
   .btn--block {
     display: flex;
     width: 100%;
+  }
+
+  /* The wallet button is a custom element with its own shadow DOM, so none of
+     the utilities above reach it. It exports its trigger, which is the one
+     handle it gives us: without this it renders 40px tall beside our 36px
+     controls and the header row sits half a step out of alignment. Geometry
+     only — its colours come from the kit's own tokens, which the connect modal
+     inside it also reads. */
+  mysten-dapp-kit-connect-button::part(trigger) {
+    height: 2.25rem;
+    padding-inline: 0.875rem;
+    border-radius: var(--radius-pill);
+    font-family: var(--font-display);
   }
 
   /* The link that reads as a link without being blue: ink text, hairline

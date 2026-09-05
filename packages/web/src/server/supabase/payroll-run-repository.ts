@@ -30,6 +30,7 @@ interface SupabaseDataClient {
 interface PayrollRunRow {
   id: string;
   employee_wallet: string;
+  payroll_mandate_id: string | null;
   breakdown: PayrollBreakdown;
   status: PayrollRunStatus;
   digest: string | null;
@@ -37,7 +38,7 @@ interface PayrollRunRow {
   created_at: string;
 }
 
-const RUN_COLUMNS = 'id, employee_wallet, breakdown, status, digest, abort_code, created_at';
+const RUN_COLUMNS = 'id, payroll_mandate_id, employee_wallet, breakdown, status, digest, abort_code, created_at';
 
 /** PostgREST for a table that is not in the schema cache, or not there at all. */
 const TABLE_MISSING = new Set(['PGRST205', 'PGRST106', '42P01']);
@@ -75,6 +76,7 @@ function mapRow(input: unknown): PayrollRunView {
 
   return {
     id: row.id,
+    mandateId: row.payroll_mandate_id as PayrollRunView['mandateId'],
     employee: row.employee_wallet as Address,
     breakdown: row.breakdown,
     status: row.status,
@@ -106,10 +108,11 @@ export function createSupabasePayrollRunRepository(
   }
 
   return {
-    async create({ employee, breakdown }) {
+    async create({ mandateId, employee, breakdown }) {
       const { data, error } = await query(client, 'payroll_runs')
         .insert({
           employee_wallet: employee,
+          payroll_mandate_id: mandateId,
           gross: breakdown.gross,
           net: breakdown.net,
           employer_cost: breakdown.employerCost,
@@ -135,12 +138,22 @@ export function createSupabasePayrollRunRepository(
       });
     },
 
+    async listRecentForMandate(mandateId, limit) {
+      const { data, error } = await query(client, 'payroll_runs')
+        .select(RUN_COLUMNS)
+        .eq('payroll_mandate_id', mandateId)
+        .order('created_at', { ascending: false })
+        .limit(limit);
+
+      if (error) throw failure(error);
+      if (!Array.isArray(data)) throw databaseFailure(null);
+      return data.map(mapRow);
+    },
     async listRecent(limit) {
       const { data, error } = await query(client, 'payroll_runs')
         .select(RUN_COLUMNS)
         .order('created_at', { ascending: false })
         .limit(limit);
-
       if (error) throw failure(error);
       if (!Array.isArray(data)) throw databaseFailure(null);
       return data.map(mapRow);

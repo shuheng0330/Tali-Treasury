@@ -6,7 +6,7 @@ import { createPayrollRunsPostHandler } from './route';
 const employer = `0x${'a'.repeat(64)}`;
 const origin = 'https://tali-treasury.vercel.app';
 const payload = {
-  employee: `0x${'b'.repeat(64)}`,
+  mandateId: `0x${'b'.repeat(64)}`,
   gross: '100000000',
   age: 25,
   citizenship: 'local' as const,
@@ -31,7 +31,7 @@ describe('payroll runs POST authorization', () => {
     })(request());
 
     expect(response.status).toBe(201);
-    expect(run).toHaveBeenCalledWith(payload);
+    expect(run).toHaveBeenCalledWith(employer, payload);
   });
 
   it('does not run payroll for another wallet', async () => {

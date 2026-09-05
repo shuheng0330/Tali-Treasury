@@ -11,6 +11,7 @@ const breakdown = { gross: '1', net: '1', employerCost: '1' } as PayrollBreakdow
 function view(id: string): PayrollRunView {
   return {
     id,
+    mandateId: null,
     employee: '0xworker',
     breakdown,
     status: 'pending',
@@ -42,7 +43,7 @@ describe('fallbackStore', () => {
   it('uses the database and reports the runs as persisted', async () => {
     const store = fallbackStore(repository(), repository());
 
-    await store.create({ employee: '0xworker', breakdown });
+    await store.create({ mandateId: '0xmandate', employee: '0xworker', breakdown });
 
     expect(store.persisted()).toBe(true);
     expect(store.reason()).toBeNull();
@@ -52,7 +53,7 @@ describe('fallbackStore', () => {
     const memory = repository({ create: vi.fn(async () => view('mem-1')) });
     const store = fallbackStore(missing(), memory);
 
-    const run = await store.create({ employee: '0xworker', breakdown });
+    const run = await store.create({ mandateId: '0xmandate', employee: '0xworker', breakdown });
 
     expect(run.id).toBe('mem-1');
     expect(store.persisted()).toBe(false);
@@ -66,7 +67,7 @@ describe('fallbackStore', () => {
     const primary = missing();
     const store = fallbackStore(primary, memory);
 
-    await store.create({ employee: '0xworker', breakdown });
+    await store.create({ mandateId: '0xmandate', employee: '0xworker', breakdown });
     await store.markPaid('mem-1', '0xdigest');
 
     expect(memory.markPaid).toHaveBeenCalledOnce();
@@ -110,7 +111,7 @@ describe('fallbackStore', () => {
     const memory = repository();
     const store = fallbackStore(primary, memory);
 
-    await expect(store.create({ employee: '0xworker', breakdown })).rejects.toThrow(
+    await expect(store.create({ mandateId: '0xmandate', employee: '0xworker', breakdown })).rejects.toThrow(
       'The database operation failed',
     );
     expect(memory.create).toHaveBeenCalledTimes(0);
@@ -131,7 +132,7 @@ describe('memoryOnlyStore', () => {
   it('never claims to have persisted anything', async () => {
     const store = memoryOnlyStore(repository(), 'Supabase is not configured');
 
-    await store.create({ employee: '0xworker', breakdown });
+    await store.create({ mandateId: '0xmandate', employee: '0xworker', breakdown });
 
     expect(store.persisted()).toBe(false);
     expect(store.reason()).toBe('Supabase is not configured');

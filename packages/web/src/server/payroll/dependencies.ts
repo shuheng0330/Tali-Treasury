@@ -7,12 +7,14 @@ import { createOpenExchangeRateReader } from '../fx/rates';
 import { createSuiPayrollExecutor } from '../sui/payroll-executor';
 import { createServerSupabaseClient } from '../supabase/client';
 import { createSupabasePayrollRunRepository } from '../supabase/payroll-run-repository';
+import { createSupabasePayrollConfigurationRepository } from '../supabase/payroll-configuration-repository';
+import { createPayrollConfigurationService } from './configurations';
+import { requireEmployerWallet } from '../auth/authorization';
 import { createPayrollService, type PayrollService } from './service';
 import { fallbackStore, memoryOnlyStore, type PayrollRunStore } from './run-store';
 import type {
   PayrollChainPort,
   PayrollRunRepository,
-  StatutoryRecipientConfig,
 } from './ports';
 
 /**
@@ -53,11 +55,12 @@ function memoryRepository(): PayrollRunRepository {
   };
 
   return {
-    async create({ employee, breakdown }) {
+    async create({ mandateId, employee, breakdown }) {
       const state = memoryState();
       state.sequence += 1;
       const view: PayrollRunView = {
         id: `run-${state.sequence}`,
+        mandateId: mandateId as PayrollRunView['mandateId'],
         employee,
         breakdown: breakdown as PayrollBreakdown,
         status: 'pending',
@@ -74,10 +77,14 @@ function memoryRepository(): PayrollRunRepository {
     async markFailed(id, abortCode, digest) {
       return update(id, { status: 'failed', abortCode, ...(digest ? { digest } : {}) });
     },
-    async listRecent(limit) {
+    async listRecentForMandate(mandateId, limit) {
       return [...runs.values()]
+        .filter((run) => run.mandateId === mandateId)
         .sort((a, b) => b.createdAtMs - a.createdAtMs)
         .slice(0, limit);
+    },
+    async listRecent(limit) {
+      return [...runs.values()].sort((a, b) => b.createdAtMs - a.createdAtMs).slice(0, limit);
     },
   };
 }
@@ -121,21 +128,8 @@ function unconfiguredChain(): PayrollChainPort {
 export function payrollIsLive(env: EnvLike = process.env): boolean {
   return Boolean(
     env.AGENT_PRIVATE_KEY?.trim() &&
-      env.PAYROLL_PACKAGE_ID?.trim() &&
-      env.PAYROLL_CAP_ID?.trim() &&
-      env.PAYROLL_MANDATE_ID?.trim() &&
-      env.PAYROLL_EPF_ADDRESS?.trim() &&
-      env.PAYROLL_SOCSO_ADDRESS?.trim() &&
-      env.PAYROLL_EIS_ADDRESS?.trim(),
+      (env.SUI_NETWORK ?? 'testnet').trim().toLowerCase() === 'testnet',
   );
-}
-
-function recipients(): StatutoryRecipientConfig {
-  return {
-    epf: process.env.PAYROLL_EPF_ADDRESS ?? '',
-    socso: process.env.PAYROLL_SOCSO_ADDRESS ?? '',
-    eis: process.env.PAYROLL_EIS_ADDRESS ?? '',
-  };
 }
 
 function runStore(): PayrollRunStore {
@@ -167,11 +161,15 @@ export function getPayrollRateReader(): ReturnType<typeof createOpenExchangeRate
 
 export function getPayrollService(): PayrollService {
   if (!service) {
+    const client = createServerSupabaseClient() as never;
     store = runStore();
     service = createPayrollService({
       runs: store,
       chain: payrollIsLive() ? createSuiPayrollExecutor() : unconfiguredChain(),
-      recipients: recipients(),
+      configurations: createPayrollConfigurationService({
+        configurations: createSupabasePayrollConfigurationRepository(client),
+        employer: requireEmployerWallet(),
+      }),
       rates: getPayrollRateReader(),
     });
   }

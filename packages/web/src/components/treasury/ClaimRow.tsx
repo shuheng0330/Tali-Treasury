@@ -152,7 +152,13 @@ export function ClaimRow({
                 >
                   {check.label}
                 </span>
-                <span className="tnum ml-auto text-right text-caption text-ink-3">
+                <span
+                  className={`tnum ml-auto text-right text-caption ${
+                    !check.passed && !notEvaluated(check)
+                      ? 'font-medium text-no'
+                      : 'text-ink-3'
+                  }`}
+                >
                   {notEvaluated(check) && !check.pending
                     ? 'Checked after an explicit USDC conversion quote is attached'
                     : check.detail}

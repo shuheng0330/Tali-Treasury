@@ -3,7 +3,7 @@ import { TaliApiError, responseJson } from '@/lib/api/client';
 import type { Sourced } from '@/lib/api/demo';
 
 export interface PreviewRequest {
-  employee: string;
+  mandateId: string;
   gross: string;
   age: number;
   citizenship: 'local' | 'foreign';

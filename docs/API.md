@@ -5,6 +5,21 @@ that exactly equals `TALI_APP_ORIGIN`. Protected endpoints use the opaque
 `tali_session` HTTP-only cookie; wallet addresses in request payloads are not an
 authentication mechanism.
 
+## Registered payrolls
+
+`GET /api/payroll/configurations` returns newest-first immutable payroll views
+accessible to the signed-in wallet as employer or employee. Capability IDs and
+owners are private.
+
+Payroll preview and run POST bodies require `mandateId` plus wage/class inputs.
+The server derives the employee and EPF/SOCSO/EIS recipients from the authorized
+snapshot. `GET /api/payroll/runs?payroll=<mandateId>` returns only runs for that
+authorized registration; legacy unscoped rows are excluded.
+
+Stream reads and withdrawals also require `payroll=<mandateId>`. Current Testnet
+stream mandate and employee fields must match the registry and employee session;
+withdrawal additionally requires exact origin and the registered cap owner signer.
+
 ## Wallet session
 
 `POST /api/auth/challenge`

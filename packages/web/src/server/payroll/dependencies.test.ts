@@ -15,24 +15,16 @@ const complete: EnvLike = {
 };
 
 describe('payrollIsLive', () => {
-  it('is true only when everything a run needs is present', () => {
+  it('is true when the signer is available for registered configurations', () => {
     expect(payrollIsLive(complete)).toBe(true);
     expect(payrollIsLive({})).toBe(false);
   });
 
-  it('stays false while any single piece is missing', () => {
-    // A half-configured mandate must not sign. Paying a wage while one of the
-    // statutory recipients is unset is exactly the failure this whole module
-    // exists to make impossible.
-    for (const key of Object.keys(complete)) {
-      const partial = { ...complete };
-      delete partial[key];
-      expect(payrollIsLive(partial), `${key} missing`).toBe(false);
-    }
+  it('does not depend on global mandate, cap, package or recipient ids', () => {
+    expect(payrollIsLive({ AGENT_PRIVATE_KEY: complete.AGENT_PRIVATE_KEY })).toBe(true);
   });
 
   it('treats blank and whitespace-only values as unset', () => {
-    expect(payrollIsLive({ ...complete, PAYROLL_EIS_ADDRESS: '   ' })).toBe(false);
     expect(payrollIsLive({ ...complete, AGENT_PRIVATE_KEY: '' })).toBe(false);
   });
 });
@@ -48,7 +40,7 @@ describe('streamsAreLive', () => {
     expect(streamsAreLive(configured)).toBe(true);
     expect(streamsAreLive({ ...configured, AGENT_PRIVATE_KEY: '' })).toBe(false);
     expect(streamsAreLive({ ...configured, DEMO_STREAM_ID: '' })).toBe(false);
-    expect(streamsAreLive({ ...configured, PAYROLL_PACKAGE_ID: '' })).toBe(false);
+    expect(streamsAreLive({ ...configured, PAYROLL_PACKAGE_ID: '' })).toBe(true);
   });
 
   it('accepts the public stream id when only that one is set', () => {

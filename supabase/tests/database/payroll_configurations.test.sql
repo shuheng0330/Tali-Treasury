@@ -53,7 +53,11 @@ insert into public.payroll_configurations (
   '7000', '100000000000', '10000000000', '4102444800000'
 );
 
-select is((select count(*)::bigint from public.payroll_configurations), 1::bigint, 'valid snapshot is stored');
+select is(
+  (select count(*)::bigint from public.payroll_configurations where creation_digest = repeat('4', 44)),
+  1::bigint,
+  'valid snapshot is stored'
+);
 
 insert into public.payroll_configurations (
   creation_digest, package_id, coin_type, mandate_id, cap_id,
@@ -63,7 +67,8 @@ insert into public.payroll_configurations (
   repeat('5', 44), package_id, coin_type, '0x' || repeat('b', 64), '0x' || repeat('c', 64),
   employer_wallet, cap_owner_wallet, approved_employees, statutory_terms,
   net_min_bps, initial_budget, max_per_run, expiry_ms
-from public.payroll_configurations limit 1;
+from public.payroll_configurations
+where creation_digest = repeat('4', 44);
 
 select is(
   (select count(*)::bigint from public.payroll_configurations where employer_wallet = '0x' || repeat('5', 64)),
