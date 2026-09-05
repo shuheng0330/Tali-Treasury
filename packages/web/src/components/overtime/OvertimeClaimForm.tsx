@@ -31,6 +31,7 @@ import { PAYROLL_EMPLOYEE, SINGLE_WALLET_DEMO } from '@/lib/demo-config';
 import { walletAccess, type AccessCopy } from '@/lib/wallet-access';
 import { useWalletSession } from '@/components/wallet/WalletSessionProvider';
 import { DataNotice } from '@/components/DataNotice';
+import { Select } from '@/components/Select';
 import { RoleNotice } from '@/components/RoleNotice';
 import { OvertimeList } from './OvertimeList';
 import { OvertimePreview } from './OvertimePreview';
@@ -273,28 +274,23 @@ export function OvertimeClaimForm() {
           />
         </Field>
 
-        <Field
+        <Select
           label="Day type"
           uncertain={uncertain.has('kind')}
+          value={kind}
+          disabled={!access.permitted}
+          onChange={(next) => setChosenKind(next)}
+          options={KINDS.map((option) => ({
+            value: option,
+            label: OVERTIME_KIND_LABEL[option],
+            note: OVERTIME_KIND_RATE[option],
+          }))}
           hint={
             chosenKind === null
               ? 'Set from the date. Change it if this was your rest day or a public holiday.'
               : 'Your correction. The multiplier follows the Employment Act either way.'
           }
-        >
-          <select
-            value={kind}
-            disabled={!access.permitted}
-            onChange={(event) => setChosenKind(event.target.value as OvertimeKind)}
-            className="bg-transparent text-body outline-none disabled:opacity-60"
-          >
-            {KINDS.map((option) => (
-              <option key={option} value={option}>
-                {OVERTIME_KIND_LABEL[option]} · {OVERTIME_KIND_RATE[option]}
-              </option>
-            ))}
-          </select>
-        </Field>
+        />
 
         <Field
           label="Hours past the normal day"

@@ -11,11 +11,13 @@ import type {
 import {
   analyzeReceipt,
   createClaim,
+  createManualDraft,
   listClaims,
   payClaim,
   processClaim,
   reviewClaim,
   TaliApiError,
+  type ManualClaimRequest,
 } from '@/lib/api/client';
 import { DEMO_EVENT_ID } from '@/lib/demo-config';
 import { recentClaims } from '@/lib/mock/api';
@@ -64,6 +66,23 @@ export async function tryAnalyzeReceipt(
 ): Promise<Sourced<AnalyzeReceiptResponse | null>> {
   try {
     const data = await analyzeReceipt(file, DEMO_EVENT_ID);
+    return { data, source: 'live', reason: null };
+  } catch (error) {
+    return { data: null, source: 'mock', reason: describe(error) };
+  }
+}
+
+/**
+ * Null data means the claim was not started, and nothing is invented in its
+ * place, for the reason `tryAnalyzeReceipt` invents nothing: the fields on
+ * screen are the ones the claimant typed, and replacing them would be putting
+ * words in their mouth.
+ */
+export async function tryCreateManualDraft(
+  request: ManualClaimRequest,
+): Promise<Sourced<AnalyzeReceiptResponse | null>> {
+  try {
+    const data = await createManualDraft(request, DEMO_EVENT_ID);
     return { data, source: 'live', reason: null };
   } catch (error) {
     return { data: null, source: 'mock', reason: describe(error) };

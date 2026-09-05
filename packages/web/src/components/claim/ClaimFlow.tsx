@@ -7,20 +7,27 @@ import type {
   MandateView,
   ReceiptAnalysis,
 } from '@tali/shared';
-import { subtract } from '@tali/shared';
+import { subtract, toBaseUnits } from '@tali/shared';
 import { committedFrom } from '@/lib/queue';
 import { mandate as sampleMandate } from '@/lib/mock/data';
-import { tryAnalyzeReceipt, tryCreateClaim, type Source } from '@/lib/api/demo';
+import {
+  tryAnalyzeReceipt,
+  tryCreateClaim,
+  tryCreateManualDraft,
+  type Source,
+} from '@/lib/api/demo';
 import { useClaims } from '@/lib/api/useClaims';
 import { DEMO_EVENT_ID, DEMO_EVENT_NAME, DEMO_SUBMITTER, SINGLE_WALLET_DEMO } from '@/lib/demo-config';
 import { DataNotice } from '@/components/DataNotice';
+import type { ManualClaimRequest } from '@/lib/api/client';
 import { ClaimHome } from './ClaimHome';
+import { ManualClaim } from './ManualClaim';
 import { ReceiptConfirm } from './ReceiptConfirm';
 import { tryResubmitClaim } from '@/lib/api/resubmit';
 import { Submitted } from './Outcome';
 import { useWalletSession } from '@/components/wallet/WalletSessionProvider';
 
-type Step = 'home' | 'reading' | 'confirm' | 'correcting' | 'submitting' | 'submitted';
+type Step = 'home' | 'reading' | 'manual' | 'confirm' | 'correcting' | 'submitting' | 'submitted';
 
 interface Props {
   apiEnabled: boolean;
@@ -99,6 +106,52 @@ export function ClaimFlow({ apiEnabled, mandate, mandateReadError }: Props) {
       setStep('confirm');
     });
   }, []);
+
+  /* Two calls where the photographed path has one, because a typed claim has
+     no earlier step to have made its draft in. Both land on the same submit the
+     confirm screen uses, so a claim is a claim once it exists. */
+  const onSubmitManual = useCallback(
+    async (fields: ManualClaimRequest) => {
+      setSaveError(null);
+      setStep('submitting');
+
+      const drafted = await tryCreateManualDraft(fields);
+      if (drafted.data === null) {
+        setSaveError(`This claim was not saved: ${drafted.reason}.`);
+        setStep('manual');
+        return;
+      }
+      if (drafted.data.duplicateOf !== null) {
+        setSaveError('You have already claimed this exact expense.');
+        setStep('manual');
+        return;
+      }
+      if (drafted.data.draftId === null) {
+        setSaveError('This claim was not saved: the server returned no draft.');
+        setStep('manual');
+        return;
+      }
+
+      const created = await tryCreateClaim({
+        draftId: drafted.data.draftId,
+        amount: toBaseUnits(fields.amount),
+        merchant: fields.merchant,
+        receiptDate: fields.receiptDate,
+        category: fields.category,
+        description: fields.description,
+      });
+      if (created.data === null) {
+        setSaveError(`This claim was not saved: ${created.reason}.`);
+        setStep('manual');
+        return;
+      }
+
+      setSubmittedClaim(created.data.claim);
+      reloadClaims();
+      setStep('submitted');
+    },
+    [reloadClaims],
+  );
 
   const onSubmit = useCallback(
     async (next: DraftClaim) => {
@@ -257,7 +310,19 @@ export function ClaimFlow({ apiEnabled, mandate, mandateReadError }: Props) {
           claimsLoading={claims.loading}
           captureDisabled={!authenticated}
           onCapture={onCapture}
+          onManual={() => {
+            setSaveError(null);
+            setStep('manual');
+          }}
           onCorrect={onCorrect}
+        />
+      ) : null}
+
+      {step === 'manual' ? (
+        <ManualClaim
+          submitting={false}
+          onCancel={reset}
+          onSubmit={(fields) => void onSubmitManual(fields)}
         />
       ) : null}
 

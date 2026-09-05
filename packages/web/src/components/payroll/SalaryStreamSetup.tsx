@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 
 import { RoleNotice } from '@/components/RoleNotice';
+import { Select } from '@/components/Select';
 import { useWalletSession } from '@/components/wallet/WalletSessionProvider';
 import { getRegisteredSalaryStream, openSalaryStream } from '@/lib/api/payroll';
 import { EMPLOYER_COPY, walletAccess } from '@/lib/wallet-access';
@@ -96,18 +97,25 @@ export function SalaryStreamSetup({ configuration }: { configuration: PayrollCon
         </p>
       </div>
       <div className="grid gap-3 sm:grid-cols-2">
-        <label className="flex flex-col gap-1">
-          <span className="text-caption text-ink-2">Stream total (USDC)</span>
-          <input className="input tnum" inputMode="decimal" value={amount} onChange={(event) => setAmount(event.target.value)} />
+        <label className="flex flex-col gap-1 rounded-control border border-rule bg-surface px-3 py-2">
+          <span className="text-body font-medium text-ink-2">Stream total (USDC)</span>
+          <input
+            className="tnum bg-transparent text-body outline-none"
+            inputMode="decimal"
+            value={amount}
+            onChange={(event) => setAmount(event.target.value)}
+          />
         </label>
-        <label className="flex flex-col gap-1">
-          <span className="text-caption text-ink-2">Demo duration</span>
-          <select className="input" value={durationMinutes} onChange={(event) => setDurationMinutes(Number(event.target.value))}>
-            <option value={5}>5 minutes</option>
-            <option value={10}>10 minutes</option>
-            <option value={30}>30 minutes</option>
-          </select>
-        </label>
+        <Select
+          label="Demo duration"
+          value={String(durationMinutes)}
+          onChange={(minutes) => setDurationMinutes(Number(minutes))}
+          options={[
+            { value: '5', label: '5 minutes' },
+            { value: '10', label: '10 minutes' },
+            { value: '30', label: '30 minutes' },
+          ]}
+        />
       </div>
       <RoleNotice access={access} />
       <button className="btn btn--primary btn--block" type="button" disabled={!access.permitted || status === 'opening'} onClick={open}>

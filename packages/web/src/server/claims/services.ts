@@ -44,7 +44,7 @@ export interface AnalyzeReceiptInput {
   mimeType: ReceiptMimeType;
 }
 
-function databaseError(error: unknown): ServerError {
+export function databaseError(error: unknown): ServerError {
   return isServerError(error)
     ? error
     : new ServerError(
