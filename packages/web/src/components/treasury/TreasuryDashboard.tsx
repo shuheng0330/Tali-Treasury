@@ -5,12 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useMemo, useState, useTransition } from 'react';
 import type { ClaimReviewAction, MandateView } from '@tali/shared';
 import { event } from '@/lib/mock/data';
-import {
-  DEMO_EVENT_ID,
-  DEMO_EVENT_NAME,
-  DEMO_TREASURER,
-} from '@/lib/demo-config';
-import { viewerRoles } from '@/lib/viewer-role';
+import { DEMO_EVENT_ID, DEMO_EVENT_NAME, EMPLOYER_WALLET } from '@/lib/demo-config';
 import { reviewQueue, settledClaims } from '@/lib/mock/api';
 import { committedFrom, settledFrom, toReviewQueue } from '@/lib/queue';
 import { useClaims } from '@/lib/api/useClaims';
@@ -64,11 +59,12 @@ export function TreasuryDashboard({
      The server refuses all three, so this only decides whether the refusal
      arrives before the click or after it.
 
-     Checked against the treasurer recorded on the event rather than through
+     Checked against the wallet recorded on the event rather than through
      `viewerRole`: that is the authority the server reads, and it differs per
-     event. `DEMO_TREASURER` is a build-time constant kept only as the fallback
-     for an event that could not be read. */
-  const treasurer = eventTreasurer?.trim() || DEMO_TREASURER;
+     event. The role itself is gone — the employer holds the treasury now — so
+     an event that could not be read falls back to the employer wallet, which
+     is who that authority is meant to be. */
+  const treasurer = eventTreasurer?.trim() || EMPLOYER_WALLET;
   const reviewAccess = walletAccess(wallet.address, treasurer, REVIEW_COPY);
   const revokeAccess = walletAccess(wallet.address, treasurer, REVOKE_COPY);
   const router = useRouter();
@@ -92,7 +88,7 @@ export function TreasuryDashboard({
   const [reconciliationError, setReconciliationError] = useState<string | null>(null);
   const [refreshingPayments, setRefreshingPayments] = useState(false);
 
-  const live = useClaims(apiEnabled, wallet.address ?? DEMO_TREASURER);
+  const live = useClaims(apiEnabled, wallet.address ?? EMPLOYER_WALLET);
 
   const queue = useMemo(
     () =>
@@ -317,10 +313,10 @@ export function TreasuryDashboard({
         revokeNotice={revokeAccess.notice}
       />
 
-      {/* The set, not the single label: a wallet that is both employer and
-          treasurer is called Employer on its badge, and asking for that one
-          word here would hide the roster from the person who holds it. */}
-      {viewerRoles(wallet.address, { eventTreasurer }).has('treasurer') ? (
+      {/* The roster is written with the same authority that reviews a claim —
+          the server checks both against the event's own treasurer — so it is
+          offered on the same answer rather than on a role name. */}
+      {reviewAccess.permitted ? (
         <AddMemberForm eventId={DEMO_EVENT_ID} onAdded={() => live.reload()} />
       ) : null}
 

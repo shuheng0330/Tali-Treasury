@@ -46,8 +46,9 @@ describe('the single-wallet demo flag no longer decides who anybody is', () => {
     expect(can(viewerRoles('0xEMPLOYER'), 'approve')).toBe(true);
   });
 
-  it('still recognises the treasurer it is configured with', () => {
-    expect(viewerRole('0xTREASURER')).toBe('treasurer');
+  /* The treasurer role is gone: the employer holds the treasury now. */
+  it('calls the old treasurer constant a member', () => {
+    expect(viewerRole('0xTREASURER')).toBe('member');
   });
 
   it('still labels nobody when there is no address', () => {
