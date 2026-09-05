@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { NAV_TABS, activeTab, orderTabs, otherRolesNote } from './nav';
+import { NAV_TABS, activeTab, orderTabs, otherRolesNote, parentOf } from './nav';
 import type { ViewerRole } from './viewer-role';
 
 const roles = (...values: ViewerRole[]) => new Set<ViewerRole>(values);
@@ -108,5 +108,34 @@ describe('otherRolesNote', () => {
 
   it('says nothing when every tab is the viewer’s', () => {
     expect(otherRolesNote(roles('employer', 'treasurer', 'employee', 'member'))).toBeNull();
+  });
+});
+
+describe('parentOf', () => {
+  it('sends a sub-route up to its own section, not the overview', () => {
+    expect(parentOf('/treasury/setup')).toMatchObject({ href: '/treasury', label: 'Treasury' });
+    expect(parentOf('/payroll/setup')).toMatchObject({ href: '/payroll', label: 'Payroll' });
+    expect(parentOf('/payroll/proof')).toMatchObject({ href: '/payroll', label: 'Payroll' });
+    expect(parentOf('/payroll/history')).toMatchObject({ href: '/payroll', label: 'Payroll' });
+  });
+
+  it('sends a top-level screen to the overview', () => {
+    for (const path of ['/payroll', '/treasury', '/claim', '/earnings', '/safety', '/start']) {
+      expect(parentOf(path)).toMatchObject({ href: '/', label: 'Overview' });
+    }
+  });
+
+  it('handles the overview and a trailing slash', () => {
+    expect(parentOf('/').href).toBe('/');
+    expect(parentOf('/treasury/setup/').href).toBe('/treasury');
+  });
+
+  it('falls back to the overview when the parent segment is not a section', () => {
+    expect(parentOf('/nowhere/deep').href).toBe('/');
+  });
+
+  it('names a destination the button can actually say', () => {
+    expect(parentOf('/treasury/setup').description).toBe('Back to Treasury');
+    expect(parentOf('/payroll').description).toBe('Back to the overview');
   });
 });

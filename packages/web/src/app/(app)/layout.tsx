@@ -14,7 +14,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     <WalletSessionBoundary>
     <div className="flex min-h-dvh flex-col">
       <header className="sticky top-0 z-30 border-b border-rule bg-canvas/85 backdrop-blur-md">
-        <div className="mx-auto flex max-w-5xl flex-wrap items-center gap-x-3 gap-y-3 px-4 py-3 sm:gap-x-4 sm:px-6 sm:py-4">
+        <div className="mx-auto flex max-w-5xl flex-wrap items-center gap-x-3 gap-y-3 px-4 py-3 sm:px-6 sm:py-4">
           <BackButton />
 
           <Link
@@ -28,8 +28,13 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             <span className="truncate">Tali Treasury</span>
           </Link>
 
-          <AppNav className="w-full sm:ml-auto sm:w-auto" />
-          <WalletSessionControl />
+          {/* Wallet sits on the top row beside the wordmark, not on a third row
+              of its own under the tabs. Stacked below the nav it read as a
+              piece of the page rather than the account control, and it pushed
+              the sticky header to 165px on a phone. Source order is the mobile
+              order; sm reorders it back to nav-then-wallet. */}
+          <WalletSessionControl className="ml-auto sm:order-3 sm:ml-0" />
+          <AppNav className="w-full sm:order-2 sm:ml-auto sm:w-auto" />
         </div>
       </header>
 
