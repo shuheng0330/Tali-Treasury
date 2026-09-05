@@ -95,6 +95,22 @@ describe('treasury polish', () => {
     }
   });
 
+  it('uses the compact quote card in claimant history but keeps full review evidence', () => {
+    const claimHome = readFileSync(
+      new URL('../components/claim/ClaimHome.tsx', import.meta.url),
+      'utf8',
+    );
+    const reviewDialog = readFileSync(
+      new URL('../components/treasury/ReviewActionDialog.tsx', import.meta.url),
+      'utf8',
+    );
+
+    expect(claimHome).toContain('<FxQuoteSummary claim={claim} variant="compact" />');
+    expect(claimHome).toContain('<ClaimStatusSummary claim={claim} />');
+    expect(reviewDialog).toContain('<FxQuoteSummary claim={claim} />');
+    expect(reviewDialog).not.toContain('variant="compact"');
+  });
+
   it('renders review claims as independent cards and orders failed checks first', () => {
     const source = readFileSync(
       new URL('../components/treasury/ClaimRow.tsx', import.meta.url),
