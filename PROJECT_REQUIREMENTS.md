@@ -232,6 +232,9 @@ The payroll setup backend must:
 - Treasury history and review queues must use individually bounded cards. Each
   card keeps its status, primary reason, payout, and available action visible,
   while policy checks and FX evidence expand on demand.
+- Employee claim history uses distinct mobile-friendly cards. Saved FX evidence
+  shows payout and rate first, with provider, readable timestamps, expiry,
+  parity, and rounding available under `Rate Details`.
 - Operational controls must be at least 44px high, remain keyboard accessible,
   wrap safely at 320px, preserve visible focus, and announce asynchronous results.
 - Customer-facing screens use product language rather than development-stage

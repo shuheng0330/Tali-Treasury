@@ -51,6 +51,10 @@ The claim boundary and database accept three-letter ISO currency codes plus the
 explicit four-letter `USDC` asset symbol. This keeps validation narrow while
 allowing the configured payment asset to persist end to end.
 
+Employee and treasury claim histories share `FxQuoteSummary`'s compact variant.
+This keeps quote evidence consistent without duplicating formatting or changing
+the authoritative `Claim` contract.
+
 ## Payroll and treasury write authorization
 
 Registered payroll selection is URL-addressable but server-authorized. Public

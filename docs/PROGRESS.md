@@ -1,5 +1,11 @@
 # Team build progress
 
+## 5 September — employee claim-card polish
+
+- Employee expense history now uses independent claim cards and the shared
+  compact FX disclosure; claim state, payment links, calculations, and APIs are
+  unchanged.
+
 ## 5 September — mobile judging polish
 
 - Reframed the EPF proof as a short safety test with underpayment selected by

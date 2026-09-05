@@ -85,6 +85,8 @@ The demo runs on a projector, 3–8m away, in a lit room.
 - At 320–430px, one card has one reading path: identity and amount, status and
   reason, payout, then action. Claim cards are separated by 16px instead of
   relying on dividers inside one large panel.
+- On mobile claim histories, use one bounded card per claim and keep secondary
+  FX evidence inside the semantic `Rate Details` disclosure.
 - Put the answer before the proof. Calculations, Sui rules, FX metadata, and
   policy checks use native `details` disclosures with a 44px summary target.
 - Show only the first actionable policy failure before expansion. Expanded
