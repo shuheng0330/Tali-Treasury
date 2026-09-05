@@ -1,4 +1,4 @@
-import { can, type Capability, type ViewerRole } from './viewer-role';
+import { canAny, type Capability, type ViewerRole } from './viewer-role';
 
 /** A screen inside a section, reached from the section's own sub-navigation. */
 export interface NavChild {
@@ -22,8 +22,13 @@ export interface NavSection {
    * capitalises whichever subject opens its sentence.
    */
   subject?: string;
-  /** What a wallet must be able to do for this section to appear at all. */
-  capability: Capability;
+  /**
+   * What a wallet must be able to do for this section to appear at all. Any one
+   * of them is enough, because a section can be two people's screen without
+   * being everybody's: Earnings is the employee's own pay and the employer's
+   * view of the team, and holding neither keeps you out.
+   */
+  capabilities: readonly Capability[];
   /**
    * The screens inside it, first one being the section itself.
    *
@@ -47,10 +52,10 @@ export const NAV_SECTIONS: readonly NavSection[] = [
     href: '/requests',
     label: 'Requests',
     full: 'Expenses, overtime and leave',
-    /* Everybody signed in may ask for something, the employer included: an
+    /* The people who do the work, which is everybody except the employer. An
        expense, an hour worked late and a day off are asked for by whoever did
-       the work, whatever else they are. */
-    capability: 'request',
+       the work; the employer meets all three in the approval queue instead. */
+    capabilities: ['request'],
     children: [
       {
         href: '/requests/expense',
@@ -72,9 +77,12 @@ export const NAV_SECTIONS: readonly NavSection[] = [
   {
     href: '/earnings',
     label: 'Earnings',
-    full: 'Your earnings',
+    full: 'Pay as it accrues',
     subject: 'the earnings screen',
-    capability: 'earn',
+    /* Two wallets, one route. An employee opens their own salary and can
+       withdraw from it; the employer opens the same screen and reads what
+       everybody they pay has earned, with nothing to press. */
+    capabilities: ['earn', 'overseeEarnings'],
     children: [],
   },
   {
@@ -82,7 +90,7 @@ export const NAV_SECTIONS: readonly NavSection[] = [
     label: 'Approvals',
     full: 'Decide overtime and leave',
     subject: 'the approval queue',
-    capability: 'approve',
+    capabilities: ['approve'],
     children: [],
   },
   {
@@ -90,7 +98,7 @@ export const NAV_SECTIONS: readonly NavSection[] = [
     label: 'Payroll',
     full: 'Run payroll',
     subject: 'the payroll run',
-    capability: 'runPayroll',
+    capabilities: ['runPayroll'],
     children: [
       { href: '/payroll', label: 'Run', blurb: 'Pay one salary and its three statutory shares in one transaction.' },
       { href: '/payroll/history', label: 'History', blurb: 'Every run this mandate has signed, and what each one paid.' },
@@ -100,9 +108,9 @@ export const NAV_SECTIONS: readonly NavSection[] = [
   {
     href: '/treasury',
     label: 'Treasury',
-    full: 'Treasurer view',
+    full: 'The expense treasury',
     subject: 'the treasury dashboard',
-    capability: 'holdTreasury',
+    capabilities: ['holdTreasury'],
     children: [
       { href: '/treasury', label: 'Claims', blurb: 'The event budget, the queue, and what has already been paid.' },
       { href: '/treasury/setup', label: 'Set up', blurb: 'Create an expense treasury and set the rules it will hold you to.' },
@@ -114,7 +122,7 @@ export const NAV_SECTIONS: readonly NavSection[] = [
     full: 'Safety tests',
     /* Open to anyone, and the part worth showing a stranger. It needs no
        permission at all, so every role carries `proof`. */
-    capability: 'proof',
+    capabilities: ['proof'],
     children: [
       { href: '/safety', label: 'Budget cap', blurb: 'Try to spend more than the mandate allows and watch the chain refuse.' },
       { href: '/safety/payroll', label: 'Payroll floor', blurb: 'Try to pay a salary that skips EPF and watch the contract refuse.' },
@@ -186,7 +194,7 @@ export function visibleSections(
   sections: readonly NavSection[] = NAV_SECTIONS,
 ): readonly NavSection[] {
   if (roles.size === 0) return sections;
-  return sections.filter((section) => can(roles, section.capability));
+  return sections.filter((section) => canAny(roles, section.capabilities));
 }
 
 export interface NavParent {

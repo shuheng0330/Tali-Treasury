@@ -1,31 +1,17 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import type { ApiError, SalaryStreamView, WithdrawEarnedResult } from '@tali/shared';
 import { accruedAt, availableAt, toDisplay } from '@tali/shared';
 
 import { RoleNotice } from '@/components/RoleNotice';
 import { useWalletSession } from '@/components/wallet/WalletSessionProvider';
 import { EMPLOYEE_COPY, walletAccess } from '@/lib/wallet-access';
+import { useAccrualClock } from './use-accrual-clock';
 
 type WithdrawOutcome = WithdrawEarnedResult | { ok: 'unreachable'; message: string };
 
 const CORRECTION_INTERVAL_MS = 15_000;
-
-function usePrefersReducedMotion(): boolean {
-  const [reduced, setReduced] = useState(false);
-
-  useEffect(() => {
-    const query = window.matchMedia('(prefers-reduced-motion: reduce)');
-    setReduced(query.matches);
-
-    const onChange = (event: MediaQueryListEvent) => setReduced(event.matches);
-    query.addEventListener('change', onChange);
-    return () => query.removeEventListener('change', onChange);
-  }, []);
-
-  return reduced;
-}
 
 /**
  * Ticks the figure between chain reads using the same integer arithmetic the
@@ -38,46 +24,15 @@ function usePrefersReducedMotion(): boolean {
 export function LiveBalance({ initial, mandateId }: { initial: SalaryStreamView; mandateId: string }) {
   const { address } = useWalletSession();
   const [stream, setStream] = useState(initial);
-  const [now, setNow] = useState(() => initial.startedAtMs);
   const [withdrawing, setWithdrawing] = useState(false);
   const [result, setResult] = useState<WithdrawOutcome | null>(null);
-  const [mounted, setMounted] = useState(false);
 
-  const reduced = usePrefersReducedMotion();
-  const frame = useRef<number | null>(null);
+  const { now, mounted, finished } = useAccrualClock(initial.startedAtMs, stream.endsAtMs);
 
   /* The stream names its own employee, so this needs no configuration: the
      contract pays `stream.employee` whoever signs, and nobody else's wallet is
      the one this balance belongs to. */
   const access = walletAccess(address, stream.employee, EMPLOYEE_COPY);
-
-  const finished = now >= stream.endsAtMs;
-
-  /* The server rendered against its own clock. Reading the real clock only
-     after mount keeps the first paint identical on both sides. */
-  useEffect(() => {
-    setMounted(true);
-    setNow(Date.now());
-  }, []);
-
-  useEffect(() => {
-    if (!mounted || finished) return;
-
-    if (reduced) {
-      const timer = window.setInterval(() => setNow(Date.now()), 1000);
-      return () => window.clearInterval(timer);
-    }
-
-    const tick = () => {
-      setNow(Date.now());
-      frame.current = window.requestAnimationFrame(tick);
-    };
-    frame.current = window.requestAnimationFrame(tick);
-
-    return () => {
-      if (frame.current !== null) window.cancelAnimationFrame(frame.current);
-    };
-  }, [mounted, reduced, finished]);
 
   const reload = useCallback(async () => {
     const response = await fetch(`/api/streams/${stream.id}?payroll=${encodeURIComponent(mandateId)}`, { cache: 'no-store' });

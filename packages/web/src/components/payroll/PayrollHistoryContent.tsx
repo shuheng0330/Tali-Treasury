@@ -37,7 +37,7 @@ export function PayrollHistoryContent() {
   return <div className="flex flex-col gap-5">
     <PayrollSelection state={selection} />
     {state === 'loading' ? <p className="text-caption text-ink-3">Loading this payroll’s history…</p> : null}
-    {state === 'error' ? <p className="rounded-card border border-no-line bg-no-soft p-4 text-caption text-no">This payroll’s run history could not be read. Nothing was retried or paid.</p> : null}
-    {selection.selected && state === 'idle' ? <><DataNotice source={persisted ? 'live' : 'mock'} reason={warning} live="These runs" simulated="They are real attempts scoped to the selected registered payroll." plural /><RunHistory runs={runs} /></> : null}
+    {state === 'error' ? <p className="rounded-card border border-no-line bg-no-soft p-4 text-caption text-no">Past runs could not be loaded. Nothing was retried or paid.</p> : null}
+    {selection.selected && state === 'idle' ? <><DataNotice source={persisted ? 'live' : 'mock'} reason={warning} live="These runs" simulated="Every attempt on this payroll, paid or refused." plural fallbackLabel="Not saved yet." fallbackNote="These runs really happened, but they will be lost if the app restarts." /><RunHistory runs={runs} /></> : null}
   </div>;
 }

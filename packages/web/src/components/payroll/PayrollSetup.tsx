@@ -176,9 +176,9 @@ export function PayrollSetup() {
   return (
     <div className="flex flex-col gap-6">
       <div className="rounded-card border border-rule bg-surface p-5">
-        <p className="eyebrow">Authenticated employer</p>
+        <p className="eyebrow">Signed in as</p>
         <p className="mt-2 break-all font-mono text-caption text-ink-2">
-          {wallet.address ?? 'Connect and sign in with Slush'}
+          {wallet.address ?? 'Connect your wallet to continue'}
         </p>
       </div>
 
@@ -198,29 +198,30 @@ export function PayrollSetup() {
           }} />
         </label>
         <div className="grid grid-cols-2 gap-3 rounded-control bg-raised p-4">
-          <div><p className="eyebrow">Monthly gross wage</p><p className="text-subhead">RM30</p></div>
-          <div><p className="eyebrow">Total budget</p><p className="text-subhead">RM50 equivalent</p></div>
+          <div><p className="eyebrow">Monthly wage</p><p className="text-subhead">RM30</p></div>
+          <div><p className="eyebrow">Money set aside</p><p className="text-subhead">RM50</p></div>
         </div>
         <button className="btn btn--primary btn--block" type="button" onClick={loadPreview}
           disabled={!access.permitted || status === 'previewing' || status === 'signing' || !employee || !expiry}>
-          {status === 'previewing' ? 'Getting live quote…' : 'Preview payroll setup'}
+          {status === 'previewing' ? 'Checking…' : 'Check the details'}
         </button>
       </div>
 
       <div className="flex flex-col gap-4 rounded-card border border-rule bg-surface p-5">
         <div>
-          <p className="eyebrow">Already funded on Sui?</p>
+          <p className="eyebrow">Already set one up?</p>
           <p className="mt-2 text-caption text-ink-2">
-            Register the finalized setup transaction. This verifies existing chain objects and cannot create or fund another mandate.
+            Paste the transaction ID to link it to this app. Nothing new is created and no
+            money moves.
           </p>
         </div>
         <label className={FIELD}>
-          <span className="text-caption text-ink-2">Setup transaction digest</span>
+          <span className="text-caption text-ink-2">Transaction ID</span>
           <input
             className={`${INPUT} font-mono text-caption`}
             value={existingDigest}
             onChange={(event) => setExistingDigest(event.target.value.trim())}
-            placeholder="Sui transaction digest"
+            placeholder="Paste the transaction ID"
           />
         </label>
         <button
@@ -229,31 +230,34 @@ export function PayrollSetup() {
           onClick={registerExistingPayroll}
           disabled={!access.permitted || status === 'verifying' || !SUI_DIGEST.test(existingDigest)}
         >
-          {status === 'verifying' ? 'Verifying existing payroll…' : 'Register existing payroll'}
+          {status === 'verifying' ? 'Checking…' : 'Link it to this app'}
         </button>
       </div>
 
       {preview ? (
         <div className="flex flex-col gap-4 rounded-card border border-ok-line bg-ok-soft p-5">
           <div>
-            <p className="eyebrow text-ok">Funding preview</p>
+            <p className="eyebrow text-ok">What you will pay in</p>
             <p className="mt-2 text-title">{toDisplay(preview.budgetUsdc, 6)} USDC</p>
             <p className="text-caption text-ink-2">
-              Funds the RM50 ceiling · 1 USD = {preview.rate.myrPerUsd} MYR · 1 USDC = 1 USD
+              RM50 at today&rsquo;s rate of {preview.rate.myrPerUsd} to the dollar
             </p>
           </div>
+          {/* `truncate` alone does not shrink a flex item: its default
+              min-width is its content, so a 66-character address pushed the row
+              wider than the card it sits in. */}
           <dl className="grid gap-2 text-caption text-ink-2">
-            <div className="flex justify-between gap-4"><dt>Approved employee</dt><dd className="truncate font-mono">{preview.employee}</dd></div>
-            <div className="flex justify-between gap-4"><dt>PayrollCap recipient</dt><dd className="truncate font-mono">{preview.capRecipient}</dd></div>
-            <div className="flex justify-between gap-4"><dt>Expiry</dt><dd>{new Date(preview.expiryMs).toLocaleDateString('en-MY')}</dd></div>
-            <div className="flex justify-between gap-4"><dt>Statutory rules</dt><dd>EPF · SOCSO · EIS</dd></div>
+            <div className="flex justify-between gap-4"><dt className="shrink-0">Employee</dt><dd className="min-w-0 truncate font-mono">{preview.employee}</dd></div>
+            <div className="flex justify-between gap-4"><dt className="shrink-0">Runs the payroll</dt><dd className="min-w-0 truncate font-mono">{preview.capRecipient}</dd></div>
+            <div className="flex justify-between gap-4"><dt className="shrink-0">Expires</dt><dd>{new Date(preview.expiryMs).toLocaleDateString('en-MY')}</dd></div>
+            <div className="flex justify-between gap-4"><dt className="shrink-0">Covers</dt><dd>EPF · SOCSO · EIS</dd></div>
           </dl>
           <p className="text-caption text-ink-2">
-            Your wallet will spend Testnet USDC and gas. These rules and the employee allowlist are immutable for this mandate.
+            None of this can be changed afterwards.
           </p>
           <button className="btn btn--primary btn--block" type="button" onClick={createPayroll}
             disabled={!access.permitted || status === 'signing' || status === 'verifying' || status === 'registered'}>
-            {status === 'signing' ? 'Check your wallet…' : status === 'verifying' ? 'Verifying and registering…' : status === 'registered' ? 'Payroll registered' : 'Create and fund PayrollMandate'}
+            {status === 'signing' ? 'Check your wallet…' : status === 'verifying' ? 'Almost done…' : status === 'registered' ? 'Payroll is ready' : 'Create and fund payroll'}
           </button>
         </div>
       ) : null}
@@ -261,12 +265,12 @@ export function PayrollSetup() {
       {error ? <p className="rounded-card border border-no-line bg-no-soft p-4 text-caption text-no">{error}</p> : null}
       {digest && !registration && status === 'verifying' ? (
         <button className="btn btn--ghost btn--block" type="button" onClick={retryRegistration}>
-          Retry registration (do not fund again)
+          Try again (this will not take more money)
         </button>
       ) : null}
       {digest ? (
         <p className="rounded-card border border-ok-line bg-ok-soft p-4 text-caption text-ok">
-          {registration ? `Registered mandate ${registration.mandateId.slice(0, 10)}… ` : 'The wallet transaction succeeded; verification or registration is still pending. '}
+          {registration ? 'Payroll is set up and ready to run. ' : 'Your payment went through. Linking it to the app… '}
           <a className="link" href={`https://suiscan.xyz/testnet/tx/${digest}`} target="_blank" rel="noreferrer">View transaction</a>
         </p>
       ) : null}

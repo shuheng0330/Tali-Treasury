@@ -20,6 +20,14 @@ describe('NAV_SECTIONS', () => {
     }
   });
 
+  /* A section with no capability at all would be visible to a signed-in wallet
+     holding nothing, which is the opposite of what declaring one means. */
+  it('names at least one capability for every section', () => {
+    for (const section of NAV_SECTIONS) {
+      expect(section.capabilities.length, section.label).toBeGreaterThan(0);
+    }
+  });
+
   it('keeps every child inside the section that declares it', () => {
     for (const section of NAV_SECTIONS) {
       for (const child of section.children) {
@@ -121,15 +129,22 @@ describe('visibleSections', () => {
     expect(labels(roles('employee', 'member'))).toEqual(['Requests', 'Earnings', 'Safety']);
   });
 
-  it('shows the employer every section', () => {
-    expect(labels(roles('employer', 'member'))).toEqual([
-      'Requests',
+  /* The employer decides requests rather than filing them, so Requests is not
+     theirs. Earnings still is, and shows the team rather than a salary. */
+  it('shows the employer everything except the request forms', () => {
+    expect(labels(roles('employer'))).toEqual([
       'Earnings',
       'Approvals',
       'Payroll',
       'Treasury',
       'Safety',
     ]);
+  });
+
+  it('opens the earnings section to both kinds of wallet', () => {
+    for (const set of [roles('employer'), roles('employee', 'member'), roles('member')]) {
+      expect(labels(set)).toContain('Earnings');
+    }
   });
 
   /**
@@ -141,12 +156,8 @@ describe('visibleSections', () => {
     expect(labels(roles('member'))).toEqual(['Requests', 'Earnings', 'Safety']);
   });
 
-  it('keeps every signed-in wallet able to ask, to earn, and to read the proofs', () => {
-    for (const set of [
-      roles('member'),
-      roles('employee', 'member'),
-      roles('employer', 'member'),
-    ]) {
+  it('keeps everybody who is paid able to ask, to earn, and to read the proofs', () => {
+    for (const set of [roles('member'), roles('employee', 'member')]) {
       expect(labels(set)).toContain('Requests');
       expect(labels(set)).toContain('Earnings');
       expect(labels(set)).toContain('Safety');
@@ -154,7 +165,7 @@ describe('visibleSections', () => {
   });
 
   it('never invents a section that is not declared', () => {
-    for (const set of [roles(), roles('member'), roles('employer', 'member')]) {
+    for (const set of [roles(), roles('member'), roles('employer')]) {
       for (const section of visibleSections(set)) {
         expect(NAV_SECTIONS).toContain(section);
       }

@@ -176,6 +176,15 @@ describe('treasury polish', () => {
 describe('production-ready application copy', () => {
   const source = (path: string) => readFileSync(new URL(path, import.meta.url), 'utf8');
 
+  it('uses compact FX evidence and separate cards in employee claim history', () => {
+    const claimHome = source('../components/claim/ClaimHome.tsx');
+
+    expect(claimHome).toContain('<FxQuoteSummary claim={claim} variant="compact" />');
+    expect(claimHome).toContain('data-employee-claim-card="true"');
+    expect(claimHome).toContain('<ul className="flex flex-col gap-4">');
+    expect(claimHome).not.toContain('divide-y divide-rule overflow-hidden');
+  });
+
   it('uses a quiet, accurate network footer without development navigation', () => {
     const layout = source('../app/(app)/layout.tsx');
     expect(layout).toContain('Network · Sui Testnet');
@@ -206,13 +215,13 @@ describe('production-ready application copy', () => {
     const breakdown = source('../components/payroll/Breakdown.tsx');
     const overtime = source('../components/overtime/OvertimePreview.tsx');
 
-    expect(setup).toContain('Monthly gross wage');
+    expect(setup).toContain('Monthly wage');
     expect(setup).not.toContain('Demo wage');
     expect(stream).toContain('Salary stream');
     expect(stream).toContain('Vesting period');
     expect(stream).not.toContain('salary-stream demo');
     expect(stream).not.toContain('demo period');
-    expect(roles).toContain('No role is assigned to this wallet.');
+    expect(roles).toContain('This wallet has no role here yet.');
     expect(roles).not.toContain('demo configuration');
     expect(breakdown).not.toContain('Testnet demo');
     expect(overtime).not.toContain('demo mandate');
@@ -228,7 +237,6 @@ describe('production-ready application copy', () => {
       />,
     );
     expect(html).toContain('Preview data.');
-    expect(html).toContain('Live data is temporarily unavailable.');
     expect(html).toContain('Actions requiring live data are unavailable.');
     expect(html).not.toContain('Sample data.');
     expect(html).not.toContain('fell back because');
@@ -312,6 +320,25 @@ describe('production-ready application copy', () => {
     );
   });
 
+  /* `simulated` describes the live path. Reused as the fallback text it told the
+     employer their saved approvals would be lost on a restart, which is true of
+     the memory fallback and of nothing else. */
+  it('prefers the fallback note over the live note when the live path is down', () => {
+    const html = renderToStaticMarkup(
+      <DataNotice
+        source="mock"
+        reason={null}
+        live="These decisions"
+        simulated="Approved overtime joins the next payroll run."
+        fallbackLabel="Not saved yet."
+        fallbackNote="Your decisions still work, but they will be lost if the app restarts."
+      />,
+    );
+    expect(html).toContain('Not saved yet.');
+    expect(html).toContain('will be lost if the app restarts');
+    expect(html).not.toContain('joins the next payroll run');
+  });
+
   it('uses preview language for local safety evidence', () => {
     const safety = source('../components/safety/SafetyTest.tsx');
     expect(safety).toContain('Local preview · no transaction submitted');
@@ -327,7 +354,7 @@ describe('production-ready application copy', () => {
     const evidence = source('../components/landing/Evidence.tsx');
     const wire = source('../components/landing/Wire.tsx');
     expect(landing).toContain('Package on SuiVision');
-    expect(landing).toContain('This illustrative payroll');
+    expect(landing).toContain('official rates');
     expect(landing).not.toContain('MUBA Blockchain Hackathon');
     expect(landing).not.toContain('demo identity');
     expect(landing).not.toContain('No mainnet, no real funds');

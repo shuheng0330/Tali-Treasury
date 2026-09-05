@@ -4,7 +4,8 @@ import Link from 'next/link';
 
 import { RoleNotice } from '@/components/RoleNotice';
 import { useWalletSession } from '@/components/wallet/WalletSessionProvider';
-import { EMPLOYER_WALLET } from '@/lib/demo-config';
+import { EMPLOYER_WALLET, PAYROLL_EMPLOYEE } from '@/lib/demo-config';
+import { can, viewerRoles, type Capability } from '@/lib/viewer-role';
 import {
   EMPLOYEE_COPY,
   REVIEW_COPY,
@@ -30,6 +31,8 @@ interface Destination {
   href: string;
   title: string;
   blurb: string;
+  /** What the wallet must hold for this card to be worth offering. */
+  capability: Capability;
   access: Access | null;
 }
 
@@ -75,6 +78,9 @@ export function RoleChooser({
 }) {
   const { address } = useWalletSession();
 
+  const roles = viewerRoles(address, { employee: configured(employee) || PAYROLL_EMPLOYEE });
+  const employer = can(roles, 'overseeEarnings');
+
   const employerAccess = walletAccess(address, EMPLOYER_WALLET, SETUP_COPY);
   const treasurerAccess = walletAccess(address, configured(treasurer), REVIEW_COPY);
   const employeeAccess = walletAccess(address, configured(employee), EMPLOYEE_COPY);
@@ -83,34 +89,56 @@ export function RoleChooser({
     {
       href: '/payroll/setup',
       title: 'Set up payroll',
-      blurb: 'Fund a mandate whose contribution rules cannot be edited afterwards.',
+      blurb: 'Put money aside for wages. The rules cannot be changed afterwards.',
+      capability: 'runPayroll',
+      access: employerAccess,
+    },
+    {
+      href: '/approvals',
+      title: 'Decide requests',
+      blurb: 'Overtime and leave your team has asked for, waiting on a yes or a no.',
+      capability: 'approve',
       access: employerAccess,
     },
     {
       href: '/treasury',
       title: 'Review claims',
-      blurb: 'The event budget, the queue, and what has already been paid.',
+      blurb: 'What is left in the budget, what is waiting, and what has been paid.',
+      capability: 'holdTreasury',
       access: treasurerAccess,
     },
     {
       href: '/earnings',
-      title: 'Your earnings',
-      blurb: 'Wages accrue every second. Withdraw what you have already earned.',
-      access: employeeAccess,
+      title: employer ? 'Team earnings' : 'Your earnings',
+      blurb: employer
+        ? 'Every salary you pay, accruing by the second. Nothing here is yours to draw.'
+        : 'Wages accrue every second. Withdraw what you have already earned.',
+      capability: employer ? 'overseeEarnings' : 'earn',
+      /* The employer is not the wallet any stream names, so checking them
+         against one would badge their own screen "not yours". */
+      access: employer ? null : employeeAccess,
     },
     {
       /* Membership is a row in the database rather than a configured wallet, so
          this screen does not pretend to know it. The claim flow checks. */
       href: '/requests/expense',
       title: 'Claim an expense',
-      blurb: 'Photograph a receipt and get reimbursed. Open to members of the event.',
+      blurb: 'Photograph a receipt and get your money back.',
+      capability: 'request',
       access: null,
     },
   ];
 
+  /* Signed out shows everything, exactly as the navigation does: there is no
+     answer yet about who this is, and hiding on the strength of not knowing
+     would leave a first-time visitor an empty page. */
+  const shown = destinations.filter(
+    (destination) => roles.size === 0 || can(roles, destination.capability),
+  );
+
   const signedIn = address !== null;
   const holdsSomething =
-    employerAccess.permitted || treasurerAccess.permitted || employeeAccess.permitted;
+    employer || treasurerAccess.permitted || employeeAccess.permitted;
 
   return (
     <div className="flex flex-col gap-6">
@@ -119,13 +147,13 @@ export function RoleChooser({
           access={{
             permitted: false,
             notice:
-              'Connect a wallet to see which of these are yours. Every screen below is readable without one.',
+              'Connect a wallet to see which of these are yours.',
           }}
         />
       ) : null}
 
       <ul className="flex flex-col gap-3">
-        {destinations.map((destination) => (
+        {shown.map((destination) => (
           <Card key={destination.href} destination={destination} />
         ))}
       </ul>
@@ -133,20 +161,16 @@ export function RoleChooser({
       {signedIn && !holdsSomething ? (
         <div className="flex flex-col gap-2 rounded-card border border-rule bg-raised p-5">
           <p className="text-body text-ink-2">
-            No role is assigned to this wallet.
+            This wallet has no role here yet.
           </p>
           <p className="text-caption text-ink-3">
-            The parts worth seeing need no permission at all:{' '}
+            The best parts need no permission:{' '}
             <Link href="/safety/payroll" className="link">
-              watch the contract refuse an underpaid run
-            </Link>
-            ,{' '}
+              watch a payroll get refused for skipping EPF
+            </Link>{' '}
+            or{' '}
             <Link href="/safety" className="link">
               try to break a spending rule
-            </Link>
-            , or read{' '}
-            <Link href="/" className="link">
-              the transactions already on testnet
             </Link>
             .
           </p>

@@ -19,10 +19,9 @@ export default function PayrollHistoryPage() {
   return (
     <div className="mx-auto flex w-full max-w-md flex-col gap-6 px-5 py-6">
       <header className="flex flex-col gap-2">
-        <h1 className="text-display">What has been run</h1>
+        <h1 className="text-display">Past runs</h1>
         <p className="text-body text-ink-2">
-          A run that reaches the contract is written down before it is signed, so a
-          refusal leaves the same trail as a payment.
+          Every run is recorded before it is sent, so refusals show up here too.
         </p>
       </header>
 

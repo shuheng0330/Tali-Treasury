@@ -1,24 +1,25 @@
 import { Suspense } from 'react';
 import { EarningsContent } from '@/components/earnings/EarningsContent';
 
+/* Neutral on purpose. This route is the employee's own salary and the
+   employer's view of every salary they pay, and a tab reading "Your earnings"
+   over the second one would name the wrong thing. */
 export const metadata = {
-  title: 'Your earnings · Tali Treasury',
+  title: 'Earnings · Tali Treasury',
 };
 
 export const dynamic = 'force-dynamic';
 
 export default function EarningsPage() {
   return (
-    <div className="mx-auto flex w-full max-w-md flex-col gap-6 px-5 py-6">
-      <header className="flex flex-col gap-2">
-        <h1 className="text-display">Your earnings</h1>
-        <p className="text-body text-ink-2">
-          Your pay builds up every second you are employed. You can take what you
-          have already earned whenever you need it.
+    <Suspense
+      fallback={
+        <p className="mx-auto w-full max-w-md px-5 py-6 text-caption text-ink-3">
+          Loading registered payroll…
         </p>
-      </header>
-
-      <Suspense fallback={<p className="text-caption text-ink-3">Loading registered payroll…</p>}><EarningsContent /></Suspense>
-    </div>
+      }
+    >
+      <EarningsContent />
+    </Suspense>
   );
 }

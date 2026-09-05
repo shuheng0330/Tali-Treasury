@@ -10,13 +10,18 @@ import { useWalletSession } from '@/components/wallet/WalletSessionProvider';
 import { loadPayrollConfigurations } from '@/lib/payroll-configurations-client';
 import { resolvePayrollSelection } from '@/lib/payroll-selection';
 
-export function usePayrollSelection() {
+/**
+ * Every payroll this wallet is party to, and the wallet that asked.
+ *
+ * Separated from the selection below because the two screens that need it want
+ * different things from the same list: payroll and earnings pick one out of it,
+ * while the employer's team view reads all of them at once. The revoked-session
+ * handling is the part worth having in one place.
+ */
+export function usePayrollConfigurations() {
   const { address, signOut } = useWalletSession();
-  const params = useSearchParams();
-  const router = useRouter();
   const [configurations, setConfigurations] = useState<PayrollConfigurationView[]>([]);
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
-  const requested = params.get('payroll');
 
   useEffect(() => {
     if (!address) {
@@ -46,6 +51,15 @@ export function usePayrollSelection() {
       .catch(() => current && setStatus('error'));
     return () => { current = false; };
   }, [address, signOut]);
+
+  return { address, configurations, status };
+}
+
+export function usePayrollSelection() {
+  const { address, configurations, status } = usePayrollConfigurations();
+  const params = useSearchParams();
+  const router = useRouter();
+  const requested = params.get('payroll');
 
   const resolution = useMemo(
     () => resolvePayrollSelection(configurations, requested),

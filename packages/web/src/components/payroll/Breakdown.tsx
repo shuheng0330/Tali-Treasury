@@ -37,16 +37,18 @@ function Row({
 }
 
 /**
- * Why each body's wage base is what it is.
+ * Why each body is charged on a different figure.
  *
  * Only a month carrying overtime shows these, because that is the only month
- * where the three bases differ — and that difference is the thing the employer
- * is being asked to approve.
+ * where the three differ — and that difference is the thing the employer is
+ * being asked to approve. Said in plain words rather than by citation: the
+ * statute numbers proved nothing to the person reading the screen, and the one
+ * reader who wants them is looking at ERROR_CODES.md, not here.
  */
 const OVERTIME_BASE_NOTE: Record<StatutoryBody, string> = {
-  epf: 'overtime excluded, EPF Act 1991 s.2(b)',
-  socso: 'overtime included, Act 4 s.2(24)',
-  eis: 'overtime included, Act 800 s.3',
+  epf: 'overtime does not count for EPF',
+  socso: 'overtime counts for SOCSO',
+  eis: 'overtime counts for EIS',
 };
 
 /**
@@ -77,7 +79,7 @@ export function Breakdown({
 
   const parts: string[] = [];
   if (overtime > 0n) parts.push('plus approved overtime');
-  if (unpaidLeave > 0n) parts.push('less approved unpaid leave');
+  if (unpaidLeave > 0n) parts.push('less unpaid leave');
   /* The rows above this one are in ringgit and this one is in the token, so
      the ringgit total goes in the caption. Otherwise the three figures read
      as an addition that does not come out. */
@@ -96,9 +98,8 @@ export function Breakdown({
             RM {toDisplay(source.gross)} gross → {toDisplay(breakdown.gross, 6)} USDC
           </p>
           <p className="text-caption text-ink-3">
-            Total employer cost RM {toDisplay(source.employerCost)} →{' '}
-            {toDisplay(breakdown.employerCost, 6)} USDC · 1 USD ={' '}
-            {breakdown.fxConversion.myrPerUsd} MYR · USDC valued at USD parity
+            Costs you RM {toDisplay(source.employerCost)} in total, at today&rsquo;s rate of{' '}
+            {breakdown.fxConversion.myrPerUsd} to the dollar
           </p>
         </div>
       ) : null}
@@ -115,7 +116,7 @@ export function Breakdown({
       {overtime > 0n ? (
         <Row
           label={`Approved overtime (${basisUnit})`}
-          detail="Outside EPF wages, inside SOCSO and EIS wages"
+          detail="Counts for SOCSO and EIS, but not EPF"
           amount={basis.overtime ?? '0'}
           fractionDigits={basisDigits}
         />
@@ -124,7 +125,7 @@ export function Breakdown({
       {unpaidLeave > 0n ? (
         <Row
           label={`Approved unpaid leave (${basisUnit})`}
-          detail="Off all three wage bases"
+          detail="Does not count for any of the three"
           amount={`-${basis.unpaidLeave ?? '0'}`}
           fractionDigits={basisDigits}
         />
@@ -145,17 +146,17 @@ export function Breakdown({
           <div key={body.body} className={shorted ? '-mx-5 border-l-2 border-no bg-no-soft px-5' : undefined}>
             <Row
               label={STATUTORY_BODY_LABEL[body.body]}
-              detail={`${toDisplay(body.employee, unit === 'USDC' ? 6 : 2)} ${unit} from wages · ${toDisplay(
+              detail={`Worker pays ${toDisplay(body.employee, unit === 'USDC' ? 6 : 2)} · you pay ${toDisplay(
                 body.employer,
                 unit === 'USDC' ? 6 : 2,
-              )} ${unit} from the employer`}
+              )}`}
               amount={shorted ? '1' : body.total}
               muted={shorted}
               fractionDigits={shorted || unit === 'USDC' ? 6 : 2}
             />
             {base && overtime > 0n ? (
               <p className="pb-2 text-caption text-ink-3">
-                Wage base{' '}
+                Charged on{' '}
                 <span className="tnum">
                   {toDisplay(base, basisDigits)} {basisUnit}
                 </span>{' '}
@@ -171,10 +172,10 @@ export function Breakdown({
         );
       })}
 
-      <Row label={`Net to the worker (${unit})`} amount={breakdown.net} strong fractionDigits={unit === 'USDC' ? 6 : 2} />
+      <Row label={`Worker takes home (${unit})`} amount={breakdown.net} strong fractionDigits={unit === 'USDC' ? 6 : 2} />
       <Row
-        label={`Total cost to the employer (${unit})`}
-        detail="Gross plus the employer contributions"
+        label={`Total cost to you (${unit})`}
+        detail="The wage plus your share"
         amount={breakdown.employerCost}
         strong
         fractionDigits={unit === 'USDC' ? 6 : 2}

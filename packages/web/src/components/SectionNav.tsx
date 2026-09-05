@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation';
 
 import { PAYROLL_EMPLOYEE } from '@/lib/demo-config';
 import { activeChild, activeSection } from '@/lib/nav';
-import { can, viewerRoles } from '@/lib/viewer-role';
+import { canAny, viewerRoles } from '@/lib/viewer-role';
 import { useWalletSession } from './wallet/WalletSessionProvider';
 
 /**
@@ -34,7 +34,7 @@ export function SectionNav() {
   if (!section || section.children.length === 0) return null;
 
   const roles = viewerRoles(session.address, { employee: PAYROLL_EMPLOYEE });
-  if (roles.size > 0 && !can(roles, section.capability)) return null;
+  if (roles.size > 0 && !canAny(roles, section.capabilities)) return null;
 
   const current = activeChild(pathname, section);
 
