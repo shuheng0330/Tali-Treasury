@@ -125,6 +125,8 @@ export type {
   ReconcileClaimRequest,
   ReconcileClaimResponse,
   ReconciliationStatus,
+  RegisterEventRequest,
+  RegisterEventResponse,
   RegisterPayrollRequest,
   RegisterPayrollResponse,
   SalaryStreamRegistrationResponse,

@@ -17,6 +17,7 @@ import {
   ALL_CATEGORIES,
   CATEGORY_LABEL,
   recipientList,
+  registrationRecoveryBlocker,
   treasuryAmounts,
   treasuryProblems,
   type TreasuryFormValue,
@@ -89,6 +90,7 @@ export function TreasurySetup() {
     agent: AGENT_ADDRESS,
   });
   const [outcome, setOutcome] = useState<Outcome>({ kind: 'idle' });
+  const [recoveryDigest, setRecoveryDigest] = useState('');
 
   const problems = useMemo(() => treasuryProblems(form), [form]);
   const amounts = useMemo(() => {
@@ -110,6 +112,15 @@ export function TreasurySetup() {
       : !amounts
         ? 'Some of the details above still need fixing.'
         : null;
+
+  const recoveryBlocker = registrationRecoveryBlocker({
+    digest: recoveryDigest,
+    name: form.name,
+    organisation: form.organisation,
+    categories: form.categories,
+    authenticated,
+    sameAccount,
+  });
 
   const funded = outcome.kind === 'funded' || outcome.kind === 'registered';
 
@@ -414,6 +425,39 @@ export function TreasurySetup() {
         <p className="rounded-card border border-no-line bg-no-soft p-4 text-caption text-no" role="alert">
           {outcome.message} Nothing was created.
         </p>
+      ) : null}
+
+      {!funded ? (
+        <section className="flex flex-col gap-3 rounded-card border border-rule bg-surface p-4">
+          <div className="flex flex-col gap-1">
+            <h2 className="eyebrow">Already funded? Recover registration</h2>
+            <p className="text-caption text-ink-2">
+              Paste the funding transaction digest from your wallet or SuiScan. This only
+              registers the existing mandate; it never moves funds again.
+            </p>
+          </div>
+          <Field
+            label="Funding transaction digest"
+            hint="Open the wallet’s recent activity and copy the digest for the successful funding transaction."
+          >
+            <input
+              value={recoveryDigest}
+              spellCheck={false}
+              placeholder="e.g. 9gY…"
+              onChange={(event) => setRecoveryDigest(event.target.value)}
+              className={`${ADDRESS_INPUT} w-full`}
+            />
+          </Field>
+          <button
+            type="button"
+            onClick={() => void register(recoveryDigest.trim())}
+            disabled={recoveryBlocker !== null}
+            className="btn btn--ghost btn--block h-10 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            Recover and register funded treasury
+          </button>
+          {recoveryBlocker ? <p className="text-caption text-ink-3">{recoveryBlocker}</p> : null}
+        </section>
       ) : null}
 
       {funded ? null : (

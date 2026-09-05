@@ -30,6 +30,28 @@ inspect a stream after its Testnet mandate and employee fields match the registr
 employee, the origin must match exactly, and the configured signer must own the
 registered cap.
 
+## Expense treasury registration
+
+`POST /api/events` requires the authenticated configured employer/treasurer and
+the exact application origin. It accepts the digest of an already-finalized
+`treasury::create_mandate` transaction plus event metadata:
+
+```json
+{
+  "digest": "Sui transaction digest",
+  "name": "MUBA Hack",
+  "organisation": "MMU",
+  "allowedCategories": ["food", "printing"]
+}
+```
+
+The server reads the finalized transaction and verifies its sender, package,
+USDC type, mandate fields, AdminCap owner, AgentCap owner and allowlist before
+inserting the event. Approved recipients are seeded as active event members
+with address-based display names. Repeating the same digest/mandate is safe and
+returns HTTP `200`; a new registration returns `201`. The endpoint never funds
+the mandate or trusts a browser-supplied mandate object ID.
+
 ## Wallet session
 
 `POST /api/auth/challenge`

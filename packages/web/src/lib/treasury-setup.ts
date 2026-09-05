@@ -117,6 +117,39 @@ export interface TreasuryAmounts {
   approvedRecipients: string[];
 }
 
+export interface RegistrationRecoveryValue {
+  digest: string;
+  name: string;
+  organisation: string;
+  categories: ExpenseCategory[];
+  authenticated: boolean;
+  sameAccount: boolean;
+}
+
+/**
+ * A funded mandate can be registered without rebuilding the funding
+ * transaction. Keep this check separate from treasuryProblems: recovery does
+ * not need the budget or recipient fields because those values are verified
+ * from the transaction on Sui.
+ */
+export function registrationRecoveryBlocker(
+  value: RegistrationRecoveryValue,
+): string | null {
+  if (!value.authenticated) return 'Sign in with the treasurer wallet first.';
+  if (!value.sameAccount) {
+    return 'The connected wallet is not the one this session was signed with.';
+  }
+  if (!value.digest.trim()) return 'Paste the funding transaction digest.';
+  if (!value.name.trim()) return 'The event needs a name people will recognise.';
+  if (!value.organisation.trim()) {
+    return 'Which club, faculty or company this belongs to.';
+  }
+  if (value.categories.length === 0) {
+    return 'Pick at least one kind of expense this treasury covers.';
+  }
+  return null;
+}
+
 /**
  * What the transaction will carry.
  *

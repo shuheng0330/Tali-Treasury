@@ -148,6 +148,20 @@ export interface GetEventResponse {
   };
 }
 
+/** POST /api/events — register an already-funded reimbursement mandate. */
+export interface RegisterEventRequest {
+  digest: Digest;
+  name: string;
+  organisation: string;
+  allowedCategories: ExpenseCategory[];
+}
+
+export interface RegisterEventResponse {
+  status: 'registered';
+  eventId: string;
+  mandateId: ObjectId;
+}
+
 /** POST /api/events/:id/members */
 export interface CreateEventMemberRequest {
   address: Address;

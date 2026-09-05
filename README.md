@@ -50,7 +50,7 @@ Status words are intentionally precise:
 | Authenticated Set Up Payroll | **Live via local app; hosted migration pending** | Slush created and funded a verified 12.363385 USDC mandate; its creation digest was verified against historical creation-state objects, stored in the strict immutable registry, and can be selected by authorized payroll pages |
 | Registered payroll page binding | **Complete locally** | Role-aware registry views, URL selection, derived inputs, scoped history and fail-closed stream matching |
 | Live payroll run and salary stream | **Live** | RM30 payroll paid 9.046290 USDC atomically; a 1 USDC stream was opened, accrued, and withdrawn by the registered employee on Testnet |
-| Create Expense Treasury | **Complete locally through wallet execution** | Separate reimbursement setup screen can sign against the existing package; verified event registration remains pending |
+| Create Expense Treasury | **Complete locally through registration** | Separate reimbursement setup signs against the existing package; the authenticated `POST /api/events` verifies the funded mandate/caps and registers it idempotently; event selection/routing remains |
 | Revoke and Safety Test interactions | **Complete locally; live proof pending** | Employer-authorized APIs can submit through the server signer; unsupported scenarios remain clearly labelled predictions |
 | Gemini receipt analysis and Supabase claims | **Complete locally; rollout pending** | Private drafts, authenticated access and 154 pgTAP assertions across the current schema |
 | Deterministic policy and backend agent signing | **Live via local app** | Native USDC payment/recovery and manually approved MYR reimbursement verified on Testnet |

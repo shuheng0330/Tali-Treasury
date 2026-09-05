@@ -113,6 +113,26 @@ export const REVIEW_COPY: AccessCopy = {
   holder: "the event treasurer's wallet",
 };
 
+/**
+ * Access for actions that are authorized by the event's treasurer row.
+ *
+ * A missing event value is not an authorization decision: the UI hides the
+ * control until the server has returned the event authority.
+ */
+export function eventTreasurerAccess(
+  address: string | null,
+  eventTreasurer: string | null | undefined,
+): Access {
+  if (!eventTreasurer?.trim()) {
+    return {
+      permitted: false,
+      notice: 'The event treasurer could not be read yet.',
+    };
+  }
+
+  return walletAccess(address, eventTreasurer, REVIEW_COPY);
+}
+
 export const REVOKE_COPY: AccessCopy = {
   action: 'revoke this mandate',
   holder: "the event treasurer's wallet",

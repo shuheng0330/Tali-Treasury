@@ -21,7 +21,12 @@ import { RevokeDialog } from './RevokeDialog';
 import { ReviewActionDialog } from './ReviewActionDialog';
 import { useWalletSession } from '@/components/wallet/WalletSessionProvider';
 import { RoleNotice } from '@/components/RoleNotice';
-import { REVIEW_COPY, REVOKE_COPY, walletAccess } from '@/lib/wallet-access';
+import {
+  eventTreasurerAccess,
+  REVIEW_COPY,
+  REVOKE_COPY,
+  walletAccess,
+} from '@/lib/wallet-access';
 import { reviewRequestForClaim } from '@/lib/review-actions';
 
 type Tab = 'review' | 'paid' | 'rejected' | 'all';
@@ -67,6 +72,7 @@ export function TreasuryDashboard({
   const treasurer = eventTreasurer?.trim() || EMPLOYER_WALLET;
   const reviewAccess = walletAccess(wallet.address, treasurer, REVIEW_COPY);
   const revokeAccess = walletAccess(wallet.address, treasurer, REVOKE_COPY);
+  const memberManagementAccess = eventTreasurerAccess(wallet.address, eventTreasurer);
   const router = useRouter();
   const [refreshing, startRefresh] = useTransition();
   const [tab, setTab] = useState<Tab>('review');
@@ -313,10 +319,9 @@ export function TreasuryDashboard({
         revokeNotice={revokeAccess.notice}
       />
 
-      {/* The roster is written with the same authority that reviews a claim —
-          the server checks both against the event's own treasurer — so it is
-          offered on the same answer rather than on a role name. */}
-      {reviewAccess.permitted ? (
+      {/* Member management is authorized by the event row itself. Unlike the
+          review fallback, a missing event authority must keep this hidden. */}
+      {memberManagementAccess.permitted ? (
         <AddMemberForm eventId={DEMO_EVENT_ID} onAdded={() => live.reload()} />
       ) : null}
 
