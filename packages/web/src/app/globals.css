@@ -285,6 +285,19 @@ h4 {
     width: 100%;
   }
 
+  /* The wallet button is a custom element with its own shadow DOM, so none of
+     the utilities above reach it. It exports its trigger, which is the one
+     handle it gives us: without this it renders 40px tall beside our 36px
+     controls and the header row sits half a step out of alignment. Geometry
+     only — its colours come from the kit's own tokens, which the connect modal
+     inside it also reads. */
+  mysten-dapp-kit-connect-button::part(trigger) {
+    height: 2.25rem;
+    padding-inline: 0.875rem;
+    border-radius: var(--radius-pill);
+    font-family: var(--font-display);
+  }
+
   /* The link that reads as a link without being blue: ink text, hairline
      underline that thickens into the accent on hover. */
   .link {
