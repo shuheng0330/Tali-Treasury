@@ -139,16 +139,20 @@ export function ClaimHome({
             Nothing yet. Photograph a receipt and it lands here.
           </p>
         ) : (
-          <ul className="flex flex-col divide-y divide-rule overflow-hidden rounded-card border border-rule bg-surface">
+          <ul className="flex flex-col gap-4">
             {claims.map((claim) => (
-              <li key={claim.id} className="flex flex-col gap-3 px-4 py-4">
+              <li
+                key={claim.id}
+                data-employee-claim-card="true"
+                className="flex min-w-0 flex-col gap-3 rounded-card border border-rule bg-surface p-4"
+              >
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <span className="break-words text-body font-medium">{claim.merchant}</span>
                   <Money amount={claim.amount} unit={claim.analysis?.currency ?? 'USDC'} size="row" />
                 </div>
                 <div className="flex min-w-0 flex-1 flex-col gap-2">
                   <ClaimStatusSummary claim={claim} />
-                  <FxQuoteSummary claim={claim} />
+                  <FxQuoteSummary claim={claim} variant="compact" />
                   <span className="text-caption text-ink-3" suppressHydrationWarning>
                     Updated {relative(claim.updatedAtMs)}
                   </span>

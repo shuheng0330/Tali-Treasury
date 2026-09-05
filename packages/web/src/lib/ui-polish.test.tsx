@@ -160,6 +160,15 @@ describe('treasury polish', () => {
 describe('production-ready application copy', () => {
   const source = (path: string) => readFileSync(new URL(path, import.meta.url), 'utf8');
 
+  it('uses compact FX evidence and separate cards in employee claim history', () => {
+    const claimHome = source('../components/claim/ClaimHome.tsx');
+
+    expect(claimHome).toContain('<FxQuoteSummary claim={claim} variant="compact" />');
+    expect(claimHome).toContain('data-employee-claim-card="true"');
+    expect(claimHome).toContain('<ul className="flex flex-col gap-4">');
+    expect(claimHome).not.toContain('divide-y divide-rule overflow-hidden');
+  });
+
   it('uses a quiet, accurate network footer without development navigation', () => {
     const layout = source('../app/(app)/layout.tsx');
     expect(layout).toContain('Network · Sui Testnet');
