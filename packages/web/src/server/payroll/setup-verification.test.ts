@@ -13,7 +13,7 @@ const capId = `0x${'2'.repeat(64)}`;
 const agent = Ed25519Keypair.generate();
 const rate = { myrPerUsd: '4.0416', rateTimestampMs: 1_000, fetchedAtMs: 2_000 };
 const expiryMs = 10_000_000;
-const budget = convertMyrToUsdc('50000000', rate.myrPerUsd);
+const budget = convertMyrToUsdc('120000000', rate.myrPerUsd);
 const wageCap = convertMyrToUsdc('6000000000', rate.myrPerUsd);
 const env = {
   TALI_EMPLOYER_WALLET: employer,

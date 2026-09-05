@@ -199,7 +199,7 @@ export function PayrollSetup() {
         </label>
         <div className="grid grid-cols-2 gap-3 rounded-control bg-raised p-4">
           <div><p className="eyebrow">Monthly wage</p><p className="text-subhead">RM30</p></div>
-          <div><p className="eyebrow">Money set aside</p><p className="text-subhead">RM50</p></div>
+          <div><p className="eyebrow">Money set aside</p><p className="text-subhead">RM120</p></div>
         </div>
         <button className="btn btn--primary btn--block" type="button" onClick={loadPreview}
           disabled={!access.permitted || status === 'previewing' || status === 'signing' || !employee || !expiry}>
@@ -240,7 +240,7 @@ export function PayrollSetup() {
             <p className="eyebrow text-ok">What you will pay in</p>
             <p className="mt-2 text-title">{toDisplay(preview.budgetUsdc, 6)} USDC</p>
             <p className="text-caption text-ink-2">
-              RM50 at today&rsquo;s rate of {preview.rate.myrPerUsd} to the dollar
+              RM120 at today&rsquo;s rate of {preview.rate.myrPerUsd} to the dollar
             </p>
           </div>
           {/* An address gets a line of its own and wraps on it.

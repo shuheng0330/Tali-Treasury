@@ -17,7 +17,7 @@ const env = {
 const rate = { myrPerUsd: '4.0416', rateTimestampMs: 1_000, fetchedAtMs: 2_000 };
 
 describe('authenticated payroll setup preview', () => {
-  it('converts the RM50 ceiling and assigns the cap to the backend agent', async () => {
+  it('converts the RM120 ceiling and assigns the cap to the backend agent', async () => {
     const preview = await createPayrollSetupPreview({
       identity: employer,
       employee,
@@ -28,8 +28,8 @@ describe('authenticated payroll setup preview', () => {
     });
 
     expect(preview.wageMyr).toBe('30000000');
-    expect(preview.budgetMyr).toBe('50000000');
-    expect(preview.budgetUsdc).toBe('12371338');
+    expect(preview.budgetMyr).toBe('120000000');
+    expect(preview.budgetUsdc).toBe('29691211');
     expect(preview.maxPerRunUsdc).toBe(preview.budgetUsdc);
     expect(preview.capRecipient).toBe(agent.toSuiAddress());
     expect(preview.floors.map((floor) => floor.minBps)).toEqual(['2300', '225', '40']);

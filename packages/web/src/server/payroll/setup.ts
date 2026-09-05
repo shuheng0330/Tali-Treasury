@@ -11,7 +11,24 @@ import type { FxRate } from '../fx/rates';
 import { assertAuthorizedWallet, requireEmployerWallet } from '../auth/authorization';
 
 const WAGE_MYR = '30000000';
-const BUDGET_MYR = '50000000';
+
+/**
+ * Enough for several runs, because a payroll mandate cannot be topped up.
+ *
+ * `payroll.move` funds the mandate once at creation and offers no deposit
+ * entry point — only `withdraw_payroll_remaining` in the other direction. At
+ * RM50 the mandate held barely more than one run of an RM30 wage, so the second
+ * run aborted on 26 with no way to recover except creating another mandate.
+ * Approving a piece of overtime was enough to tip it over, which is how this
+ * surfaced: the approval dialog priced the next run at more than the mandate
+ * had left.
+ *
+ * Still a fixed figure, which is the real limitation. The employer should be
+ * choosing what to fund, and the register path would have to carry that choice
+ * through to `setup-verification`, which re-derives the expected budget from
+ * this constant to check the mandate it is about to trust.
+ */
+const BUDGET_MYR = '120000000';
 const STATUTORY_CAP_MYR = '6000000000';
 
 export interface PayrollSetupPreview {
