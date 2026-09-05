@@ -97,6 +97,19 @@ reads the registered stream and displays its live per-second accrual to either
 authorized payroll party. Withdrawal remains restricted to the immutable
 employee wallet.
 
-## Evidence still required
+## Accrued employee withdrawal
 
-- One accrued withdrawal paid to the registered employee.
+The registered employee withdrew the full stream in transaction
+[`DHcoXy…vmrX6H`](https://suiscan.xyz/testnet/tx/DHcoXyjw9PP11EQPefAfffZoHWWX3Nz3ZWACvxvmrX6H)
+at checkpoint `380020001`.
+
+| Withdrawal field | Verified value |
+| --- | --- |
+| Employee | `0x405200312d4c8ee0159d44429ca69ef0cf035f4a00c12f2035a0bdef882bb16e` |
+| Amount | `1.000000 USDC` |
+| Stream withdrawn total | `1.000000 USDC` |
+| Mandate committed after withdrawal | `0 USDC` |
+| Mandate spendable after withdrawal | `2.317095 USDC` |
+
+This completes the live payroll salary-stream workflow: employer setup and
+funding, atomic payroll, accrual, and employee withdrawal.

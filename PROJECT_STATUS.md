@@ -33,9 +33,9 @@ the old local registration read-only and installs the strict registry without a
 database reset. The existing setup digest has been re-verified against its
 historical creation-state objects and stored in that registry. Payroll package
 v2, setup, one successful run and one abort-24 refusal are live. Registered
-stream opening and persistence are live on Testnet. Employer inspection is
-separate from employee-only withdrawal; withdrawal evidence and hosted-registry
-verification remain pending.
+stream opening, accrual and employee withdrawal are live on Testnet. Employer
+inspection is separate from employee-only withdrawal; hosted-registry
+verification remains pending.
 
 ## Complete locally
 
@@ -153,7 +153,6 @@ data was changed by this verification.
   and render the authoritative roster after additions;
 - apply the payroll-registry migration, register an already funded creation
   digest, then bind payroll, proof and earnings to an explicitly selected record;
-- sign in as the registered employee and record one accrued stream withdrawal;
 - run the hosted receipt flow end to end after authenticated identity is available.
 
 ## Known limitations

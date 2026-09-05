@@ -84,6 +84,15 @@ After opening, the mandate reported `3.317095 USDC` budget,
 `9.046290 USDC` total paid, and one payroll run. The registered employer may
 inspect the stream and its accrual, but only the immutable employee may withdraw.
 
+The registered employee then withdrew the full accrued stream:
+
+- Withdrawal transaction: `DHcoXyjw9PP11EQPefAfffZoHWWX3Nz3ZWACvxvmrX6H`
+- Withdrawal checkpoint: `380020001`
+- Withdrawal amount: `1.000000 USDC`
+- Stream withdrawn total: `1.000000 USDC`
+- Mandate state after withdrawal: `2.317095 USDC` committed `0`, spendable
+  `2.317095 USDC`, total paid `10.046290 USDC`
+
 ## First live SUI mandate
 
 This smoke-test mandate uses testnet SUI to verify the on-chain workflow before integrating official testnet USDC.
