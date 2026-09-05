@@ -153,6 +153,13 @@ describe('createSupabasePayrollConfigurationRepository', () => {
     const employeeClient = client([{ data: [dated], error: null }]);
     const employeeRepo = createSupabasePayrollConfigurationRepository(employeeClient as never);
     await expect(employeeRepo.listByEmployee!(snapshot.approvedEmployees[0] as Address)).resolves.toHaveLength(1);
-    expect(employeeClient.calls).toContainEqual({ method: 'contains', args: ['approved_employees', [snapshot.approvedEmployees[0]]] });
+    /* Pinned as the JSON string rather than an array. This stub records the
+       argument without serialising it, so it happily accepted the array form
+       that postgrest-js turns into `cs.{0x…}` and Postgres rejects as invalid
+       JSON. Asserting the exact string is what makes this test able to fail. */
+    expect(employeeClient.calls).toContainEqual({
+      method: 'contains',
+      args: ['approved_employees', JSON.stringify([snapshot.approvedEmployees[0]])],
+    });
   });
 });

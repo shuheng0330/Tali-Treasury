@@ -1,6 +1,5 @@
 import type { MandateView } from '@tali/shared';
 import { EXPLORER, mandateStatus, subtract, toDisplay } from '@tali/shared';
-import { BudgetMeter } from '@/components/BudgetMeter';
 import { StatusChip } from '@/components/StatusChip';
 
 interface Props {
@@ -19,12 +18,12 @@ interface Props {
   revokeNotice: string | null;
 }
 
-function Stat({ label, value, note }: { label: string; value: React.ReactNode; note: string }) {
+function Stat({ label, value, note }: { label: string; value: React.ReactNode; note?: string }) {
   return (
-    <div className="flex flex-col gap-1 border-l border-rule px-4 first:border-l-0 first:pl-0">
+    <div className="flex min-w-0 flex-col gap-1 rounded-control bg-raised p-3">
       <span className="eyebrow">{label}</span>
       <span className="tnum font-display text-subhead">{value}</span>
-      <span className="text-caption text-ink-3">{note}</span>
+      {note ? <span className="text-caption text-ink-3">{note}</span> : null}
     </div>
   );
 }
@@ -53,7 +52,7 @@ export function MandateHeader({
     perClaim > 0n && BigInt(available) > 0n ? BigInt(available) / perClaim : 0n;
 
   return (
-    <section className="flex flex-col gap-6 rounded-panel border border-rule bg-surface p-6 md:p-8">
+    <section className="flex flex-col gap-5 rounded-panel border border-rule bg-surface p-5 sm:p-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="flex flex-col gap-1">
           <span className="eyebrow">{organisation}</span>
@@ -75,7 +74,7 @@ export function MandateHeader({
               type="button"
               onClick={onRevoke}
               disabled={status !== 'active' || !canRevoke}
-              className="btn btn--danger h-9 px-4 text-label"
+              className="btn btn--danger min-h-11 px-4 text-label"
             >
               Revoke mandate
             </button>
@@ -86,17 +85,28 @@ export function MandateHeader({
         </div>
       </div>
 
-      <BudgetMeter
-        settled={mandate.amountSpent}
-        committed={committed}
-        available={available}
-        budget={mandate.initialBudget}
-      />
+      <div className="grid gap-3 sm:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
+        <div className="rounded-card bg-ink p-5 text-canvas">
+          <p className="eyebrow text-canvas/70">Available balance</p>
+          <p className="tnum mt-2 font-display text-title">{toDisplay(available)} <span className="text-body text-canvas/70">USDC</span></p>
+          <p className="mt-1 text-caption text-canvas/70">of {toDisplay(mandate.initialBudget)} USDC budget</p>
+        </div>
+        <dl className="grid grid-cols-2 gap-3">
+          <div className="rounded-card border border-rule bg-canvas p-4">
+            <dt className="eyebrow">Settled</dt>
+            <dd className="tnum mt-2 font-display text-subhead">{toDisplay(mandate.amountSpent)}</dd>
+          </div>
+          <div className="rounded-card border border-rule bg-canvas p-4">
+            <dt className="eyebrow">Committed</dt>
+            <dd className="tnum mt-2 font-display text-subhead">{toDisplay(committed)}</dd>
+          </div>
+        </dl>
+      </div>
 
-      <div className="grid grid-cols-2 gap-y-4 sm:grid-cols-4">
+      <div className="grid grid-cols-1 gap-2 min-[380px]:grid-cols-3">
         <Stat
-          label="Max per claim"
-          value={toDisplay(mandate.maxPerClaim)}
+          label="Claim limit"
+          value={`${toDisplay(mandate.maxPerClaim)} USDC`}
           note={
             BigInt(available) < 0n
               ? 'approved past what remains'
@@ -113,15 +123,29 @@ export function MandateHeader({
             minute: '2-digit',
           })}
         />
-        <Stat label="Approved payees" value={String(mandate.approvedRecipients.length)} note="on the allowlist" />
-        <Stat label="Enforced by" value="Move" note={`module treasury`} />
+        <Stat label="Approved payees" value={String(mandate.approvedRecipients.length)} />
       </div>
 
-      <p className="border-t border-rule pt-4 text-caption text-ink-3">
-        The per-claim cap, the budget, the expiry, the allowlist and the revoked flag are
-        enforced on Sui by the <span className="font-mono">treasury</span> module. Not by
-        this app.
-      </p>
+      <details className="disclosure-card">
+        <summary>View Treasury Rules</summary>
+        <div className="mt-4 flex flex-col gap-3 text-caption text-ink-2">
+          <p className="font-display text-body font-medium text-ink">Protected on Sui</p>
+          <ul className="grid list-disc gap-2 pl-5 sm:grid-cols-2">
+            <li>Budget and per-claim limits</li>
+            <li>Approved payee allowlist</li>
+            <li>Expiry enforcement</li>
+            <li>Revocation enforcement</li>
+          </ul>
+          <a
+            href={EXPLORER.object(mandate.id).suiscan}
+            target="_blank"
+            rel="noreferrer"
+            className="link min-h-11 self-start py-3"
+          >
+            View Mandate on Suiscan
+          </a>
+        </div>
+      </details>
     </section>
   );
 }

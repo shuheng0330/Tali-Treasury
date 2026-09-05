@@ -5,7 +5,7 @@ import QRCode from 'qrcode';
 
 /** Rendered light-on-white in both themes. Scanners cope badly with inverted
  *  codes, and a projector in a dark room is exactly where this gets scanned. */
-export function PhoneCode({ path = '/claim' }: { path?: string }) {
+export function PhoneCode({ path = '/requests/expense' }: { path?: string }) {
   const [svg, setSvg] = useState<string | null>(null);
   const [href, setHref] = useState(path);
 

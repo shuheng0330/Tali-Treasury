@@ -53,6 +53,11 @@ function relative(atMs: number) {
   return `${Math.round(minutes / 60)}h ago`;
 }
 
+function sortPolicyChecks<T extends { passed: boolean }>(checks: T[], pending: (check: T) => boolean) {
+  const rank = (check: T) => (pending(check) ? 1 : check.passed ? 2 : 0);
+  return [...checks].sort((a, b) => rank(a) - rank(b));
+}
+
 interface Props {
   item: ReviewQueueItem;
   processing: boolean;
@@ -109,12 +114,12 @@ export function ClaimRow({
       : undefined;
 
   return (
-    <li className="flex flex-col gap-3 px-4 py-4">
+    <li data-claim-card="true" className="flex min-w-0 flex-col gap-4 rounded-card border border-rule bg-surface p-4 sm:p-5">
       <div className="flex items-start gap-3">
         <ReasonMark reason={reason} />
 
         <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-          <span className="truncate text-body">{claim.merchant}</span>
+          <span className="break-words font-display text-body-lg font-medium">{claim.merchant}</span>
           <span className="text-caption text-ink-3">
             {claim.submitterName} · <span className="capitalize">{claim.category}</span> ·{' '}
             {/* The demo timestamps are relative to module load, and the server
@@ -127,16 +132,16 @@ export function ClaimRow({
         <Money amount={claim.amount} unit={claim.analysis?.currency ?? 'USDC'} size="row" className="shrink-0" />
       </div>
 
-      <div className="ml-7"><ClaimStatusSummary claim={{ ...claim, decision }} /></div>
-      <details className="ml-7 rounded-card border border-rule bg-canvas p-4">
-        <summary className="cursor-pointer rounded-control text-body text-ink focus-visible:outline-2 focus-visible:outline-offset-2">
-          {awaitingPolicy ? 'Evaluation details' : `Policy checks (${decision.checks.filter(check => check.passed).length}/${decision.checks.length} passed)`}
+      <ClaimStatusSummary claim={{ ...claim, decision }} structured />
+      <details className="disclosure-card bg-canvas">
+        <summary>
+          {awaitingPolicy ? 'Evaluation Details' : 'View Checks'}
         </summary>
         {awaitingPolicy ? (
           <p className="text-caption text-ink-2">Awaiting server policy evaluation.</p>
         ) : (
           <ul className="grid gap-x-6 gap-y-1 sm:grid-cols-2">
-            {decision.checks.map((check) => (
+            {sortPolicyChecks(decision.checks, notEvaluated).map((check) => (
               <li key={check.rule} className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
                 <span className="translate-y-0.5">
                   <Verdict passed={check.passed} pending={notEvaluated(check)} />
@@ -169,9 +174,9 @@ export function ClaimRow({
         )}
       </details>
 
-      <FxQuoteSummary claim={claim} />
+      <FxQuoteSummary claim={claim} variant="compact" />
       {agentNote ? (
-        <p className="ml-7 flex gap-2 text-caption italic text-ink-3">
+        <p className="flex gap-2 rounded-control bg-accent-soft p-3 text-caption text-ink-2">
           <span className="not-italic" aria-hidden>
             ◇
           </span>
@@ -179,7 +184,7 @@ export function ClaimRow({
         </p>
       ) : null}
 
-      <div className="ml-7 flex flex-wrap items-center gap-3">
+      <div className="claim-actions flex flex-wrap items-center gap-3">
         {approvalBlocked && !awaitingPolicy ? (
           <p className="w-full text-body text-ink-2">{approvalBlocked}</p>
         ) : null}
@@ -205,7 +210,7 @@ export function ClaimRow({
               type="button"
               disabled={reconciling || actionsDisabled}
               onClick={() => onCheckPayment(claim.id)}
-              className="btn btn--primary h-9 w-fit px-5 text-label"
+              className="btn btn--primary min-h-11 w-full px-5 text-label sm:w-fit"
               title={actionsDisabled ? disabledReason : undefined}
             >
               {reconciling ? 'Checking Sui…' : 'Check payment status'}
@@ -217,7 +222,7 @@ export function ClaimRow({
               type="button"
               disabled={paying || actionsDisabled}
               onClick={() => onPay(claim.id)}
-              className="btn btn--primary h-9 px-5 text-label"
+              className="btn btn--primary min-h-11 w-full px-5 text-label sm:w-fit"
               title={actionsDisabled ? disabledReason : undefined}
             >
               {paying ? 'Paying…' : 'Try the payment again'}
@@ -239,7 +244,7 @@ export function ClaimRow({
               type="button"
               disabled={paying || actionsDisabled}
               onClick={() => onPay(claim.id)}
-              className="btn btn--primary h-9 px-5 text-label"
+              className="btn btn--primary min-h-11 w-full px-5 text-label sm:w-fit"
               title={actionsDisabled ? disabledReason : undefined}
             >
               {paying ? 'Paying…' : 'Release the payment'}
@@ -254,7 +259,7 @@ export function ClaimRow({
             type="button"
             disabled={processing || actionsDisabled}
             onClick={() => onProcess(claim.id)}
-            className="btn btn--primary h-9 px-5 text-label"
+            className="btn btn--primary min-h-11 w-full px-5 text-label sm:w-fit"
             title={actionsDisabled ? disabledReason : undefined}
           >
             {processing ? 'Evaluating…' : claim.analysis?.currency === 'MYR' ? 'Get live quote & evaluate' : 'Evaluate claim'}
@@ -262,7 +267,7 @@ export function ClaimRow({
         ) : (
           <>
             {claim.analysis?.currency === 'MYR' ? (
-              <button type="button" className="btn btn--ghost h-9 px-5 text-label"
+              <button type="button" className="btn btn--ghost min-h-11 w-full px-5 text-label sm:w-fit"
                 disabled={processing || reviewPending || actionsDisabled} onClick={() => onProcess(claim.id)}>
                 {processing ? 'Refreshing…' : 'Refresh quote & evaluate'}
               </button>
@@ -271,7 +276,7 @@ export function ClaimRow({
               type="button"
               disabled={approvalBlocked !== null || reviewPending || verdictBlocked}
               onClick={() => onReview(claim.id, 'approve')}
-              className="btn btn--primary h-9 px-5 text-label"
+              className="btn btn--primary min-h-11 w-full px-5 text-label"
               title={approvalBlocked ?? verdictReason}
             >
               {approvalBlocked
@@ -283,22 +288,22 @@ export function ClaimRow({
             <button
               type="button"
               disabled={reviewPending || verdictBlocked}
-              onClick={() => onReview(claim.id, 'reject')}
-              className="btn btn--danger h-9 px-5 text-label"
-              title={verdictReason}
-            >
-              {pendingAction === 'reject' ? 'Rejecting…' : 'Reject'}
-            </button>
-            <button
-              type="button"
-              disabled={reviewPending || verdictBlocked}
               onClick={() => onReview(claim.id, 'request_correction')}
-              className="btn btn--ghost h-9 px-5 text-label"
+              className="btn btn--ghost min-h-11 flex-1 px-5 text-label"
               title={verdictReason}
             >
               {pendingAction === 'request_correction'
                 ? 'Requesting…'
                 : 'Request correction'}
+            </button>
+            <button
+              type="button"
+              disabled={reviewPending || verdictBlocked}
+              onClick={() => onReview(claim.id, 'reject')}
+              className="btn btn--danger min-h-11 flex-1 px-5 text-label"
+              title={verdictReason}
+            >
+              {pendingAction === 'reject' ? 'Rejecting…' : 'Reject'}
             </button>
           </>
         )}

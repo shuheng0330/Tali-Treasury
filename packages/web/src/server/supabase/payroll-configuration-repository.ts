@@ -227,7 +227,13 @@ export function createSupabasePayrollConfigurationRepository(
     async listByEmployee(employee) {
       const result = await query(client)
         .select(COLUMNS)
-        .contains('approved_employees', [employee])
+        /* A JSON string, not an array. `approved_employees` is jsonb, and
+           postgrest-js serialises an array argument as the Postgres array
+           literal `cs.{0x…}`, which Postgres then fails to parse as JSON:
+           22P02, surfaced as a 500 from GET /api/payroll/configurations for
+           every signed-in employee. The string branch is passed through
+           verbatim, giving the `cs.["0x…"]` containment PostgREST wants. */
+        .contains('approved_employees', JSON.stringify([employee]))
         .order('registered_at', { ascending: false }) as unknown as QueryResult;
       if (result.error) throw databaseFailure(result.error);
       if (!Array.isArray(result.data)) throw databaseFailure(null);

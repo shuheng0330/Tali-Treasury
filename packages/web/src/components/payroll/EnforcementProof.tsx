@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { toDisplay } from '@tali/shared';
 import { tryPreviewPayroll, tryRunPayroll } from '@/lib/api/payroll';
@@ -43,7 +44,7 @@ export function EnforcementProof({
      not being signed in, not the reason. */
   const access = walletAccess(address, EMPLOYER_WALLET, EMPLOYER_COPY);
 
-  const [shortEpf, setShortEpf] = useState(false);
+  const [scenario, setScenario] = useState<'valid' | 'underpay'>('underpay');
   const [outcome, setOutcome] = useState<Outcome>({ kind: 'none' });
   const [breakdown, setBreakdown] = useState(person.breakdown);
 
@@ -71,7 +72,7 @@ export function EnforcementProof({
       gross: breakdown.fxConversion?.source.gross ?? breakdown.gross,
       age: 30,
       citizenship: 'local',
-      underpay: shortEpf ? 'epf' : undefined,
+      underpay: 'epf',
       ...(breakdown.fxConversion
         ? {
             fxApproval: {
@@ -103,67 +104,107 @@ export function EnforcementProof({
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-col gap-3 rounded-card border border-rule bg-surface p-5">
-        <label className="flex items-start gap-3">
-          <input
-            type="checkbox"
-            checked={shortEpf}
-            onChange={(event) => {
-              setShortEpf(event.target.checked);
-              setOutcome({ kind: 'none' });
-            }}
-            className="mt-1 h-4 w-4 shrink-0 accent-accent"
-          />
-          <span className="flex flex-col gap-1">
-            <span className="text-body font-medium">Underpay EPF</span>
-            <span className="text-caption text-ink-2">
-              Send one base unit to EPF instead of {toDisplay(epf?.total ?? '0')}, and keep
-              the difference. Everything else about the run stays correct.
+      <fieldset className="grid gap-3 sm:grid-cols-2">
+        <legend className="sr-only">Payroll test scenario</legend>
+        {(['valid', 'underpay'] as const).map((value) => (
+          <label
+            key={value}
+            className={`flex min-h-16 cursor-pointer items-center gap-3 rounded-card border p-4 transition-colors ${
+              scenario === value
+                ? 'border-accent bg-accent-soft'
+                : 'border-rule bg-surface'
+            }`}
+          >
+            <input
+              type="radio"
+              name="payroll-scenario"
+              value={value}
+              checked={scenario === value}
+              onChange={() => {
+                setScenario(value);
+                setOutcome({ kind: 'none' });
+              }}
+              className="h-5 w-5 shrink-0 accent-accent"
+            />
+            <span className="font-display text-body font-medium">
+              {value === 'valid' ? 'Valid Payroll' : 'Underpay EPF'}
             </span>
-          </span>
-        </label>
-      </div>
+          </label>
+        ))}
+      </fieldset>
 
-      <Breakdown breakdown={breakdown} shortedBody={shortEpf ? 'epf' : null} />
+      {scenario === 'underpay' ? (
+        <>
+          <section className="overflow-hidden rounded-panel border border-no-line bg-no-soft">
+            <div className="flex items-center gap-3 border-b border-no-line px-5 py-4">
+              <span className="flex h-9 w-9 items-center justify-center rounded-full bg-no text-canvas" aria-hidden>×</span>
+              <div>
+                <p className="eyebrow text-no">Expected result</p>
+                <h2 className="text-subhead">Blocked. No one gets paid.</h2>
+              </div>
+            </div>
+            <dl className="grid grid-cols-1 divide-y divide-no-line sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+              <div className="p-4">
+                <dt className="text-caption text-ink-3">Required EPF</dt>
+                <dd className="tnum mt-1 font-display text-body-lg">{toDisplay(required.toString(), 6)} USDC</dd>
+              </div>
+              <div className="p-4">
+                <dt className="text-caption text-ink-3">Test amount</dt>
+                <dd className="tnum mt-1 font-display text-body-lg">0.000001 USDC</dd>
+              </div>
+              <div className="p-4">
+                <dt className="text-caption text-ink-3">USDC moved</dt>
+                <dd className="tnum mt-1 font-display text-body-lg">0 USDC</dd>
+              </div>
+            </dl>
+          </section>
 
-      {shortEpf ? (
-        <div className="flex flex-col gap-2 rounded-card border border-stop-line bg-stop-soft p-5">
-          <span className="eyebrow text-stop">What the contract will do</span>
-          <p className="text-body text-ink-2">
-            <span className="font-medium text-stop">Refuse it, on abort 24.</span> EPF must
-            receive at least {toDisplay(required.toString(), 6)} USDC on a gross of{' '}
-            {toDisplay(breakdown.gross, 6)} USDC. Nothing moves: the worker is not paid
-            either, because the payment is one transaction and it reverts whole.
-          </p>
-          <p className="text-caption text-ink-3">
-            The address is still in the payment. Presence was never the check.
-          </p>
-        </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="rounded-card border border-rule bg-surface p-4">
+              <p className="text-caption text-ink-3">Employee net pay</p>
+              <p className="tnum mt-1 font-display text-subhead">{toDisplay(breakdown.net, 6)}</p>
+              <p className="text-caption text-ink-3">USDC</p>
+            </div>
+            <div className="rounded-card border border-rule bg-surface p-4">
+              <p className="text-caption text-ink-3">Employer cost</p>
+              <p className="tnum mt-1 font-display text-subhead">{toDisplay(breakdown.employerCost, 6)}</p>
+              <p className="text-caption text-ink-3">USDC</p>
+            </div>
+          </div>
+
+          <details className="disclosure-card">
+            <summary>View Full Payroll Calculation</summary>
+            <div className="mt-4"><Breakdown breakdown={breakdown} shortedBody="epf" /></div>
+          </details>
+
+          <div className="rounded-card border border-no-line bg-no-soft p-5">
+            <p className="eyebrow text-no">Expected: Blocked</p>
+            <p className="mt-2 text-body text-ink-2">
+              EPF is below the required minimum, so the entire transaction should fail.
+            </p>
+          </div>
+        </>
       ) : (
-        <div className="flex flex-col gap-2 rounded-card border border-ok-line bg-ok-soft p-5">
-          <span className="eyebrow text-ok">What the contract will do</span>
-          <p className="text-body text-ink-2">
-            Pay four recipients in one transaction, totalling{' '}
-            {toDisplay(breakdown.employerCost, 6)} USDC. The worker cannot be paid without
-            EPF, SOCSO and EIS being paid in the same moment.
-          </p>
+        <div className="rounded-card border border-ok-line bg-ok-soft p-5">
+          <p className="eyebrow text-ok">Comparison only</p>
+          <h2 className="mt-2 text-subhead">Valid payroll belongs on the payroll page.</h2>
+          <p className="mt-1 text-caption text-ink-2">This safety screen cannot start a valid payment.</p>
+          <Link href="/payroll" className="btn btn--ghost mt-4 w-full sm:w-fit">Go to Payroll</Link>
         </div>
       )}
 
       <RoleNotice access={access} />
 
-      <button
-        type="button"
-        className="btn btn--primary btn--block"
-        disabled={!access.permitted || outcome.kind === 'running' || !breakdown.fxConversion}
-        onClick={submit}
-      >
-        {outcome.kind === 'running'
-          ? 'Submitting…'
-          : shortEpf
-            ? 'Submit the underpaid run'
-            : 'Run payroll'}
-      </button>
+      {scenario === 'underpay' ? (
+        <button
+          type="button"
+          className="btn btn--primary btn--block btn--lg"
+          disabled={!access.permitted || outcome.kind === 'running' || !breakdown.fxConversion}
+          onClick={submit}
+        >
+          {outcome.kind === 'running' ? 'Running Safety Test…' : 'Run Safety Test'}
+        </button>
+      ) : null}
 
       {access.permitted && !breakdown.fxConversion ? (
         <p className="text-caption text-wait">
@@ -171,20 +212,21 @@ export function EnforcementProof({
         </p>
       ) : null}
 
+      <div aria-live="polite">
       {outcome.kind === 'refused' ? (
-        <p className="rounded-card border border-stop-line bg-stop-soft p-4 text-caption text-stop">
-          <span className="font-medium">
-            {outcome.abortCode === null
-              ? 'Refused before submission.'
-              : `Refused on abort ${outcome.abortCode}.`}
-          </span>{' '}
-          {outcome.message} No USDC balance changed.{' '}
+        <section className="rounded-panel border border-ok-line bg-ok-soft p-5">
+          <p className="eyebrow text-ok">Safety test passed</p>
+          <h2 className="mt-2 text-heading">Blocked as Expected</h2>
+          <dl className="mt-4 grid grid-cols-2 gap-3">
+            <div><dt className="text-caption text-ink-3">Contract result</dt><dd className="tnum text-body font-medium">Abort {outcome.abortCode ?? '—'}</dd></div>
+            <div><dt className="text-caption text-ink-3">Funds moved</dt><dd className="tnum text-body font-medium">0 USDC moved</dd></div>
+          </dl>
           {outcome.digest ? (
-            <a className="link" href={`https://suiscan.xyz/testnet/tx/${outcome.digest}`} target="_blank" rel="noreferrer">
-              View the failed transaction
+            <a className="link mt-4 inline-flex min-h-11 items-center" href={`https://suiscan.xyz/testnet/tx/${outcome.digest}`} target="_blank" rel="noreferrer">
+              View Failed Transaction
             </a>
           ) : null}
-        </p>
+        </section>
       ) : null}
 
       {outcome.kind === 'paid' ? (
@@ -209,6 +251,15 @@ export function EnforcementProof({
           {payrollAttemptNote(stage)} — {outcome.reason}.
         </p>
       ) : null}
+      </div>
+
+      <details className="disclosure-card">
+        <summary>How This Test Works</summary>
+        <p className="mt-3 text-caption text-ink-2">
+          Tali sends one atomic Testnet payroll with EPF set below the mandate minimum.
+          Sui should reject it before any recipient is paid.
+        </p>
+      </details>
     </div>
   );
 }

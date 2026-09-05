@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { AppNav } from '@/components/AppNav';
+import { SectionNav } from '@/components/SectionNav';
 import { BackButton } from '@/components/BackButton';
 import { WalletSessionControl } from '@/components/wallet/WalletSessionControl';
 import { WalletSessionBoundary } from '@/components/wallet/WalletSessionBoundary';
@@ -37,6 +38,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           <AppNav className="w-full sm:order-2 sm:ml-auto sm:w-auto" />
         </div>
       </header>
+
+      <SectionNav />
 
       <main className="flex-1">{children}</main>
 

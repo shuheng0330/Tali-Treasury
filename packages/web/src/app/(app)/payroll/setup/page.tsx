@@ -30,7 +30,6 @@ export default function PayrollSetupPage() {
         </Link>{' '}
         instead; it is not created here.
       </p>
-      <Link href="/payroll" className="link self-start">Back to payroll</Link>
     </div>
   );
 }

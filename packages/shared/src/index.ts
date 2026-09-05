@@ -45,6 +45,33 @@ export {
 } from './money.js';
 
 export { isAllowedRecipient, mandateStatus, toMandateView } from './mandate.js';
+
+export {
+  LEAVE_KIND_LABEL,
+  MAX_OVERTIME_HOURS_PER_MONTH,
+  NORMAL_HOURS_PER_DAY,
+  ORP_DAYS_PER_MONTH,
+  OVERTIME_KIND_LABEL,
+  OVERTIME_KIND_RATE,
+  OVERTIME_MULTIPLIER_BPS,
+  approvedLeaveDeduction,
+  checkOvertimeClaim,
+  fromCentihours,
+  overtimePay,
+  pendingOvertimePay,
+  toCentihours,
+  unpaidLeaveDeduction,
+} from './overtime.js';
+export type {
+  LeaveKind,
+  LeaveRequest,
+  LeaveStatus,
+  OvertimeClaim,
+  OvertimeIssue,
+  OvertimeIssueCode,
+  OvertimeKind,
+  OvertimeStatus,
+} from './overtime.js';
 export type { MandateStatus, MandateView } from './mandate.js';
 
 export {

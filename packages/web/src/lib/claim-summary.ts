@@ -20,7 +20,7 @@ export function claimExplanation(claim: Claim): string | null {
   }
   if (claim.state === 'rejected' || claim.state === 'awaiting_review') {
     const issues = claim.decision?.checks.filter(check => !check.passed && check.rule !== 'fx_quote_approval');
-    if (issues?.length) return issues.map(check => check.detail).join(' · ');
+    if (issues?.length) return issues[0]?.detail ?? null;
     return claim.state === 'rejected'
       ? claim.decision?.reason || 'No rejection reason was recorded. Ask the treasurer for details.'
       : 'Waiting for the treasurer to approve the reimbursement.';

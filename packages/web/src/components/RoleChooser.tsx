@@ -101,7 +101,7 @@ export function RoleChooser({
     {
       /* Membership is a row in the database rather than a configured wallet, so
          this screen does not pretend to know it. The claim flow checks. */
-      href: '/claim',
+      href: '/requests/expense',
       title: 'Claim an expense',
       blurb: 'Photograph a receipt and get reimbursed. Open to members of the event.',
       access: null,
@@ -138,7 +138,7 @@ export function RoleChooser({
           </p>
           <p className="text-caption text-ink-3">
             The parts worth seeing need no permission at all:{' '}
-            <Link href="/payroll/proof" className="link">
+            <Link href="/safety/payroll" className="link">
               watch the contract refuse an underpaid run
             </Link>
             ,{' '}

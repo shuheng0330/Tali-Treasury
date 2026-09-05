@@ -37,17 +37,18 @@ export function AddMemberForm({ eventId, onAdded }: Props) {
   }
 
   return (
-    <div className="flex flex-col gap-3 rounded-card border border-rule bg-surface p-4">
-      <span className="eyebrow">Add a member</span>
+    <details className="disclosure-card bg-surface">
+      <summary>Add a Member</summary>
+      <div className="mt-4 flex flex-col gap-3">
 
-      <div className="flex flex-col gap-2 sm:flex-row">
+      <div className="grid gap-3 sm:grid-cols-2">
         <label className="flex flex-1 flex-col gap-1">
           <span className="text-caption text-ink-3">Wallet address</span>
           <input
             value={walletAddress}
             onChange={(e) => setWalletAddress(e.target.value.trim())}
             placeholder="0x…"
-            className="rounded-control border border-rule bg-canvas px-3 py-2.5 font-mono text-caption outline-none focus-visible:border-accent-ink"
+            className="min-h-11 rounded-control border border-rule bg-canvas px-3 py-2.5 font-mono text-caption outline-none focus-visible:border-accent-ink"
           />
         </label>
         <label className="flex flex-1 flex-col gap-1">
@@ -55,7 +56,7 @@ export function AddMemberForm({ eventId, onAdded }: Props) {
           <input
             value={displayName}
             onChange={(e) => setDisplayName(e.target.value)}
-            className="rounded-control border border-rule bg-canvas px-3 py-2.5 text-body outline-none focus-visible:border-accent-ink"
+            className="min-h-11 rounded-control border border-rule bg-canvas px-3 py-2.5 text-body outline-none focus-visible:border-accent-ink"
           />
         </label>
       </div>
@@ -66,7 +67,7 @@ export function AddMemberForm({ eventId, onAdded }: Props) {
 
       <button
         type="button"
-        className="btn btn--primary self-start"
+        className="btn btn--primary min-h-11 w-full sm:w-fit"
         disabled={sending || addressInvalid || !addressTyped || !displayName.trim()}
         onClick={() => void submit()}
       >
@@ -74,15 +75,16 @@ export function AddMemberForm({ eventId, onAdded }: Props) {
       </button>
 
       {result && !result.ok ? (
-        <p className="rounded-control border border-wait-line bg-wait-soft p-3 text-caption text-wait">
+        <p className="rounded-control border border-wait-line bg-wait-soft p-3 text-caption text-wait" aria-live="polite">
           Not added. {result.message}.
         </p>
       ) : null}
       {result?.ok ? (
-        <p className="rounded-control border border-ok-line bg-ok-soft p-3 text-caption text-ok">
+        <p className="rounded-control border border-ok-line bg-ok-soft p-3 text-caption text-ok" aria-live="polite">
           {result.name} added to the roster.
         </p>
       ) : null}
-    </div>
+      </div>
+    </details>
   );
 }

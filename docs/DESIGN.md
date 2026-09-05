@@ -80,6 +80,22 @@ The demo runs on a projector, 3–8m away, in a lit room.
 - One animated element per view. Only the in-progress state animates; terminal states
   are static.
 
+## Mobile comprehension and evidence
+
+- At 320–430px, one card has one reading path: identity and amount, status and
+  reason, payout, then action. Claim cards are separated by 16px instead of
+  relying on dividers inside one large panel.
+- Put the answer before the proof. Calculations, Sui rules, FX metadata, and
+  policy checks use native `details` disclosures with a 44px summary target.
+- Show only the first actionable policy failure before expansion. Expanded
+  checks are ordered failed, pending, then passed.
+- Preserve six-decimal evidence inside disclosures and confirmation dialogs;
+  concise cards may shorten labels but never round away payment precision.
+- Use `Intl.DateTimeFormat` for human-facing timestamps. Raw ISO timestamps are
+  transport evidence, not interface copy.
+- Respect safe-area insets, prevent horizontal overflow, and make all operational
+  buttons at least 44px high. Below 360px, claim actions stack to full width.
+
 ## Typeface
 
 **Bricolage Grotesque** for display: headings, the tracked uppercase labels, and any
