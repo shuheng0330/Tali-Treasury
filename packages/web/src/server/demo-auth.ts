@@ -7,7 +7,7 @@ export function requireDemoIdentityEnabled(
     throw new ServerError(
       'authentication_required',
       503,
-      'The demo identity API is disabled until wallet authentication is configured',
+      'Wallet authentication is required',
     );
   }
 }

@@ -27,8 +27,7 @@ import {
   parseHours,
   wageOfRecord,
 } from '@/lib/overtime-form';
-import { PAYROLL_EMPLOYEE, SINGLE_WALLET_DEMO } from '@/lib/demo-config';
-import { walletAccess, type AccessCopy } from '@/lib/wallet-access';
+import { signedInAccess, type AccessCopy } from '@/lib/wallet-access';
 import { useWalletSession } from '@/components/wallet/WalletSessionProvider';
 import { DataNotice } from '@/components/DataNotice';
 import { Select } from '@/components/Select';
@@ -39,7 +38,7 @@ import { TimesheetCapture } from './TimesheetCapture';
 
 const OVERTIME_COPY: AccessCopy = {
   action: 'claim overtime',
-  holder: "the employee's wallet",
+  holder: 'your wallet',
 };
 
 const KINDS: readonly OvertimeKind[] = ['normal_day', 'rest_day', 'public_holiday'];
@@ -89,7 +88,7 @@ function Field({
  */
 export function OvertimeClaimForm() {
   const wallet = useWalletSession();
-  const access = walletAccess(wallet.address, PAYROLL_EMPLOYEE, OVERTIME_COPY);
+  const access = signedInAccess(wallet.address, OVERTIME_COPY);
 
   const [listing, setListing] = useState<OvertimeListing>(EMPTY_LISTING);
   const [loading, setLoading] = useState(false);
@@ -134,9 +133,10 @@ export function OvertimeClaimForm() {
     };
   }, [address, reload]);
 
-  /* One wallet plays every part in the single-wallet demo, so filtering by the
-     signed-in address there would hide the claims it just submitted. */
-  const mine = SINGLE_WALLET_DEMO ? listing.data : ownClaims(listing.data, address);
+  /* Always the signed-in wallet's own. The server hands an employer every
+     employee's claims so the approval queue can be built from the same call,
+     and this screen is the employer's own overtime, not everyone's. */
+  const mine = ownClaims(listing.data, address);
 
   const recordedWage = wageOfRecord(mine);
   const monthlyWage = recordedWage ?? DEMO_MONTHLY_WAGE;

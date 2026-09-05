@@ -218,11 +218,14 @@ describe('overtime claims', () => {
     });
   });
 
-  it('will not let the employer claim overtime on the employee behalf', async () => {
-    await expect(service().submitClaim(EMPLOYER, claim)).rejects.toMatchObject({
-      code: 'forbidden',
-      status: 403,
-    });
+  /* An employer works late like anybody else. Refusing them left the one
+     account that reaches every screen unable to use the thing every employee
+     does; deciding the claim is still theirs alone, which is the check that
+     matters. */
+  it('lets the employer claim their own overtime', async () => {
+    const submitted = await service().submitClaim(EMPLOYER, claim);
+    expect(submitted.employee).toBe(EMPLOYER);
+    expect(submitted.status).toBe('submitted');
   });
 });
 
@@ -319,11 +322,20 @@ describe('leave requests', () => {
     ).rejects.toMatchObject({ code: 'processing_conflict', status: 409 });
   });
 
-  it('will not let the employer file leave for the employee', async () => {
-    await expect(service().submitLeave(EMPLOYER, leave)).rejects.toMatchObject({
-      code: 'forbidden',
-      status: 403,
-    });
+  it('lets the employer ask for their own leave', async () => {
+    const submitted = await service().submitLeave(EMPLOYER, leave);
+    expect(submitted.employee).toBe(EMPLOYER);
+    expect(submitted.status).toBe('submitted');
+  });
+
+  /* Filing on somebody else's behalf is still impossible, because a request is
+     always recorded against the wallet that signed it. */
+  it('records a request against the wallet that sent it, never another', async () => {
+    const submitted = await service().submitLeave(EMPLOYER, {
+      ...leave,
+      employee: EMPLOYEE,
+    } as never);
+    expect(submitted.employee).toBe(EMPLOYER);
   });
 });
 

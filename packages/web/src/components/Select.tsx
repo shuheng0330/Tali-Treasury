@@ -62,6 +62,7 @@ export function Select<T extends string>({
   const id = useId();
   const labelId = `${id}-label`;
   const hintId = `${id}-hint`;
+  const uncertainId = `${id}-uncertain`;
   const listId = `${id}-list`;
   const optionId = (index: number) => `${id}-option-${index}`;
 
@@ -186,14 +187,22 @@ export function Select<T extends string>({
         <span id={labelId} className="text-body font-medium text-ink-2">
           {label}
         </span>
-        {uncertain ? <span className="text-caption text-wait">not sure</span> : null}
+        {/* Named, not just drawn. A wrapping label used to fold this into the
+            control's accessible name, so the native select announced "Day type
+            not sure"; without it the one signal that a value was guessed from a
+            photograph is sighted-only. */}
+        {uncertain ? (
+          <span id={uncertainId} className="text-caption text-wait">
+            not sure
+          </span>
+        ) : null}
       </span>
 
       <button
         type="button"
         role="combobox"
         disabled={disabled}
-        aria-labelledby={labelId}
+        aria-labelledby={uncertain ? `${labelId} ${uncertainId}` : labelId}
         aria-describedby={hint ? hintId : undefined}
         aria-haspopup="listbox"
         aria-expanded={open}
@@ -201,7 +210,7 @@ export function Select<T extends string>({
         aria-activedescendant={open ? optionId(active) : undefined}
         onClick={() => (open ? setOpen(false) : show())}
         onKeyDown={onKeyDown}
-        className="flex min-h-9 w-full items-center justify-between gap-2 text-left text-body outline-none disabled:cursor-not-allowed disabled:opacity-60"
+        className="flex min-h-11 w-full items-center justify-between gap-2 text-left text-body outline-none disabled:cursor-not-allowed disabled:opacity-60"
       >
         <span className={current ? '' : 'text-ink-3'}>
           {current ? (
@@ -245,6 +254,12 @@ export function Select<T extends string>({
           id={listId}
           role="listbox"
           aria-labelledby={labelId}
+          /* The list is a sibling of the trigger, not a descendant, and its
+             rows are not focusable — so a plain mousedown moves focus to the
+             body and the combobox stops being what `aria-activedescendant`
+             speaks for. Refusing the default keeps focus where the pattern
+             says it lives, on the trigger. */
+          onMouseDown={(event) => event.preventDefault()}
           className="absolute left-0 top-[calc(100%+0.375rem)] z-40 max-h-64 w-full overflow-y-auto rounded-card border border-rule bg-canvas p-1 shadow-float"
         >
           {options.map((option, index) => {

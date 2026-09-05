@@ -133,8 +133,7 @@ export function RoleChooser({
       {signedIn && !holdsSomething ? (
         <div className="flex flex-col gap-2 rounded-card border border-rule bg-raised p-5">
           <p className="text-body text-ink-2">
-            This wallet does not hold a role in the demo configuration. That is not an
-            error — nothing here is hidden from you.
+            No role is assigned to this wallet.
           </p>
           <p className="text-caption text-ink-3">
             The parts worth seeing need no permission at all:{' '}

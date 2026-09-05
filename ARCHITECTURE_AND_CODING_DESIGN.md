@@ -335,6 +335,14 @@ messages are never serialized.
 
 ## Deployment design
 
+Customer-visible copy is independent from internal compatibility identifiers.
+Legacy `DEMO_*` environment keys, mock fixtures, and source discriminators remain
+available to existing development paths, but their names must not leak into the
+rendered product. `DataNotice` presents unavailable fallbacks as clearly labelled
+preview data, while operational network boundaries continue to say Sui Testnet.
+This separation permits a production-facing interface without disguising local
+or non-persisted data as authoritative.
+
 Local Supabase is the normal development target. Hosted deployment uses
 `supabase login`, `supabase link` and `supabase db push`, followed by direct checks
 that RLS, grants and the private bucket match the migration. Hosted verification

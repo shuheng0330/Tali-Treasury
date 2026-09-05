@@ -1,17 +1,62 @@
-import {
-  DEMO_TREASURER,
-  EMPLOYER_WALLET,
-  PAYROLL_EMPLOYEE,
-  SINGLE_WALLET_DEMO,
-} from './demo-config';
+import { EMPLOYER_WALLET, PAYROLL_EMPLOYEE } from './demo-config';
 
-export type ViewerRole = 'treasurer' | 'employer' | 'employee' | 'member';
+/**
+ * Three answers, because there are three kinds of wallet.
+ *
+ * There was a fourth, `treasurer`, holding the event's expense budget while the
+ * employer held payroll. They are one person here: the same account creates the
+ * treasury, funds payroll, and decides what either of them pays. Splitting them
+ * described an organisation this product does not have, and left the employer
+ * looking at a Treasury tab that was somebody else's.
+ */
+export type ViewerRole = 'employer' | 'employee' | 'member';
 
 export const ROLE_LABEL: Record<ViewerRole, string> = {
-  treasurer: 'Treasurer',
   employer: 'Employer',
   employee: 'Employee',
   member: 'Member',
+};
+
+/**
+ * What a wallet may do, named by the act rather than by the screen.
+ *
+ * Roles answer "who is this", capabilities answer "what may they reach", and
+ * keeping them apart is what stops the answer being rewritten in every
+ * component that needs it. A screen asks for a capability; only this table
+ * decides which roles carry it.
+ */
+export type Capability =
+  | 'request'
+  | 'approve'
+  | 'runPayroll'
+  | 'holdTreasury'
+  | 'earn'
+  | 'proof';
+
+/**
+ * Gate authority over other people, never what is somebody's own.
+ *
+ * Approving a claim, running payroll and holding the treasury are powers over
+ * others, and they are the whole of what this table restricts. Asking for
+ * something, reading your own pay and watching the contract refuse are not
+ * powers at all: they are a person's own business, and every signed-in wallet
+ * carries them.
+ *
+ * `earn` was briefly the employee's alone, which was a plain mistake. The
+ * screen behind it resolves the connected wallet's own payrolls — the server
+ * reads them with `listByEmployee` and refuses any mandate the wallet is not
+ * party to — and it says so plainly when there are none. Gating it on a
+ * build-time constant naming one wallet meant that everybody else, in a product
+ * whose entire idea is that a salary accrues by the second and you withdraw
+ * what you have already earned, could not see their salary.
+ *
+ * Whether a wallet has a stream is a question about data, and the screen
+ * answers it honestly. It was never a question about permission.
+ */
+const CAPABILITIES: Record<ViewerRole, readonly Capability[]> = {
+  employer: ['request', 'earn', 'approve', 'runPayroll', 'holdTreasury', 'proof'],
+  employee: ['request', 'earn', 'proof'],
+  member: ['request', 'earn', 'proof'],
 };
 
 function sameAddress(a: string | null | undefined, b: string | null | undefined): boolean {
@@ -20,69 +65,79 @@ function sameAddress(a: string | null | undefined, b: string | null | undefined)
 }
 
 /**
- * The server independently enforces who may actually act as treasurer or
- * employer on every write that matters, so this only ever hides convenience
- * UI, never a real boundary — a mismatched result gets a 403 from the
- * server, not a data leak. That's what makes it safe to answer 'treasurer'
- * unconditionally in single-wallet mode: the one demo wallet really is the
- * configured treasurer server-side, this just stops a stale local constant
- * (`DEMO_TREASURER`, recorded when the mandate was created) from hiding
- * treasurer-only controls from it after a mandate recreation moves that
- * address and nobody's updated the constant yet.
+ * Every capability the held roles add up to.
+ *
+ * A union, not a maximum: one wallet may be both employer and treasurer, and
+ * taking the first role that matched would drop half of what it may do.
  */
-export function viewerRole(
-  address: string | null,
-  /**
-   * The treasurer recorded on the event being looked at. This is the authority
-   * the server checks, so it wins wherever a screen has read an event.
-   * `DEMO_TREASURER` is a build-time constant recorded when the original
-   * mandate was created, and an event whose treasurer is anybody else would
-   * otherwise have its real treasurer labelled a member.
-   */
-  eventTreasurer?: string | null,
-): ViewerRole | null {
-  if (!address) return null;
-  if (SINGLE_WALLET_DEMO) {
-    /* Demo mode is a presentation shortcut; it must not erase the known
-       employer/employee distinction in the account control. */
-    if (sameAddress(address, PAYROLL_EMPLOYEE)) return 'employee';
-    if (sameAddress(address, EMPLOYER_WALLET)) return 'employer';
-    return 'treasurer';
+export function capabilitiesOf(roles: ReadonlySet<ViewerRole>): ReadonlySet<Capability> {
+  const held = new Set<Capability>();
+  for (const role of roles) {
+    for (const capability of CAPABILITIES[role]) held.add(capability);
   }
-  const treasurer = eventTreasurer?.trim() || DEMO_TREASURER;
-  if (sameAddress(address, treasurer)) return 'treasurer';
-  if (sameAddress(address, EMPLOYER_WALLET)) return 'employer';
-  return 'member';
+  return held;
+}
+
+export function can(roles: ReadonlySet<ViewerRole>, capability: Capability): boolean {
+  return capabilitiesOf(roles).has(capability);
+}
+
+/**
+ * The one role to call this wallet, for a badge that has room for one word.
+ *
+ * Ordered by how much of the product the role reaches, so a wallet that is both
+ * employer and treasurer is labelled Employer rather than whichever the set
+ * happened to yield first.
+ */
+const PRECEDENCE: readonly ViewerRole[] = ['employer', 'employee', 'member'];
+
+export function viewerRole(address: string | null): ViewerRole | null {
+  const roles = viewerRoles(address);
+  return PRECEDENCE.find((role) => roles.has(role)) ?? null;
 }
 
 /**
  * Every role the wallet holds, rather than the first one that matched.
  *
- * One wallet may be both employer and treasurer, and `viewerRole` has to keep
- * answering with one value because the session badge and the treasury dashboard
- * are built on it. Navigation needs the whole set: dropping a role there would
- * order the tabs as though the viewer could not do something they can.
+ * The connected wallet is the whole of the answer. There used to be a
+ * single-wallet demo mode here that handed every role to whoever signed in, so
+ * that one account could play every part on stage; it also meant an employee
+ * was offered the approval queue and the approve button on their own overtime,
+ * which the server then refused with a 403 nobody had been warned about. The
+ * flag still names the expense demo it was written for, and no longer decides
+ * who anybody is.
  *
- * The employee address is passed in rather than read from the environment
- * because the authority is the `employee` field on the salary stream, which no
- * screen can read until a stream exists. Until then a caller supplies
- * `PAYROLL_EMPLOYEE`, which is the wallet the mandate will approve.
+ * The employer is the configured wallet and nothing else. It is deliberately
+ * not also granted to whoever an event happens to record as its treasurer: the
+ * server checks each action against its own authority — `TALI_EMPLOYER_WALLET`
+ * for payroll, the event's own `treasurer_wallet` for claims — and handing the
+ * role to two wallets would put the Treasury tab in front of one of them and a
+ * 403 behind it. Where those two differ, the treasury screen still says so on
+ * the controls themselves rather than pretending.
+ *
+ * The employee address is passed in where a caller has read one, because the
+ * authority is the `employee` field on the salary stream. No screen can read
+ * that until a stream exists, and the account control has no stream in scope at
+ * all, so `PAYROLL_EMPLOYEE` — the wallet the mandate will approve — stands in.
+ * Without that fallback this could never answer 'employee' to a caller with
+ * nothing to pass, which is how the badge came to call an employee a member.
+ *
+ * The server independently enforces every one of these on each write that
+ * matters, so this only ever decides what is offered, never what is allowed.
  */
 export function viewerRoles(
   address: string | null,
-  sources: { eventTreasurer?: string | null; employee?: string | null } = {},
+  sources: { employee?: string | null } = {},
 ): ReadonlySet<ViewerRole> {
   if (!address) return new Set();
-  if (SINGLE_WALLET_DEMO) {
-    return new Set<ViewerRole>(['treasurer', 'employer', 'employee', 'member']);
-  }
 
   const roles = new Set<ViewerRole>();
-  if (sameAddress(address, sources.eventTreasurer?.trim() || DEMO_TREASURER)) {
-    roles.add('treasurer');
-  }
   if (sameAddress(address, EMPLOYER_WALLET)) roles.add('employer');
-  if (sameAddress(address, sources.employee)) roles.add('employee');
+  /* Absent means the caller had nothing to pass and the configured wallet
+     stands in; an explicit null means they read a stream and it named nobody,
+     which is a real answer and must not be overridden. */
+  const employee = sources.employee === undefined ? PAYROLL_EMPLOYEE : sources.employee;
+  if (sameAddress(address, employee)) roles.add('employee');
 
   /* Anyone signed in may open a claim; whether they are on the event roster is
      the server's answer to give, not ours. */

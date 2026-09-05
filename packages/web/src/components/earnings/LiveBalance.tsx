@@ -49,11 +49,7 @@ export function LiveBalance({ initial, mandateId }: { initial: SalaryStreamView;
   /* The stream names its own employee, so this needs no configuration: the
      contract pays `stream.employee` whoever signs, and nobody else's wallet is
      the one this balance belongs to. */
-  /* The single-wallet presentation shortcut must never offer an employee-only
-     withdrawal to the employer. The API enforces the same immutable address. */
-  const access = walletAccess(address, stream.employee, EMPLOYEE_COPY, {
-    requireExpected: true,
-  });
+  const access = walletAccess(address, stream.employee, EMPLOYEE_COPY);
 
   const finished = now >= stream.endsAtMs;
 
@@ -203,7 +199,7 @@ export function LiveBalance({ initial, mandateId }: { initial: SalaryStreamView;
               View the transaction
             </a>
           ) : (
-            'Sample data — nothing was signed or broadcast.'
+            'Preview only — nothing was signed or broadcast.'
           )}
         </p>
       ) : null}

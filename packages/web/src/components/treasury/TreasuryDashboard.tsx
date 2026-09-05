@@ -5,12 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useMemo, useState, useTransition } from 'react';
 import type { ClaimReviewAction, MandateView } from '@tali/shared';
 import { event } from '@/lib/mock/data';
-import {
-  DEMO_EVENT_ID,
-  DEMO_EVENT_NAME,
-  DEMO_TREASURER,
-  SINGLE_WALLET_DEMO,
-} from '@/lib/demo-config';
+import { DEMO_EVENT_ID, DEMO_EVENT_NAME, EMPLOYER_WALLET } from '@/lib/demo-config';
 import { reviewQueue, settledClaims } from '@/lib/mock/api';
 import { committedFrom, settledFrom, toReviewQueue } from '@/lib/queue';
 import { useClaims } from '@/lib/api/useClaims';
@@ -69,11 +64,12 @@ export function TreasuryDashboard({
      The server refuses all three, so this only decides whether the refusal
      arrives before the click or after it.
 
-     Checked against the treasurer recorded on the event rather than through
+     Checked against the wallet recorded on the event rather than through
      `viewerRole`: that is the authority the server reads, and it differs per
-     event. `DEMO_TREASURER` is a build-time constant kept only as the fallback
-     for an event that could not be read. */
-  const treasurer = eventTreasurer?.trim() || DEMO_TREASURER;
+     event. The role itself is gone — the employer holds the treasury now — so
+     an event that could not be read falls back to the employer wallet, which
+     is who that authority is meant to be. */
+  const treasurer = eventTreasurer?.trim() || EMPLOYER_WALLET;
   const reviewAccess = walletAccess(wallet.address, treasurer, REVIEW_COPY);
   const revokeAccess = walletAccess(wallet.address, treasurer, REVOKE_COPY);
   const memberManagementAccess = eventTreasurerAccess(wallet.address, eventTreasurer);
@@ -98,7 +94,7 @@ export function TreasuryDashboard({
   const [reconciliationError, setReconciliationError] = useState<string | null>(null);
   const [refreshingPayments, setRefreshingPayments] = useState(false);
 
-  const live = useClaims(apiEnabled, wallet.address ?? DEMO_TREASURER);
+  const live = useClaims(apiEnabled, wallet.address ?? EMPLOYER_WALLET);
 
   const queue = useMemo(
     () =>
@@ -290,7 +286,7 @@ export function TreasuryDashboard({
       <div className="mx-auto flex w-full max-w-4xl flex-col gap-4 px-5 py-8">
         <h1 className="text-heading">Treasury unavailable</h1>
         <p className="text-body text-ink-2">
-          Tali could not read the USDC mandate from Sui Testnet. No mock chain balance was substituted.
+          Tali could not read the USDC mandate from Sui Testnet. No balance is shown until chain data is available.
         </p>
         <p className="break-all rounded-card border border-rule bg-surface p-4 font-mono text-caption text-ink-2">
           {readError ?? 'Unknown Sui read error'}
@@ -313,12 +309,6 @@ export function TreasuryDashboard({
 
   return (
     <div className="page-safe mx-auto flex w-full max-w-4xl flex-col gap-6 px-5 py-8">
-      {SINGLE_WALLET_DEMO ? (
-        <div className="flex items-center gap-3 rounded-card border border-accent-line bg-accent-soft px-4 py-3">
-          <span className="h-2 w-2 shrink-0 rounded-full bg-accent" aria-hidden />
-          <p className="text-caption text-ink-2"><strong className="font-display text-ink">Demo Mode</strong><span className="mx-2 text-ink-3">·</span>One Testnet wallet submits and reviews claims.</p>
-        </div>
-      ) : null}
       <MandateHeader
         eventName={DEMO_EVENT_NAME}
         organisation={event.organisation}
@@ -329,6 +319,8 @@ export function TreasuryDashboard({
         revokeNotice={revokeAccess.notice}
       />
 
+      {/* Member management is authorized by the event row itself. Unlike the
+          review fallback, a missing event authority must keep this hidden. */}
       {memberManagementAccess.permitted ? (
         <AddMemberForm eventId={DEMO_EVENT_ID} onAdded={() => live.reload()} />
       ) : null}
@@ -371,7 +363,7 @@ export function TreasuryDashboard({
               reason={live.reason}
               live="Claim loading, policy decisions, and review actions"
               plural
-              simulated="Reviewing and paying a claim need the live queue, so on sample data their controls do nothing."
+              simulated="Reviewing and paying claims requires live data. These actions are unavailable."
             />
           ) : null}
           {live.source === 'live' && !reviewsRecordable ? (

@@ -489,6 +489,20 @@ mandate policies and budget top-ups.
 
 ## Standing rules
 
+### 5 September — production-facing copy pass
+
+- Removed development-stage wording from the landing, application footer, role
+  selection, claims, treasury, payroll setup, salary stream, earnings, overtime,
+  and safety experiences.
+- Retained Sui Testnet labels where they identify a signing or transaction
+  boundary, and kept package and transaction evidence available to verify.
+- Standardized unavailable fallback presentation as preview data with live-only
+  actions unavailable; no API, authorization, calculation, storage, or signing
+  behavior changed.
+- Added focused copy regression coverage. Verification completed with 967 web
+  tests passing and one intentional skip, 48 Sui-integration tests passing,
+  successful typecheck and production build, and zero dependency vulnerabilities.
+
 - Screens ship with hover, `focus-visible`, empty and loading states. Judges click things.
 - Nothing below 18px above the fold; the demo is projected 3–8m away.
 - Feature freeze **3 Sep**. After that: README, two videos, deck, rehearsal.

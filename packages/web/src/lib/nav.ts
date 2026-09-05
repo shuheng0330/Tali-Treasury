@@ -1,4 +1,4 @@
-import type { ViewerRole } from './viewer-role';
+import { can, type Capability, type ViewerRole } from './viewer-role';
 
 /** A screen inside a section, reached from the section's own sub-navigation. */
 export interface NavChild {
@@ -22,8 +22,8 @@ export interface NavSection {
    * capitalises whichever subject opens its sentence.
    */
   subject?: string;
-  /** Whose section this primarily is. Every route stays reachable by URL. */
-  role: ViewerRole;
+  /** What a wallet must be able to do for this section to appear at all. */
+  capability: Capability;
   /**
    * The screens inside it, first one being the section itself.
    *
@@ -47,11 +47,10 @@ export const NAV_SECTIONS: readonly NavSection[] = [
     href: '/requests',
     label: 'Requests',
     full: 'Expenses, overtime and leave',
-    /* Membership is the one role everybody signed in holds, so this never gets
-       greyed out and never earns a line in the note. That is the truth of it:
-       an expense, an hour worked late and a day off are asked for by whoever
-       did the work, whatever else they are. */
-    role: 'member',
+    /* Everybody signed in may ask for something, the employer included: an
+       expense, an hour worked late and a day off are asked for by whoever did
+       the work, whatever else they are. */
+    capability: 'request',
     children: [
       {
         href: '/requests/expense',
@@ -75,7 +74,7 @@ export const NAV_SECTIONS: readonly NavSection[] = [
     label: 'Earnings',
     full: 'Your earnings',
     subject: 'the earnings screen',
-    role: 'employee',
+    capability: 'earn',
     children: [],
   },
   {
@@ -83,7 +82,7 @@ export const NAV_SECTIONS: readonly NavSection[] = [
     label: 'Approvals',
     full: 'Decide overtime and leave',
     subject: 'the approval queue',
-    role: 'employer',
+    capability: 'approve',
     children: [],
   },
   {
@@ -91,7 +90,7 @@ export const NAV_SECTIONS: readonly NavSection[] = [
     label: 'Payroll',
     full: 'Run payroll',
     subject: 'the payroll run',
-    role: 'employer',
+    capability: 'runPayroll',
     children: [
       { href: '/payroll', label: 'Run', blurb: 'Pay one salary and its three statutory shares in one transaction.' },
       { href: '/payroll/history', label: 'History', blurb: 'Every run this mandate has signed, and what each one paid.' },
@@ -103,7 +102,7 @@ export const NAV_SECTIONS: readonly NavSection[] = [
     label: 'Treasury',
     full: 'Treasurer view',
     subject: 'the treasury dashboard',
-    role: 'treasurer',
+    capability: 'holdTreasury',
     children: [
       { href: '/treasury', label: 'Claims', blurb: 'The event budget, the queue, and what has already been paid.' },
       { href: '/treasury/setup', label: 'Set up', blurb: 'Create an expense treasury and set the rules it will hold you to.' },
@@ -113,22 +112,15 @@ export const NAV_SECTIONS: readonly NavSection[] = [
     href: '/safety',
     label: 'Safety',
     full: 'Safety tests',
-    /* Open to anyone, and the part worth showing a stranger. Marking it the
-       employer's greyed out the one section that needs no permission at all. */
-    role: 'member',
+    /* Open to anyone, and the part worth showing a stranger. It needs no
+       permission at all, so every role carries `proof`. */
+    capability: 'proof',
     children: [
       { href: '/safety', label: 'Budget cap', blurb: 'Try to spend more than the mandate allows and watch the chain refuse.' },
       { href: '/safety/payroll', label: 'Payroll floor', blurb: 'Try to pay a salary that skips EPF and watch the contract refuse.' },
     ],
   },
 ];
-
-const OWNER: Record<ViewerRole, string> = {
-  employer: "the employer's",
-  treasurer: "the treasurer's",
-  employee: "the employee's",
-  member: "a member's",
-};
 
 /**
  * The section a path belongs to, longest match winning.
@@ -175,62 +167,26 @@ export function activeChild(
 }
 
 /**
- * The viewer's own sections first, in declared order, then everything else in
- * declared order.
+ * The sections this wallet may actually reach.
  *
- * Nothing is removed. A hidden tab reads as a broken app to somebody who came
- * looking for it, where a visible one that says whose it is explains itself.
+ * Hidden, not dimmed. The nav used to carry every section and grey out the ones
+ * that were somebody else's, on the reasoning that a missing tab reads as a
+ * broken app. In practice it read as an app full of doors that open onto a
+ * refusal: an employee was shown the approval queue and the approve button on
+ * their own overtime, and only the server's 403 told them no. Showing people
+ * what they can do is the kinder answer and the conventional one.
+ *
+ * Signed out is the exception and everything shows. Before a wallet is
+ * connected there is no answer to give about who this is, and hiding on the
+ * strength of not knowing would leave a first-time visitor an empty app; every
+ * screen already says which wallet it wants.
  */
-export function orderSections(
+export function visibleSections(
   roles: ReadonlySet<ViewerRole>,
   sections: readonly NavSection[] = NAV_SECTIONS,
 ): readonly NavSection[] {
   if (roles.size === 0) return sections;
-
-  /* Everyone signed in is a member, so ranking that with the viewer's
-     distinguishing role would push Requests above the screens they came for. */
-  const rank = (section: NavSection) => {
-    if (!roles.has(section.role)) return 2;
-    return section.role === 'member' ? 1 : 0;
-  };
-
-  return [...sections].sort((a, b) => rank(a) - rank(b));
-}
-
-function list(items: readonly string[]): string {
-  if (items.length === 1) return items[0]!;
-  return `${items.slice(0, -1).join(', ')} and ${items[items.length - 1]}`;
-}
-
-/**
- * One sentence naming the sections that are not this viewer's, and whose they
- * are.
- *
- * Said once under the nav rather than on each pill: the pills already fill two
- * rows on a phone, and the design rules do not let a title attribute be the
- * only place a fact lives.
- */
-export function otherRolesNote(
-  roles: ReadonlySet<ViewerRole>,
-  sections: readonly NavSection[] = NAV_SECTIONS,
-): string | null {
-  if (roles.size === 0) return null;
-
-  const sentences: string[] = [];
-  for (const role of ['employer', 'treasurer', 'employee', 'member'] as const) {
-    if (roles.has(role)) continue;
-    const theirs = sections.filter((section) => section.role === role);
-    if (theirs.length === 0) continue;
-    /* Capitalised here rather than in the constant. A subject that carried its
-       own capital read as a title in the middle of the list once a role owned
-       two screens — "the earnings screen and The overtime claim form". */
-    const named = list(theirs.map((section) => section.subject ?? section.full));
-    sentences.push(
-      `${named.charAt(0).toUpperCase()}${named.slice(1)} ${theirs.length > 1 ? 'are' : 'is'} ${OWNER[role]}.`,
-    );
-  }
-
-  return sentences.length > 0 ? sentences.join(' ') : null;
+  return sections.filter((section) => can(roles, section.capability));
 }
 
 export interface NavParent {

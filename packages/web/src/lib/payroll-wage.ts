@@ -79,7 +79,7 @@ export function unpaidLeaveProblem(value: WageClassValue): string | null {
   if (after < MIN_GROSS) {
     return `After ${days} unpaid days the wage falls below the ${toDisplay(
       MIN_GROSS.toString(),
-    )} MYR the demo mandate accepts.`;
+    )} MYR supported by the registered mandate.`;
   }
   return null;
 }
@@ -89,7 +89,7 @@ export function grossProblem(gross: string): string | null {
   const base = grossToBaseUnits(gross);
   if (base === null) return 'Enter a monthly wage in ringgit, to at most six decimals.';
   if (base < MIN_GROSS) {
-    return `The scaled demo wage must be at least ${toDisplay(MIN_GROSS.toString())} MYR.`;
+    return `The monthly wage must be at least ${toDisplay(MIN_GROSS.toString())} MYR.`;
   }
   if (base > MAX_GROSS) return 'That is a typo, not a monthly salary.';
   return null;

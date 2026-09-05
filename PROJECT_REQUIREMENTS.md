@@ -234,6 +234,12 @@ The payroll setup backend must:
   while policy checks and FX evidence expand on demand.
 - Operational controls must be at least 44px high, remain keyboard accessible,
   wrap safely at 320px, preserve visible focus, and announce asynchronous results.
+- Customer-facing screens use product language rather than development-stage
+  labels. They must not describe Tali as a demo, MVP, mock, sample, or hackathon
+  project.
+- Testnet remains explicitly identified wherever a wallet signs, funds move, or
+  an explorer link opens. Preview data must never be presented as persisted or
+  on-chain data, and actions that require live data remain unavailable.
 
 ## Explicitly out of scope for this increment
 

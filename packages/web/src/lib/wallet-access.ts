@@ -1,5 +1,3 @@
-import { SINGLE_WALLET_DEMO } from './demo-config';
-
 export interface Access {
   /**
    * False only when the wallet that may act is known and this is not it, or
@@ -34,18 +32,22 @@ function short(address: string): string {
  * screen cannot tell who the employer is before one is configured, and
  * refusing everybody on the strength of a missing environment variable would
  * be a guess dressed as a rule.
+ *
+ * There used to be a single-wallet demo mode here that permitted any signed-in
+ * wallet outright, so that one account could play every part on stage. Thirteen
+ * of the fourteen callers left it on, which meant every approve, reject,
+ * revoke, run and withdraw control in the app was offered to whoever signed in
+ * and only the server's 403 said otherwise. Who may act is now always the
+ * wallet, and the demo flag no longer decides anything.
  */
 export function walletAccess(
   address: string | null,
   expected: string,
   copy: AccessCopy,
-  options: { requireExpected?: boolean; singleWalletDemo?: boolean } = {},
 ): Access {
   if (!address) {
     return { permitted: false, notice: `Sign in with ${copy.holder} to ${copy.action}.` };
   }
-  const singleWalletDemo = options.singleWalletDemo ?? SINGLE_WALLET_DEMO;
-  if (singleWalletDemo && !options.requireExpected) return { permitted: true, notice: null };
 
   const configured = expected.trim();
   if (!configured) {
@@ -63,6 +65,22 @@ export function walletAccess(
     permitted: false,
     notice: `You are signed in as ${short(address)}. Only ${short(configured)} can ${copy.action}.`,
   };
+}
+
+/**
+ * Access for an act any signed-in wallet may perform.
+ *
+ * Asking for overtime, leave or an expense is one of these: the employer works
+ * late and takes days off like anybody else, so gating the request forms on the
+ * employee's wallet would lock the one account that can reach every screen out
+ * of the thing every employee does. Deciding those requests is a different act
+ * with a different gate.
+ */
+export function signedInAccess(address: string | null, copy: AccessCopy): Access {
+  if (!address) {
+    return { permitted: false, notice: `Sign in with ${copy.holder} to ${copy.action}.` };
+  }
+  return { permitted: true, notice: null };
 }
 
 export const EMPLOYER_COPY: AccessCopy = {
@@ -98,15 +116,12 @@ export const REVIEW_COPY: AccessCopy = {
 /**
  * Access for actions that are authorized by the event's treasurer row.
  *
- * The single-wallet demo shortcut is useful for presentation labels, but it
- * must not make an employer or an unknown wallet look like the event
- * treasurer. A missing event value is also not an authorization decision: the
- * UI hides the control until the server has returned the event authority.
+ * A missing event value is not an authorization decision: the UI hides the
+ * control until the server has returned the event authority.
  */
 export function eventTreasurerAccess(
   address: string | null,
   eventTreasurer: string | null | undefined,
-  options: { singleWalletDemo?: boolean } = {},
 ): Access {
   if (!eventTreasurer?.trim()) {
     return {
@@ -115,10 +130,7 @@ export function eventTreasurerAccess(
     };
   }
 
-  return walletAccess(address, eventTreasurer, REVIEW_COPY, {
-    requireExpected: true,
-    singleWalletDemo: options.singleWalletDemo,
-  });
+  return walletAccess(address, eventTreasurer, REVIEW_COPY);
 }
 
 export const REVOKE_COPY: AccessCopy = {

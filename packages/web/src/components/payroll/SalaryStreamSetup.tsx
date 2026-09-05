@@ -74,7 +74,7 @@ export function SalaryStreamSetup({ configuration }: { configuration: PayrollCon
       <section className="flex flex-col gap-3 rounded-card border border-ok-line bg-ok-soft p-5">
         <span className="eyebrow text-ok">Salary stream opened</span>
         <p className="text-body">
-          {toDisplay(stream.totalAmount, 6)} USDC is reserved for the registered employee over this demo period.
+          {toDisplay(stream.totalAmount, 6)} USDC is reserved for the registered employee over this vesting period.
         </p>
         <div className="flex flex-wrap gap-4 text-caption">
           <a className="link" href={`https://suiscan.xyz/testnet/tx/${stream.creationDigest}`} target="_blank" rel="noreferrer">
@@ -91,7 +91,7 @@ export function SalaryStreamSetup({ configuration }: { configuration: PayrollCon
   return (
     <section className="flex flex-col gap-4 rounded-card border border-rule bg-surface p-5">
       <div>
-        <span className="eyebrow">Separate salary-stream demo</span>
+        <span className="eyebrow">Salary stream</span>
         <p className="mt-2 text-caption text-ink-3">
           Reserve a clearly labelled USDC allocation for time-based accrual. This is not a second payment of the RM30 payroll already run.
         </p>
@@ -107,7 +107,7 @@ export function SalaryStreamSetup({ configuration }: { configuration: PayrollCon
           />
         </label>
         <Select
-          label="Demo duration"
+          label="Vesting period"
           value={String(durationMinutes)}
           onChange={(minutes) => setDurationMinutes(Number(minutes))}
           options={[

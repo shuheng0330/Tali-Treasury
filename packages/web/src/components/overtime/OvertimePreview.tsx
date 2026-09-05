@@ -170,8 +170,8 @@ export function OvertimePreview({ monthlyWage, wageIsOnRecord, kind, hours }: Pr
 
         {wageIsOnRecord ? null : (
           <p className="text-caption text-ink-3">
-            No claim of yours has been priced yet, so this uses the wage of record the demo
-            mandate is registered for. The server prices what you submit against the same
+            No claim of yours has been priced yet, so this uses the wage of record for the
+            registered mandate. The server prices what you submit against the same
             figure — this preview is not a second opinion.
           </p>
         )}
