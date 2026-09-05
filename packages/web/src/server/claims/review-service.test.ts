@@ -111,6 +111,7 @@ function repository(overrides: Partial<ClaimRepository> = {}): ClaimRepository {
     getProcessContext: vi.fn(async () => context),
     resubmit: vi.fn(),
     saveDecision: vi.fn(),
+    restartExpiredPaymentQuote: vi.fn(),
     applyReview: vi.fn(),
     reservePayment: vi.fn(),
     recordPaymentAttempt: vi.fn(),

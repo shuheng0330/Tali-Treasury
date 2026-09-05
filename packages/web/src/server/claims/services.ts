@@ -275,6 +275,8 @@ export function createProcessClaimService(deps: {
     const conflict = (message = 'Claim is not available for processing') =>
       new ServerError('processing_conflict', 409, message);
 
+    const nowMs = deps.now?.() ?? Date.now();
+
     function completedPaymentResponse(storedClaim: Claim): ProcessClaimResponse {
       if (!storedClaim.decision || !storedClaim.payment) {
         throw conflict('Claim payment state is inconsistent');
@@ -322,6 +324,27 @@ export function createProcessClaimService(deps: {
       }
     }
 
+    /* A payment failure is definite: no USDC left the mandate. A MYR quote is
+       short-lived, though, so it must not be reused after expiry. Clear only
+       the mutable decision/payment state, then take the claim through the
+       normal quote-and-human-approval flow again. */
+    if (
+      context.claim.state === 'payment_failed' &&
+      context.claim.analysis?.currency === 'MYR' &&
+      claimPaymentAmount(context.claim, nowMs) === null
+    ) {
+      let restarted;
+      try {
+        restarted = await deps.claims.restartExpiredPaymentQuote(context.claim.id);
+      } catch (error) {
+        throw databaseError(error);
+      }
+      if (restarted.status !== 'saved') {
+        throw conflict('Claim changed while refreshing its expired quote. Reload and try again.');
+      }
+      context.claim = restarted.claim;
+    }
+
     // A quote is created only after treasurer authorization. It is bound to the
     // claim, event, recipient and mandate before policy evaluation continues.
     if (
@@ -329,7 +352,7 @@ export function createProcessClaimService(deps: {
       context.claim.analysis?.currency === 'MYR' &&
       !context.claim.review &&
       ['submitted', 'awaiting_review'].includes(context.claim.state) &&
-      claimPaymentAmount(context.claim, deps.now?.() ?? Date.now()) === null
+      claimPaymentAmount(context.claim, nowMs) === null
     ) {
       if (!deps.claims.saveFxQuote) {
         throw new ServerError(
@@ -359,7 +382,7 @@ export function createProcessClaimService(deps: {
         event: context.event,
         mandate,
         exactDuplicate: false,
-        nowMs: deps.now?.() ?? Date.now(),
+        nowMs,
       });
       const stateByOutcome: Record<PolicyOutcome, ProcessedClaimState> = {
         auto_pay: 'approved',
@@ -400,7 +423,7 @@ export function createProcessClaimService(deps: {
       event: context.event,
       mandate: currentMandate,
       exactDuplicate: false,
-      nowMs: deps.now?.() ?? Date.now(),
+      nowMs,
     });
     if (currentDecision.outcome !== 'auto_pay') {
       const payment: PaymentResult = {

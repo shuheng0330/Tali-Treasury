@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import type { Claim, MandateView, PaymentResult, ReceiptAnalysis } from '@tali/shared';
+import type { Claim, FxQuote, MandateView, PaymentResult, ReceiptAnalysis } from '@tali/shared';
 
 import { createPayApprovedClaimService } from './pay';
 import type { ClaimRepository, MandateReader, PaymentExecutor } from './ports';
@@ -30,6 +30,26 @@ const mandate = {
   revoked: false,
   expiryMs: NOW + 86_400_000,
 } as MandateView;
+
+const expiredMyrQuote: FxQuote = {
+  id: '11111111-1111-4111-8111-111111111111',
+  claimId: 'claim-1',
+  eventId: '22222222-2222-4222-8222-222222222222',
+  recipient: MEMBER,
+  mandateId: MANDATE_ID,
+  provider: 'open_exchange_rates',
+  sourceCurrency: 'MYR',
+  targetCurrency: 'USDC',
+  sourceAmount: '2000000',
+  targetAmount: '500000',
+  myrPerUsd: '4',
+  rateTimestampMs: NOW - 960_000,
+  fetchedAtMs: NOW - 930_000,
+  createdAtMs: NOW - 900_000,
+  expiresAtMs: NOW - 1,
+  valuation: 'USDC_USD_PARITY',
+  rounding: 'HALF_UP_6DP',
+};
 
 function payment(overrides: Partial<PaymentResult> = {}): PaymentResult {
   return {
@@ -167,6 +187,22 @@ describe('createPayApprovedClaimService', () => {
     await impl(request);
 
     expect(reservePayment).toHaveBeenCalledWith('claim-1', 'approved');
+  });
+
+  it('does not reserve or submit a failed MYR payment whose quote expired', async () => {
+    const { impl, reservePayment, payments } = service({
+      claim: {
+        state: 'payment_failed',
+        amount: '2000000',
+        analysis: { currency: 'MYR' } as ReceiptAnalysis,
+        fxQuote: expiredMyrQuote,
+        review: { action: 'approve', reviewer: TREASURER, reason: null, reviewedAtMs: NOW - 1_000 },
+      },
+    });
+
+    await expect(impl(request)).rejects.toThrow('MYR quote has expired');
+    expect(reservePayment).not.toHaveBeenCalled();
+    expect(payments.execute).not.toHaveBeenCalled();
   });
 
   it('will not pay a claim in any state but approved or a failed attempt', async () => {

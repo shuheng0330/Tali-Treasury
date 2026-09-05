@@ -62,7 +62,13 @@ export function createPayApprovedClaimService(deps: {
       );
     }
 
-    const paymentAmount = claimPaymentAmount(context.claim);
+    const nowMs = deps.now?.() ?? Date.now();
+    const paymentAmount = claimPaymentAmount(context.claim, nowMs);
+    const expiredMyrQuote =
+      context.claim.analysis?.currency === 'MYR' &&
+      context.claim.fxQuote !== null &&
+      context.claim.fxQuote !== undefined &&
+      nowMs >= context.claim.fxQuote.expiresAtMs;
     if (
       paymentAmount === null ||
       (context.claim.analysis?.currency === 'MYR' &&
@@ -72,7 +78,9 @@ export function createPayApprovedClaimService(deps: {
       throw new ServerError(
         'processing_conflict',
         409,
-        'The claim needs an explicit conversion quote and approval before payment.',
+        expiredMyrQuote
+          ? 'The MYR quote has expired or is no longer approved. Refresh the quote and approve the new USDC amount before payment.'
+          : 'The claim needs an explicit conversion quote and approval before payment.',
       );
     }
 
