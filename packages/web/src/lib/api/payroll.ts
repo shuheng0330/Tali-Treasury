@@ -36,7 +36,7 @@ function describe(error: unknown): string {
     return error.message.charAt(0).toLowerCase() + error.message.slice(1);
   }
   if (error.code === 'authentication_required') {
-    return 'the demo identity API is switched off';
+    return 'wallet authentication is required';
   }
   return error.message.charAt(0).toLowerCase() + error.message.slice(1);
 }

@@ -12,7 +12,7 @@ function describe(error: unknown): string {
       : 'the backend is unreachable';
   }
   if (error.code === 'authentication_required') {
-    return 'the demo identity API is switched off';
+    return 'wallet authentication is required';
   }
   /* Rendered as its own sentence, unlike the banner text elsewhere, so the
      server's capitalisation is kept. */

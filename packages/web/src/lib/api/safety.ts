@@ -14,7 +14,7 @@ function describe(error: unknown): string {
       : 'the backend is unreachable';
   }
   if (error.code === 'authentication_required') {
-    return 'the demo identity API is switched off';
+    return 'wallet authentication is required';
   }
   if (error.code === 'payment_configuration_failed') {
     return 'this deployment has no signing key, so nothing can be broadcast';

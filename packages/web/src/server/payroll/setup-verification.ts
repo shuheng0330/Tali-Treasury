@@ -89,7 +89,7 @@ export async function verifyPayrollSetupTransaction(input: {
       mandateId,
     );
     if (mandate.approvedEmployees.length !== 1) {
-      throw invalid('The payroll mandate must approve exactly one demo employee.');
+      throw invalid('The payroll mandate must approve exactly one employee.');
     }
     const employee = mandate.approvedEmployees[0]!;
     const expected = await createPayrollSetupPreview({

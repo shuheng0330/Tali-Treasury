@@ -8,7 +8,6 @@ import type { Source } from '@/lib/api/demo';
  */
 export function DataNotice({
   source,
-  reason,
   live,
   simulated,
   plural = false,
@@ -16,7 +15,7 @@ export function DataNotice({
    * What the fallback actually is, when it is not sample data. Records held in
    * memory are real; calling them a sample would be its own inaccuracy.
    */
-  fallbackLabel = 'Sample data.',
+  fallbackLabel = 'Preview data.',
 }: {
   source: Source;
   reason: string | null;
@@ -47,7 +46,7 @@ export function DataNotice({
         <>
           <span className="font-medium">{fallbackLabel}</span>{' '}
           <span className="text-ink-2">
-            {reason ? `${live} fell back because ${reason}. ` : ''}
+            Live data is temporarily unavailable.{' '}
             {simulated}
           </span>
         </>

@@ -98,7 +98,7 @@ export function Breakdown({
           <p className="text-caption text-ink-3">
             Total employer cost RM {toDisplay(source.employerCost)} →{' '}
             {toDisplay(breakdown.employerCost, 6)} USDC · 1 USD ={' '}
-            {breakdown.fxConversion.myrPerUsd} MYR · 1 USDC = 1 USD for this Testnet demo
+            {breakdown.fxConversion.myrPerUsd} MYR · USDC valued at USD parity
           </p>
         </div>
       ) : null}

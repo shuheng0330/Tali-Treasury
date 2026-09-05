@@ -5,6 +5,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { FxQuoteSummary } from '../components/claim/FxQuoteSummary';
 import { ClaimStatusSummary } from '../components/claim/ClaimStatusSummary';
+import { DataNotice } from '../components/DataNotice';
 import { reviewQueue } from './mock/api';
 import type { Claim } from '@tali/shared';
 
@@ -153,5 +154,113 @@ describe('treasury polish', () => {
     expect(html).toContain('<dt');
     expect(html).toContain('Decision');
     expect(html).toContain('Personal expense.');
+  });
+});
+
+describe('production-ready application copy', () => {
+  const source = (path: string) => readFileSync(new URL(path, import.meta.url), 'utf8');
+
+  it('uses a quiet, accurate network footer without development navigation', () => {
+    const layout = source('../app/(app)/layout.tsx');
+    expect(layout).toContain('Network · Sui Testnet');
+    expect(layout).not.toContain('no real funds');
+    expect(layout).not.toContain('Design system');
+  });
+
+  it('removes the single-wallet notices from claim and treasury journeys', () => {
+    const claim = source('../components/claim/ClaimFlow.tsx');
+    const treasury = source('../components/treasury/TreasuryDashboard.tsx');
+    expect(claim).not.toContain('Single-wallet Testnet demo');
+    expect(claim).not.toContain('Payments use test tokens, not real money.');
+    expect(treasury).not.toContain('Demo Mode');
+    expect(treasury).not.toContain('One Testnet wallet submits and reviews claims.');
+  });
+
+  it('presents the legacy treasury name as a product label', () => {
+    const header = source('../components/treasury/MandateHeader.tsx');
+    expect(header).toContain("eventName.toLowerCase() === 'single-wallet reimbursement demo'");
+    expect(header).toContain("? 'Expense treasury'");
+    expect(header).toContain('{displayName}</h1>');
+  });
+
+  it('uses operational payroll and role labels', () => {
+    const setup = source('../components/payroll/PayrollSetup.tsx');
+    const stream = source('../components/payroll/SalaryStreamSetup.tsx');
+    const roles = source('../components/RoleChooser.tsx');
+    const breakdown = source('../components/payroll/Breakdown.tsx');
+    const overtime = source('../components/overtime/OvertimePreview.tsx');
+
+    expect(setup).toContain('Monthly gross wage');
+    expect(setup).not.toContain('Demo wage');
+    expect(stream).toContain('Salary stream');
+    expect(stream).toContain('Vesting period');
+    expect(stream).not.toContain('salary-stream demo');
+    expect(stream).not.toContain('demo period');
+    expect(roles).toContain('No role is assigned to this wallet.');
+    expect(roles).not.toContain('demo configuration');
+    expect(breakdown).not.toContain('Testnet demo');
+    expect(overtime).not.toContain('demo mandate');
+  });
+
+  it('labels local fallback content as an unavailable preview', () => {
+    const html = renderToStaticMarkup(
+      <DataNotice
+        source="mock"
+        reason="the service is unavailable"
+        live="Payroll data"
+        simulated="Actions requiring live data are unavailable."
+      />,
+    );
+    expect(html).toContain('Preview data.');
+    expect(html).toContain('Live data is temporarily unavailable.');
+    expect(html).toContain('Actions requiring live data are unavailable.');
+    expect(html).not.toContain('Sample data.');
+    expect(html).not.toContain('fell back because');
+  });
+
+  it('uses preview language for local safety evidence', () => {
+    const safety = source('../components/safety/SafetyTest.tsx');
+    expect(safety).toContain('Local preview · no transaction submitted');
+    expect(safety).toContain('Skip application checks');
+    expect(safety).toContain('Application checks stopped this request.');
+    expect(safety).not.toContain('mock safety dataset');
+    expect(safety).not.toContain('this simulation');
+    expect(safety).not.toContain('simulated attempt');
+  });
+
+  it('keeps product proof while removing competition and rollout copy', () => {
+    const landing = source('../app/page.tsx');
+    const evidence = source('../components/landing/Evidence.tsx');
+    const wire = source('../components/landing/Wire.tsx');
+    expect(landing).toContain('Package on SuiVision');
+    expect(landing).toContain('This illustrative payroll');
+    expect(landing).not.toContain('MUBA Blockchain Hackathon');
+    expect(landing).not.toContain('demo identity');
+    expect(landing).not.toContain('No mainnet, no real funds');
+    expect(landing).not.toContain('Testnet faucet grant');
+    expect(landing).not.toContain('Design system');
+    expect(evidence).not.toContain('single-wallet demo mandate');
+    expect(wire).not.toContain('Pause the demonstration');
+    expect(wire).not.toContain('Play the demonstration');
+  });
+
+  it('keeps development terminology out of errors that reach customers', () => {
+    for (const path of [
+      '../lib/api/mandate.ts',
+      '../lib/api/payroll.ts',
+      '../lib/api/resubmit.ts',
+      '../lib/api/safety.ts',
+      '../server/demo-auth.ts',
+      '../server/payroll/setup-verification.ts',
+      '../lib/payroll-wage.ts',
+      '../lib/evidence.ts',
+    ]) {
+      const contents = source(path);
+      expect(contents).not.toContain('demo identity API');
+      expect(contents).not.toContain('demo employee');
+      expect(contents).not.toContain('demo mandate');
+      expect(contents).not.toContain('scaled demo wage');
+      expect(contents).not.toContain('single-wallet demo mandate');
+    }
   });
 });

@@ -187,7 +187,7 @@ export function SafetyTest() {
         <div className="flex flex-col gap-2 rounded-card border border-rule bg-surface p-4">
           <span className="eyebrow">Reference balance</span>
           <span className="tnum text-title">{toDisplay(AVAILABLE)}</span>
-          <span className="text-caption text-ink-3">mock safety dataset · no state change</span>
+          <span className="text-caption text-ink-3">Local preview · no transaction submitted</span>
         </div>
       </div>
     );
@@ -288,7 +288,7 @@ export function SafetyTest() {
               className="accent-accent"
             />
             <span className="text-caption">
-              Ignore the app check in this simulation
+              Skip application checks
             </span>
           </label>
         </div>
@@ -315,7 +315,7 @@ export function SafetyTest() {
               ) : null}
               <p className="pt-1 text-caption text-ink-3">
                 Dry run costs no gas and changes nothing. We show you this{' '}
-                <em>before</em> the simulated attempt so the expected rule is explicit.
+                <em>before</em> the request so the expected rule is explicit.
               </p>
             </div>
           )}
@@ -325,7 +325,7 @@ export function SafetyTest() {
       {appBlocked ? (
         <div className="flex flex-col gap-2 rounded-card border border-wait-line bg-wait-soft p-5">
           <p className="text-body font-medium text-wait">
-            The simulated app check stopped this attempt.
+            Application checks stopped this request.
           </p>
           <p className="text-caption text-ink-2">
             A client-side check is only a convenience. Use the evidence links above for the

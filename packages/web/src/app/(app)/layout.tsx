@@ -48,13 +48,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
       <footer className="mt-auto border-t border-rule">
         <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-x-6 gap-y-3 px-4 py-8 text-caption text-ink-3 sm:px-6">
-          <p className="eyebrow">Sui testnet · no real funds</p>
+          <p className="eyebrow">Network · Sui Testnet</p>
           <div className="flex flex-wrap gap-6">
             <Link href="/" className="link">
               Back to the overview
-            </Link>
-            <Link href="/system" className="link">
-              Design system
             </Link>
           </div>
         </div>

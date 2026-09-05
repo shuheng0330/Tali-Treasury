@@ -199,7 +199,7 @@ export function LiveBalance({ initial, mandateId }: { initial: SalaryStreamView;
               View the transaction
             </a>
           ) : (
-            'Sample data — nothing was signed or broadcast.'
+            'Preview only — nothing was signed or broadcast.'
           )}
         </p>
       ) : null}

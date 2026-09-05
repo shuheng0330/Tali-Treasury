@@ -198,7 +198,7 @@ export function PayrollSetup() {
           }} />
         </label>
         <div className="grid grid-cols-2 gap-3 rounded-control bg-raised p-4">
-          <div><p className="eyebrow">Demo wage</p><p className="text-subhead">RM30</p></div>
+          <div><p className="eyebrow">Monthly gross wage</p><p className="text-subhead">RM30</p></div>
           <div><p className="eyebrow">Total budget</p><p className="text-subhead">RM50 equivalent</p></div>
         </div>
         <button className="btn btn--primary btn--block" type="button" onClick={loadPreview}
@@ -236,7 +236,7 @@ export function PayrollSetup() {
       {preview ? (
         <div className="flex flex-col gap-4 rounded-card border border-ok-line bg-ok-soft p-5">
           <div>
-            <p className="eyebrow text-ok">Live Testnet preview</p>
+            <p className="eyebrow text-ok">Funding preview</p>
             <p className="mt-2 text-title">{toDisplay(preview.budgetUsdc, 6)} USDC</p>
             <p className="text-caption text-ink-2">
               Funds the RM50 ceiling · 1 USD = {preview.rate.myrPerUsd} MYR · 1 USDC = 1 USD
