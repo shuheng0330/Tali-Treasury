@@ -19,6 +19,10 @@ const env = {
 };
 
 const run = {
+  packageId: env.PAYROLL_PACKAGE_ID,
+  payrollCapId: env.PAYROLL_CAP_ID,
+  mandateId: env.PAYROLL_MANDATE_ID,
+  capOwnerWallet: keypair.toSuiAddress(),
   employee: `0x${'7'.repeat(64)}`,
   gross: '3000000000',
   net: '2649000000',
@@ -49,6 +53,19 @@ function operations(overrides: Partial<PayrollOperations> = {}): PayrollOperatio
 }
 
 describe('createSuiPayrollExecutor', () => {
+  it('does not sign when the registered capability owner differs from the server signer', async () => {
+    const ops = operations();
+    const executor = createSuiPayrollExecutor({ env, operations: ops });
+    await expect(executor.run({
+      ...run,
+      packageId: env.PAYROLL_PACKAGE_ID,
+      payrollCapId: env.PAYROLL_CAP_ID,
+      mandateId: env.PAYROLL_MANDATE_ID,
+      capOwnerWallet: `0x${'f'.repeat(64)}`,
+    })).rejects.toMatchObject({ code: 'payment_configuration_failed', status: 503 });
+    expect(ops.prepare).not.toHaveBeenCalled();
+  });
+
   it('refuses to sign anything until the module and its credentials are configured', () => {
     const executor = createSuiPayrollExecutor({ env: { SUI_NETWORK: 'testnet' } });
     expect(() => executor.assertReady()).toThrow(

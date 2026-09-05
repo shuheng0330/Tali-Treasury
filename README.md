@@ -47,7 +47,8 @@ Status words are intentionally precise:
 | Payroll Move module and integration | **Live** | Package v2, funded `PayrollMandate`, atomic RM30 payroll and `PayrollRun` event are verified on Testnet |
 | Unpaid leave | **Complete locally** | A day not worked is deducted at one twenty-sixth of the month before the statutory split is computed, so EPF can fall into a lower Third Schedule band. Overtime and the claim/payroll relationship are reasoned through in [`docs/LEAVE_OT_CLAIMS_PLAN.md`](docs/LEAVE_OT_CLAIMS_PLAN.md) |
 | Payroll MYR → USDC valuation | **Complete locally** | RM statutory calculation is converted leg-by-leg with one approved live-reference rate; hosted proof pending |
-| Authenticated Set Up Payroll | **Live via local app; binding and hosted rollout pending** | Slush created and funded a verified 12.363385 USDC mandate; the strict digest-only immutable registry is ready, and the preserved legacy registration must be re-registered after this schema upgrade |
+| Authenticated Set Up Payroll | **Live via local app; hosted migration pending** | Slush created and funded a verified 12.363385 USDC mandate; strict digest-only registration is ready and pages select an authorized registration by mandate |
+| Registered payroll page binding | **Complete locally** | Role-aware registry views, URL selection, derived inputs, scoped history and fail-closed stream matching |
 | Live payroll run and salary stream | **Payroll run live; stream pending** | RM30 payroll paid 9.046290 USDC atomically; salary-stream open/withdraw evidence remains |
 | Create Expense Treasury | **Complete locally through wallet execution** | Separate reimbursement setup screen can sign against the existing package; verified event registration remains pending |
 | Revoke and Safety Test interactions | **Complete locally; live proof pending** | Employer-authorized APIs can submit through the server signer; unsupported scenarios remain clearly labelled predictions |

@@ -5,7 +5,7 @@ import { createPayrollPreviewPostHandler } from './route';
 
 const employer = `0x${'a'.repeat(64)}`;
 const payload = {
-  employee: `0x${'b'.repeat(64)}`,
+  mandateId: `0x${'b'.repeat(64)}`,
   gross: '30000000',
   age: 30,
   citizenship: 'local' as const,
@@ -35,7 +35,7 @@ describe('payroll preview POST authorization', () => {
     })(request());
 
     expect(response.status).toBe(200);
-    expect(preview).toHaveBeenCalledWith(payload);
+    expect(preview).toHaveBeenCalledWith(employer, payload);
   });
 
   it('does not preview for another wallet', async () => {

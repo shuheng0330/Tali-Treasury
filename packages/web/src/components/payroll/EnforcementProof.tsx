@@ -25,11 +25,13 @@ type Outcome =
  */
 export function EnforcementProof({
   person,
+  mandateId,
   epfFloorBps,
   /* Read on the server: the package and mandate ids are not NEXT_PUBLIC_. */
   stage,
 }: {
   person: SampleEmployee;
+  mandateId: string;
   /** Read from the mandate when one exists. Base points, as a string. */
   epfFloorBps: string;
   stage: PayrollStage;
@@ -49,7 +51,7 @@ export function EnforcementProof({
     let current = true;
     const sourceGross = person.breakdown.fxConversion?.source.gross ?? person.breakdown.gross;
     void tryPreviewPayroll({
-      employee: person.address,
+      mandateId,
       gross: sourceGross,
       age: 30,
       citizenship: 'local',
@@ -57,7 +59,7 @@ export function EnforcementProof({
       if (current) setBreakdown(result.data ?? person.breakdown);
     });
     return () => { current = false; };
-  }, [person]);
+  }, [mandateId, person]);
 
   const epf = breakdown.bodies.find((body) => body.body === 'epf');
   const required = (BigInt(breakdown.gross) * BigInt(epfFloorBps)) / 10000n;
@@ -65,7 +67,7 @@ export function EnforcementProof({
   async function submit() {
     setOutcome({ kind: 'running' });
     const result = await tryRunPayroll({
-      employee: person.address,
+      mandateId,
       gross: breakdown.fxConversion?.source.gross ?? breakdown.gross,
       age: 30,
       citizenship: 'local',

@@ -47,7 +47,7 @@ function client(results: Array<{ data: unknown; error: unknown }>) {
     from: vi.fn(() => {
       const result = results[queryIndex++] ?? { data: null, error: null };
       const query: Record<string, unknown> = {};
-      for (const method of ['insert', 'select', 'eq']) {
+      for (const method of ['insert', 'select', 'eq', 'contains', 'order']) {
         query[method] = vi.fn((...args: unknown[]) => {
           calls.push({ method, args });
           return query;
@@ -55,6 +55,8 @@ function client(results: Array<{ data: unknown; error: unknown }>) {
       }
       query.single = vi.fn(async () => result);
       query.maybeSingle = vi.fn(async () => result);
+      query.then = (resolve: (value: unknown) => unknown, reject: (reason: unknown) => unknown) =>
+        Promise.resolve(result).then(resolve, reject);
       return query;
     }),
     calls,
@@ -139,5 +141,18 @@ describe('createSupabasePayrollConfigurationRepository', () => {
       code: 'database_failed',
       status: 500,
     });
+  });
+
+  it('lists employer and employee payrolls through server-side filters', async () => {
+    const dated = { ...row, registered_at: '2026-09-05T01:00:00.000Z' };
+    const employerClient = client([{ data: [dated], error: null }]);
+    const employerRepo = createSupabasePayrollConfigurationRepository(employerClient as never);
+    await expect(employerRepo.listByEmployer!(snapshot.employerWallet)).resolves.toHaveLength(1);
+    expect(employerClient.calls).toContainEqual({ method: 'eq', args: ['employer_wallet', snapshot.employerWallet] });
+
+    const employeeClient = client([{ data: [dated], error: null }]);
+    const employeeRepo = createSupabasePayrollConfigurationRepository(employeeClient as never);
+    await expect(employeeRepo.listByEmployee!(snapshot.approvedEmployees[0] as Address)).resolves.toHaveLength(1);
+    expect(employeeClient.calls).toContainEqual({ method: 'contains', args: ['approved_employees', [snapshot.approvedEmployees[0]]] });
   });
 });

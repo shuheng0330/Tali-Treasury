@@ -12,14 +12,14 @@ import {
 export const runtime = 'nodejs';
 
 export function createPayrollPreviewPostHandler(deps: {
-  preview: (input: PayrollRequest) => Promise<unknown>;
+  preview: (actor: string, input: PayrollRequest) => Promise<unknown>;
   resolveIdentity: (request: Request) => Promise<string>;
   appOrigin: string;
   env?: EnvLike;
 }) {
   return async (request: Request): Promise<Response> => {
     try {
-      await authorizeEmployerRequest({
+      const actor = await authorizeEmployerRequest({
         request,
         appOrigin: deps.appOrigin,
         resolveIdentity: deps.resolveIdentity,
@@ -42,7 +42,7 @@ export function createPayrollPreviewPostHandler(deps: {
         );
       }
 
-      return Response.json(await deps.preview(parsed.data));
+      return Response.json(await deps.preview(actor, parsed.data));
     } catch (error) {
       const { body, status } = toApiError(error);
       return Response.json(body, { status });
@@ -54,7 +54,7 @@ export async function POST(request: Request): Promise<Response> {
   try {
     const services = getBackendServices();
     return createPayrollPreviewPostHandler({
-      preview: (input) => getPayrollService().preview(input),
+      preview: (actor, input) => getPayrollService().preview(actor, input),
       resolveIdentity: async (currentRequest) =>
         (
           await resolveWalletIdentity({

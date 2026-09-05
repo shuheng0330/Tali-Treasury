@@ -1,11 +1,10 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import type { PayrollBreakdown } from '@tali/shared';
+import type { PayrollBreakdown, PayrollConfigurationView } from '@tali/shared';
 import { toDisplay } from '@tali/shared';
 import { tryPreviewPayroll, tryRunPayroll } from '@/lib/api/payroll';
 import type { Source } from '@/lib/api/demo';
-import type { SampleEmployee } from '@/lib/mock/payroll';
 import { DataNotice } from '@/components/DataNotice';
 import { Breakdown } from './Breakdown';
 import { ClassNote } from './ClassNote';
@@ -29,28 +28,27 @@ interface RunState {
 }
 
 export function PayrollDesk({
-  staff,
+  configuration,
   runsAreLive,
   /* Read on the server and handed down: the package and mandate ids are not
      NEXT_PUBLIC_, so this component cannot work the stage out for itself. */
   stage,
 }: {
-  staff: SampleEmployee[];
+  configuration: PayrollConfigurationView;
   runsAreLive: boolean;
   stage: PayrollStage;
 }) {
   const { address } = useWalletSession();
   const access = walletAccess(address, EMPLOYER_WALLET, EMPLOYER_COPY);
 
-  const [selected, setSelected] = useState(staff[0]);
   const [wage, setWage] = useState<WageClassValue>({
-    gross: toDisplay(staff[0].breakdown.gross),
+    gross: '3000.00',
     age: 30,
     citizenship: 'local',
     unpaidLeaveDays: 0,
   });
-  const [breakdown, setBreakdown] = useState<PayrollBreakdown | null>(staff[0].breakdown);
-  const [source, setSource] = useState<Source>('mock');
+  const [breakdown, setBreakdown] = useState<PayrollBreakdown | null>(null);
+  const [source, setSource] = useState<Source>('live');
   const [reason, setReason] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [run, setRun] = useState<RunState>({ status: 'idle' });
@@ -59,17 +57,6 @@ export function PayrollDesk({
      about: the split is computed on what is actually payable, never scaled
      afterwards. With no leave entered this is the typed gross unchanged. */
   const base = grossAfterUnpaidLeave(wage);
-  /* True while the inputs still describe the sample this screen shipped with,
-     which is the only case a stored breakdown legitimately answers. Leave makes
-     it false through `base`, which is what we want: a stored split for the full
-     month does not describe a month with days taken out of it. */
-  const untouched =
-    wage.age === 30 &&
-    wage.citizenship === 'local' &&
-    wage.unpaidLeaveDays === 0 &&
-    base !== null &&
-    base.toString() ===
-      (selected.breakdown.fxConversion?.source.gross ?? selected.breakdown.gross);
   const invalid =
     grossProblem(wage.gross) !== null ||
     unpaidLeaveProblem(wage) !== null ||
@@ -89,6 +76,7 @@ export function PayrollDesk({
 
     let current = true;
     setLoading(true);
+    setBreakdown(null);
     setRun({ status: 'idle' });
 
     /* Typing a wage should not send a request per keystroke. The figures catch
@@ -96,7 +84,7 @@ export function PayrollDesk({
     const timer = setTimeout(() => {
       tryPreviewPayroll(
         {
-          employee: selected.address,
+          mandateId: configuration.mandateId,
           gross: base.toString(),
           age: wage.age,
           citizenship: wage.citizenship,
@@ -104,7 +92,7 @@ export function PayrollDesk({
         /* No fallback once the wage is the operator's to type: a stored split
            for a different salary under a number somebody just entered is worse
            than saying the figures could not be computed. */
-        untouched ? selected.breakdown : undefined,
+        undefined,
       ).then((result) => {
         if (!current) return;
         setBreakdown(result.data);
@@ -118,19 +106,14 @@ export function PayrollDesk({
       current = false;
       clearTimeout(timer);
     };
-  }, [selected, wage.age, wage.citizenship, base?.toString(), invalid]);
-
-  const monthlyCost = staff.reduce(
-    (sum, person) => sum + BigInt(person.breakdown.employerCost),
-    0n,
-  );
+  }, [configuration.mandateId, wage.age, wage.citizenship, base?.toString(), invalid]);
 
   async function onRun() {
     if (invalid || base === null) return;
 
     setRun({ status: 'running' });
     const result = await tryRunPayroll({
-      employee: selected.address,
+      mandateId: configuration.mandateId,
       gross: base.toString(),
       age: wage.age,
       citizenship: wage.citizenship,
@@ -176,39 +159,9 @@ export function PayrollDesk({
       <div className="flex flex-col gap-3">
         <span className="eyebrow">Staff on this mandate</span>
 
-        <div className="flex flex-col gap-2">
-          {staff.map((person) => {
-            const active = person.address === selected.address;
-            return (
-              <button
-                key={person.address}
-                type="button"
-                onClick={() => {
-                  setSelected(person);
-                  setWage({
-                    gross: toDisplay(person.breakdown.gross),
-                    age: 30,
-                    citizenship: 'local',
-                    unpaidLeaveDays: 0,
-                  });
-                }}
-                aria-pressed={active}
-                className={`flex items-baseline justify-between gap-4 rounded-control border px-4 py-3 text-left transition-colors duration-150 ${
-                  active
-                    ? 'border-ink bg-raised'
-                    : 'border-rule bg-surface hover:border-rule-strong'
-                }`}
-              >
-                <span className="flex min-w-0 flex-col">
-                  <span className="text-body font-medium">{person.name}</span>
-                  <span className="truncate text-caption text-ink-3">{person.role}</span>
-                </span>
-                <span className="tnum shrink-0 text-body">
-                  {toDisplay(person.breakdown.gross)}
-                </span>
-              </button>
-            );
-          })}
+        <div className="rounded-control border border-ink bg-raised px-4 py-3">
+          <span className="text-body font-medium">Registered employee</span>
+          <p className="truncate font-mono text-caption text-ink-3">{configuration.employee}</p>
         </div>
 
         <p className="text-caption text-ink-3">
@@ -220,7 +173,7 @@ export function PayrollDesk({
 
       <div className="flex flex-col gap-3">
         <span className="eyebrow">
-          {selected.name}&rsquo;s payroll run{loading ? ' · reading' : ''}
+          Employee payroll run{loading ? ' · reading' : ''}
         </span>
 
         <WageClass value={wage} onChange={setWage} disabled={run.status === 'running'} />
@@ -246,8 +199,7 @@ export function PayrollDesk({
           <span className="flex flex-col">
             <span className="text-body text-ink-2">This run costs the employer</span>
             <span className="text-caption text-ink-3">
-              RM {toDisplay(monthlyCost.toString())} source cost for {staff.length}{' '}
-              {staff.length === 1 ? 'employee' : 'employees'}
+              One employee registered on this mandate
             </span>
           </span>
           <span className="tnum text-title">

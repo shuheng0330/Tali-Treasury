@@ -30,6 +30,7 @@ export interface PayrollConfigurationSnapshot {
   initialBudget: string;
   maxPerRun: string;
   expiryMs: string;
+  registeredAtMs?: number;
 }
 
 export interface PayrollRegistrationVerifier {
@@ -44,6 +45,9 @@ export interface PayrollRegistrationRepository {
     configuration: PayrollConfigurationSnapshot;
     created: boolean;
   }>;
+  listByEmployer?(employer: Address): Promise<PayrollConfigurationSnapshot[]>;
+  listByEmployee?(employee: Address): Promise<PayrollConfigurationSnapshot[]>;
+  findByMandateId?(mandateId: string): Promise<PayrollConfigurationSnapshot | null>;
 }
 
 export interface RegisterPayrollResult {

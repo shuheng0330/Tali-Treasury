@@ -17,6 +17,8 @@ export type ServerErrorCode =
   | 'reviewer_forbidden'
   | 'claim_not_found'
   | 'payroll_run_not_found'
+  | 'payroll_not_found'
+  | 'payroll_forbidden'
   | 'payroll_registration_pending'
   | 'payroll_registration_conflict'
   | 'payroll_registration_refused'

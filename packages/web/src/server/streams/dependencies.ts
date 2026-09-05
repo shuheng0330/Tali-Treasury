@@ -83,14 +83,17 @@ function sampleChain(): StreamChainPort {
   };
 }
 
-let service: StreamService | undefined;
+const services = new Map<string, StreamService>();
 
-export function getStreamService(): StreamService {
+export function getStreamService(packageId?: string): StreamService {
+  const key = packageId ?? 'default';
+  let service = services.get(key);
   if (!service) {
     service = createStreamService({
-      chain: streamsAreLive() ? createSuiStreamChain() : sampleChain(),
+      chain: streamsAreLive() ? createSuiStreamChain({ env: { ...process.env, ...(packageId ? { PAYROLL_PACKAGE_ID: packageId } : {}) } }) : sampleChain(),
       now: () => Date.now(),
     });
+    services.set(key, service);
   }
   return service;
 }
@@ -102,7 +105,7 @@ export function getStreamService(): StreamService {
  */
 export function streamsAreLive(env: EnvLike = process.env): boolean {
   const streamId = env.DEMO_STREAM_ID?.trim() || env.NEXT_PUBLIC_DEMO_STREAM_ID?.trim();
-  return Boolean(env.AGENT_PRIVATE_KEY?.trim() && env.PAYROLL_PACKAGE_ID?.trim() && streamId);
+  return Boolean(env.AGENT_PRIVATE_KEY?.trim() && streamId);
 }
 
 export const DEMO_STREAM_ID =

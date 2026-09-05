@@ -1,8 +1,6 @@
 import Link from 'next/link';
-import { EnforcementProof } from '@/components/payroll/EnforcementProof';
-import { epfFloorNote, payrollStage } from '@/lib/chain-status';
-import { payrollStaff } from '@/lib/mock/payroll';
-import { readEpfFloor } from '@/server/payroll/floors';
+import { Suspense } from 'react';
+import { PayrollProofContent } from '@/components/payroll/PayrollProofContent';
 
 export const metadata = {
   title: 'Underpaying EPF · Tali Treasury',
@@ -10,9 +8,7 @@ export const metadata = {
 
 export const dynamic = 'force-dynamic';
 
-export default async function PayrollProofPage() {
-  const floor = await readEpfFloor();
-
+export default function PayrollProofPage() {
   return (
     <div className="mx-auto flex w-full max-w-md flex-col gap-6 px-5 py-6">
       <header className="flex flex-col gap-2">
@@ -24,17 +20,7 @@ export default async function PayrollProofPage() {
         </p>
       </header>
 
-      <EnforcementProof
-        person={payrollStaff()[0]!}
-        epfFloorBps={floor.epfBps.toString()}
-        stage={payrollStage()}
-      />
-
-      <p className="text-caption text-ink-3">
-        {floor.source === 'chain'
-          ? 'The minimum above was read from the mandate itself, so it is the figure the contract will actually enforce. Both outcomes are real testnet transactions.'
-          : `The minimum above is the floor this mandate is created with. ${epfFloorNote(payrollStage())}`}
-      </p>
+      <Suspense fallback={<p className="text-caption text-ink-3">Loading payroll…</p>}><PayrollProofContent /></Suspense>
 
       <Link href="/payroll" className="link self-start">
         Back to payroll
