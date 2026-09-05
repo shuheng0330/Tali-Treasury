@@ -1,36 +1,63 @@
 # Tali Treasury
 
+## Description
+
 Tali Treasury is a payroll-first, Sui-based treasury product. An employer funds a
 payroll mandate with Circle Testnet USDC, deterministic rules enforce salary and
 statutory-allocation constraints, and employees can receive or withdraw earned
 funds. A separate expense-treasury flow uses receipt analysis and its own Sui
 mandate for reimbursements.
 
-The two flows deliberately use different objects and capabilities:
+Employees can submit expenses, overtime and leave in one responsive web
+application. Employers can review their effect, run statutory payroll, monitor
+salary streams and manage reimbursements from an auditable treasury.
 
-- **Set Up Payroll** creates a `PayrollMandate` and `PayrollCap`.
-- **Create Expense Treasury** creates the existing reimbursement `Mandate`,
-  `AdminCap` and `AgentCap`.
-
-They must not be combined into one setup transaction or configuration flow.
-
-> Testnet only. All SUI and USDC used here have no financial value.
-
-## Problem statement
+## The Problem
 
 Company payroll, overtime, leave, and expense reimbursements are often handled in
 separate systems with limited visibility into approvals, statutory deductions, and
-available funds. Tali Treasury gives employers and employees one auditable workflow:
-Sui smart contracts hold the budget, enforce deterministic payroll and reimbursement
-rules, and record the resulting payment activity on Testnet.
+available funds. Re-entering the same information slows employees and creates room
+for mistakes between an approved request and the payment that eventually leaves the
+treasury.
+
+Traditional software can calculate statutory contributions, but the party running
+the software can still alter or bypass its result. Tali makes the payment itself
+subject to funded, on-chain rules: a payroll that underpays a required contribution
+is refused as a whole, and an expense agent cannot exceed its budget, per-claim limit
+or approved-payee list.
+
+## Blockchain Used
+
+Tali runs on **Sui Testnet** and uses **Sui Move** contracts with **Circle Testnet
+USDC**. Sui is the enforcement and settlement layer, not an add-on: its object model
+lets each payroll or expense treasury own an independent funded mandate, preventing
+unrelated organisations or payment groups from blocking one another.
+
+The payroll contract sends the employee, EPF, SOCSO and EIS allocations in one
+atomic transaction. If any statutory leg is below the immutable mandate floor, the
+whole transaction aborts and no USDC moves. The expense contract separately enforces
+its budget, claim cap, expiry, revocation state and payee allowlist, even when the
+backend agent holds a valid payment capability.
+
+The two flows deliberately use different objects and capabilities:
+
+- **Set Up Payroll** creates a `PayrollMandate` and `PayrollCap`.
+- **Create Expense Treasury** creates a reimbursement `Mandate`, `AdminCap` and
+  `AgentCap`.
+
+Wallet-signed challenges authenticate employers and employees without exposing
+private keys to the application. Confirmed transactions, contract refusals and
+object state can be independently inspected through the explorer links below.
+
+> Testnet only. All SUI and USDC used here have no financial value.
 
 ## Team members
 
 | Member | Role |
 | --- | --- |
 | Shu Heng | Move smart contracts, Sui integration, and Testnet operations |
-| Ku Kian Xiang | Product web application and frontend integration |
-| Lim Wey Cheng | Product web application and frontend integration |
+| Lim Wey Cheng | Backend services, APIs, authentication, and database integration |
+| Ku Kian Xiang | Frontend application, product design, and user experience |
 
 ## Project status
 
@@ -83,21 +110,28 @@ specified rather than built. Both are recorded in
 The payroll-first release order and acceptance gate live in
 [`docs/PAYROLL_LAUNCH_PLAN.md`](docs/PAYROLL_LAUNCH_PLAN.md).
 
-## Live Testnet proof
+## Testnet Contract Addresses
 
 | Item | Identifier |
 | --- | --- |
 | Original package v1 (expense treasury) | [`0x7be8aa82872facbd01372cdeb20375a82f74011dca1512e41737664a759dc523`](https://suiscan.xyz/testnet/object/0x7be8aa82872facbd01372cdeb20375a82f74011dca1512e41737664a759dc523) |
 | Current package v2 (payroll + treasury) | [`0xeb973dbac9e4e5c2ea0c31ffb6b51b4df1f34e05443f970e89a35301e6b97688`](https://suiscan.xyz/testnet/object/0xeb973dbac9e4e5c2ea0c31ffb6b51b4df1f34e05443f970e89a35301e6b97688) |
-| Package upgrade | [`86914s…AaSfN`](https://suiscan.xyz/testnet/tx/86914sL2wFj9s7sfcMqdYx9ekST8FRU8Y1tLT5SAaSfN) |
-| Payroll setup | [`85PdAX…8ne73`](https://suiscan.xyz/testnet/tx/85PdAXLeVT82SetGWUK9a98vX3UAEcrarRRtUv8ne73) |
 | Payroll mandate | [`0xa04894…f1100`](https://suiscan.xyz/testnet/object/0xa04894a0d3852092d08df2476bb36e47992ec13ad78ba2a6e38cb891f77f1100) |
+| Salary stream | [`0x64aa6d…6eef8`](https://suiscan.xyz/testnet/object/0x64aa6def14dc646831b3fa3b820c042a7dd8cbcb65c110b8e56e58ca6b26eef8) |
+| Expense USDC mandate | [`0x16b9fd…3c7f6f`](https://suiscan.xyz/testnet/object/0x16b9fdc16764d6fa514fb6da55df5ca840d30e5bb057eba6a5ab67cf743c7f6f) |
+
+### Verified Testnet Transactions
+
+| Result | Transaction |
+| --- | --- |
+| Package v2 publication | [`86914s…AaSfN`](https://suiscan.xyz/testnet/tx/86914sL2wFj9s7sfcMqdYx9ekST8FRU8Y1tLT5SAaSfN) |
+| Payroll setup | [`85PdAX…8ne73`](https://suiscan.xyz/testnet/tx/85PdAXLeVT82SetGWUK9a98vX3UAEcrarRRtUv8ne73) |
 | Successful RM30 payroll | [`HpUwPs…Xr27y`](https://suiscan.xyz/testnet/tx/HpUwPspN9QgoXBmLARh8iJDFSxEACSwZNxhzz3zXr27y) |
 | Refused deficient-EPF payroll | [`Hqw44T…gFT8V`](https://suiscan.xyz/testnet/tx/Hqw44T6qTsQKW5ooPGM8BQmN6uNgaXk6TYNvw9tgFT8V) |
-| USDC mandate | [`0x16b9fd…3c7f6f`](https://suiscan.xyz/testnet/object/0x16b9fdc16764d6fa514fb6da55df5ca840d30e5bb057eba6a5ab67cf743c7f6f) |
 | Successful 3 USDC payment | [`Aksj8w…5yQXA`](https://suiscan.xyz/testnet/tx/Aksj8wgVoVRnbkVDyCMQ4qMKa1HfkWqDWF8Xptz5yQXA) |
 | Rejected 15 USDC overspend | [`5fMDNz…2PNpU`](https://suiscan.xyz/testnet/tx/5fMDNz9dAxJFiamg5Bi5iXnPjnHv2HTUB3hv2wJ2PNpU) |
 | Rejected unknown recipient | [`2htVB5…GDnk5e`](https://suiscan.xyz/testnet/tx/2htVB5NJCxhz1QXQtLGDjJ6kLVAwit6MLqzghzGDnk5e) |
+| RM6 receipt reimbursement | [`J6fWBNa…bZQq`](https://suiscan.xyz/testnet/tx/J6fWBNa7RQXiLaVVK4ZhZSNphggNLq312HKRyhRbZQq) |
 
 The original mandate began with `20 USDC`, allows at most `5 USDC` per claim,
 had paid `4 USDC`, and had `16 USDC` remaining after the 3 September payment
@@ -170,7 +204,9 @@ the browser never receives or uses the signing key.
 
 See [`docs/OWNERSHIP.md`](docs/OWNERSHIP.md) before editing shared paths.
 
-## Prerequisites
+## Setup and Installation
+
+### Prerequisites
 
 - Node.js 22 or a compatible current LTS release.
 - npm.
@@ -179,7 +215,7 @@ See [`docs/OWNERSHIP.md`](docs/OWNERSHIP.md) before editing shared paths.
 - Sui CLI `1.79.0` (or the current Testnet-compatible release) with the Testnet Move framework.
 - A Sui Testnet client configuration for Move tests and CLI verification.
 
-## Fresh-clone setup
+### Fresh clone
 
 ```powershell
 git clone https://github.com/shuheng0330/Tali-Treasury.git
@@ -203,11 +239,10 @@ npm run dev
 Then open `http://localhost:3000/treasury`. The page should say **Live from Sui
 Testnet** and display the current mandate state. Connect a Sui Testnet browser
 wallet, then use the separate **Sign in** action before protected APIs activate.
-The treasury process API
-persists real policy decisions and can run the server-only testnet signer for USDC
-`auto_pay` claims. Treasurer review actions are real API writes. Revoke and Safety
-Test controls remain clearly marked simulations or previews, while their server
-write routes now reject any session other than the configured employer.
+The treasury process API persists real policy decisions and can run the server-only
+Testnet signer for USDC `auto_pay` claims. Treasurer review actions are real API
+writes. Safety screens distinguish recorded on-chain results from local previews,
+and protected write routes reject any session other than the configured employer.
 
 Run Move tests separately:
 
@@ -340,8 +375,8 @@ Immediate hosted rollout (the local payment flow is already verified):
 1. Apply migration `20260901030000`, configure the hosted origin and verify both
    wallet roles manually.
 2. Configure server-only Gemini and Supabase credentials in the deployment.
-3. Roll out and verify [MYR quotes](docs/MYR_USDC_QUOTES.md) with the backend/UI
-   teammates. Member correction/resubmission remains pending.
+3. Roll out and verify [MYR quotes](docs/MYR_USDC_QUOTES.md) and the delivered member
+   correction/resubmission flow with the backend/UI teammates.
 4. Deploy and verify the event-member roster backend; finish authoritative roster
    reload/rendering in the dashboard.
 5. Apply the payroll registry migration, retry registration using the already
@@ -358,9 +393,9 @@ carry no AI attribution by design (see `CLAUDE.md`); that is a commit-metadata
 convention, not concealment. Tool use is disclosed here as MUBA's rules require
 and does not affect judging.
 
-The submission pack — verified evidence, the three-minute demo script and the
-Q and A preparation — is in [docs/SUBMISSION.md](docs/SUBMISSION.md), and the
-slides that bookend the demo are in [docs/DECK.md](docs/DECK.md).
+The submission pack—verified evidence, demonstration guidance and Q and A
+preparation—is in [docs/SUBMISSION.md](docs/SUBMISSION.md), and the pitch slides
+are in [docs/DECK.md](docs/DECK.md).
 
 ## What's new this increment
 
