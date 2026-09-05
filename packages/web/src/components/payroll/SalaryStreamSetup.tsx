@@ -71,10 +71,12 @@ export function SalaryStreamSetup({ configuration }: { configuration: PayrollCon
 
   if (stream) {
     return (
-      <section className="flex flex-col gap-3 rounded-card border border-ok-line bg-ok-soft p-5">
-        <span className="eyebrow text-ok">Salary stream opened</span>
+      <section className="flex flex-col gap-3 rounded-panel border border-ok-line bg-ok-soft p-5">
+        <h2 className="text-subhead text-ok">Salary stream is open</h2>
         <p className="text-body">
-          {toDisplay(stream.totalAmount, 6)} USDC is reserved for the registered employee over this vesting period.
+          <span className="tnum">{toDisplay(stream.totalAmount, 6)}</span>{' '}
+          <span className="text-caption text-ink-3">USDC</span> builds up for this employee
+          second by second. They can take what they have earned at any time.
         </p>
         <div className="flex flex-wrap gap-4 text-caption">
           <a className="link" href={`https://suiscan.xyz/testnet/tx/${stream.creationDigest}`} target="_blank" rel="noreferrer">
@@ -89,16 +91,18 @@ export function SalaryStreamSetup({ configuration }: { configuration: PayrollCon
   }
 
   return (
-    <section className="flex flex-col gap-4 rounded-card border border-rule bg-surface p-5">
-      <div>
-        <span className="eyebrow">Salary stream</span>
-        <p className="mt-2 text-caption text-ink-3">
-          Reserve a clearly labelled USDC allocation for time-based accrual. This is not a second payment of the RM30 payroll already run.
+    <section className="flex flex-col gap-4 rounded-panel border border-rule bg-surface p-5">
+      <div className="flex flex-col gap-2">
+        <h2 className="text-subhead">Salary stream</h2>
+        <p className="text-caption text-ink-2">
+          Money that builds up second by second, so this employee can take what they have
+          already earned without waiting for payday. Separate from the run above — it does
+          not pay the same wage twice.
         </p>
       </div>
       <div className="grid gap-3 sm:grid-cols-2">
-        <label className="flex flex-col gap-1 rounded-control border border-rule bg-surface px-3 py-2">
-          <span className="text-body font-medium text-ink-2">Stream total (USDC)</span>
+        <label className="flex min-w-0 flex-col gap-1 rounded-control border border-rule bg-canvas px-3 py-2">
+          <span className="text-caption text-ink-2">Stream total (USDC)</span>
           <input
             className="tnum bg-transparent text-body outline-none"
             inputMode="decimal"
@@ -118,8 +122,10 @@ export function SalaryStreamSetup({ configuration }: { configuration: PayrollCon
         />
       </div>
       <RoleNotice access={access} />
-      <button className="btn btn--primary btn--block" type="button" disabled={!access.permitted || status === 'opening'} onClick={open}>
-        {status === 'opening' ? 'Opening on Sui…' : 'Open salary stream'}
+      {/* Ghost, not primary: one accent action per viewport, and it belongs to
+          Run payroll above. */}
+      <button className="btn btn--ghost btn--block" type="button" disabled={!access.permitted || status === 'opening'} onClick={open}>
+        {status === 'opening' ? 'Opening on Sui…' : 'Open the salary stream'}
       </button>
       {error ? <p className="text-caption text-no">{error}</p> : null}
     </section>
