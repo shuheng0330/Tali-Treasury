@@ -11,11 +11,12 @@ import type {
   StatutoryRecipientConfig,
 } from './ports';
 import type { PayrollRequest } from './validation';
+import type { PayrollConfigurationService } from './configurations';
 
 export interface PayrollService {
-  preview(request: PayrollRequest): Promise<PayrollBreakdown>;
-  run(request: PayrollRequest): Promise<PayrollRunView>;
-  listRecent(limit?: number): Promise<PayrollRunView[]>;
+  preview(actor: string, request: PayrollRequest): Promise<PayrollBreakdown>;
+  run(actor: string, request: PayrollRequest): Promise<PayrollRunView>;
+  listRecent(actor: string, mandateId: string, limit?: number): Promise<PayrollRunView[]>;
 }
 
 function toInput(request: PayrollRequest): StatutoryInput {
@@ -29,24 +30,29 @@ function toInput(request: PayrollRequest): StatutoryInput {
 export function createPayrollService(deps: {
   runs: PayrollRunRepository;
   chain: PayrollChainPort;
-  recipients: StatutoryRecipientConfig;
+  configurations: PayrollConfigurationService;
   rates: () => Promise<FxRate>;
   now?: () => number;
 }): PayrollService {
-  async function build(request: PayrollRequest): Promise<PayrollBreakdown> {
+  async function build(actor: string, request: PayrollRequest) {
+    const configuration = await deps.configurations.requireAuthorized(actor, request.mandateId);
+    const employee = configuration.view.employee;
+    const recipients = Object.fromEntries(configuration.view.statutoryRules.map((rule) => [rule.body, rule.recipient])) as StatutoryRecipientConfig;
     const source = computeStatutory(toInput(request));
     const rate = await deps.rates();
-    return {
+    return { breakdown: {
       ...quotePayrollSplit(source, rate, (deps.now ?? Date.now)()),
-      employee: request.employee,
-      recipients: deps.recipients,
-    };
+      employee,
+      recipients,
+    }, configuration };
   }
 
   return {
-    preview: build,
+    async preview(actor, request) {
+      return (await build(actor, request)).breakdown;
+    },
 
-    async run(request) {
+    async run(actor, request) {
       /* The mandate carries one set of floors, and those describe one class of
          worker. A worker at 60 or over pays no EIS at all and a quarter of the
          EPF rate, so a correct split for them is refused by floors written for
@@ -62,7 +68,10 @@ export function createPayrollService(deps: {
 
       deps.chain.assertReady();
 
-      const breakdown = await build(request);
+      const { breakdown, configuration } = await build(actor, request);
+      if (configuration.role !== 'employer') {
+        throw new ServerError('payroll_forbidden', 403, 'Only the employer can run payroll');
+      }
       const quoted = breakdown.fxConversion;
       if (
         !request.fxApproval ||
@@ -80,7 +89,8 @@ export function createPayrollService(deps: {
       /* Persisted before anything is signed. A run that vanishes because the
          process died mid-submission is worse than one recorded as failed. */
       const record = await deps.runs.create({
-        employee: request.employee,
+        mandateId: configuration.snapshot.mandateId,
+        employee: breakdown.employee,
         breakdown,
       });
 
@@ -92,7 +102,11 @@ export function createPayrollService(deps: {
       };
 
       const submission = await deps.chain.run({
-        employee: request.employee,
+        packageId: configuration.snapshot.packageId,
+        payrollCapId: configuration.snapshot.capId,
+        mandateId: configuration.snapshot.mandateId,
+        capOwnerWallet: configuration.snapshot.capOwnerWallet,
+        employee: breakdown.employee,
         gross: breakdown.gross,
         net: breakdown.net,
         statutoryAmounts: STATUTORY_BODIES.map(amountFor),
@@ -109,8 +123,12 @@ export function createPayrollService(deps: {
       return deps.runs.markPaid(record.id, submission.digest);
     },
 
-    listRecent(limit = 20) {
-      return deps.runs.listRecent(limit);
+    async listRecent(actor, mandateId, limit = 20) {
+      if (!deps.runs.listRecentForMandate) {
+        throw new ServerError('database_failed', 500, 'The database operation failed');
+      }
+      await deps.configurations.requireAuthorized(actor, mandateId);
+      return deps.runs.listRecentForMandate(mandateId, limit);
     },
   };
 }

@@ -68,8 +68,34 @@ export interface PayrollBreakdown extends StatutorySplit {
 
 export type PayrollRunStatus = 'pending' | 'paid' | 'failed';
 
+export type PayrollViewerRole = 'employer' | 'employee';
+
+export interface PayrollStatutoryRuleView {
+  body: StatutoryBody;
+  recipient: Address;
+  minBps: string;
+  wageCap: Amount;
+}
+
+/** Public, immutable payroll registry projection. Capability details stay private. */
+export interface PayrollConfigurationView {
+  mandateId: ObjectId;
+  packageId: ObjectId;
+  coinType: string;
+  employee: Address;
+  statutoryRules: PayrollStatutoryRuleView[];
+  initialBudget: Amount;
+  maximumPerRun: Amount;
+  netMinimumBps: string;
+  expiryMs: number;
+  registeredAtMs: number;
+  role: PayrollViewerRole;
+}
+
 export interface PayrollRunView {
   id: string;
+  /** Null only for rows written before registered-payroll binding existed. */
+  mandateId: ObjectId | null;
   employee: Address;
   breakdown: PayrollBreakdown;
   status: PayrollRunStatus;

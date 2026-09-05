@@ -53,6 +53,15 @@ allowing the configured payment asset to persist end to end.
 
 ## Payroll and treasury write authorization
 
+Registered payroll selection is URL-addressable but server-authorized. Public
+configuration views omit capability data. Preview/run services derive the sole
+employee and ordered statutory recipients from the immutable snapshot; execution
+receives package, mandate and cap per call and verifies the signer against the
+stored cap owner. `payroll_runs.payroll_mandate_id` scopes new runs and history
+while remaining nullable only for legacy rows. Stream routes authorize the same
+selection and compare current chain mandate and employee state before responding
+or signing.
+
 `POST /api/payroll/runs`, `POST /api/mandate/revoke`, and
 `POST /api/safety/attack` use a shared route authorization primitive. The route
 checks the exact `TALI_APP_ORIGIN`, resolves the fixed-expiry wallet session, and

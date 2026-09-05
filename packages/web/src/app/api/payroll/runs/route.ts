@@ -1,7 +1,6 @@
 import { authorizeEmployerRequest } from '../../../../server/auth/authorization';
 import { resolveWalletIdentity } from '../../../../server/auth/session';
 import { getBackendServices } from '../../../../server/dependencies';
-import { requireDemoIdentityEnabled } from '../../../../server/demo-auth';
 import type { EnvLike } from '../../../../server/env';
 import { ServerError, toApiError } from '../../../../server/errors';
 import {
@@ -16,14 +15,14 @@ import {
 export const runtime = 'nodejs';
 
 export function createPayrollRunsPostHandler(deps: {
-  run: (input: PayrollRequest) => Promise<unknown>;
+  run: (actor: string, input: PayrollRequest) => Promise<unknown>;
   resolveIdentity: (request: Request) => Promise<string>;
   appOrigin: string;
   env?: EnvLike;
 }) {
   return async (request: Request): Promise<Response> => {
     try {
-      await authorizeEmployerRequest({
+      const actor = await authorizeEmployerRequest({
         request,
         appOrigin: deps.appOrigin,
         resolveIdentity: deps.resolveIdentity,
@@ -45,11 +44,14 @@ export function createPayrollRunsPostHandler(deps: {
           parsed.error.issues[0]?.message ?? 'Invalid payroll request',
         );
       }
+      if (!parsed.data.mandateId) {
+        throw new ServerError('invalid_request', 400, 'Select a registered payroll');
+      }
 
       /* A run that the contract refuses comes back as a normal result carrying
          its abort code. Only a request that never reached the contract is an
          error status. */
-      return Response.json(await deps.run(parsed.data), { status: 201 });
+      return Response.json(await deps.run(actor, parsed.data), { status: 201 });
     } catch (error) {
       const { body, status } = toApiError(error);
       return Response.json(body, { status });
@@ -61,7 +63,7 @@ export async function POST(request: Request): Promise<Response> {
   try {
     const services = getBackendServices();
     return createPayrollRunsPostHandler({
-      run: (input) => getPayrollService().run(input),
+      run: (actor, input) => getPayrollService().run(actor, input),
       resolveIdentity: async (currentRequest) =>
         (
           await resolveWalletIdentity({
@@ -77,10 +79,13 @@ export async function POST(request: Request): Promise<Response> {
   }
 }
 
-export async function GET(): Promise<Response> {
+export async function GET(request: Request): Promise<Response> {
   try {
-    requireDemoIdentityEnabled();
-    const runs = await getPayrollService().listRecent(20);
+    const services = getBackendServices();
+    const identity = await resolveWalletIdentity({ request, auth: services.auth });
+    const mandateId = new URL(request.url).searchParams.get('payroll');
+    if (!mandateId) throw new ServerError('invalid_request', 400, 'Select a registered payroll');
+    const runs = await getPayrollService().listRecent(identity.address, mandateId, 20);
     /* An empty list from a store that is not durable is not the same answer as
        an empty list from one that is. Without this the endpoint reports
        success over runs that vanish with the process. */

@@ -1,7 +1,8 @@
 import type { SalaryStreamView } from '@tali/shared';
 
-import { requireDemoIdentityEnabled } from '../../../../server/demo-auth';
-import { getStreamService } from '../../../../server/streams/dependencies';
+import { resolveWalletIdentity } from '../../../../server/auth/session';
+import { getBackendServices } from '../../../../server/dependencies';
+import { getStreamService, streamsAreLive } from '../../../../server/streams/dependencies';
 import { ServerError, toApiError } from '../../../../server/errors';
 
 export const runtime = 'nodejs';
@@ -32,10 +33,25 @@ export async function GET(
   context: RouteContext,
 ): Promise<Response> {
   try {
-    requireDemoIdentityEnabled();
-    return createReadStreamHandler((streamId) =>
-      getStreamService().read(streamId),
-    )(request, context);
+    const services = getBackendServices();
+    const identity = await resolveWalletIdentity({ request, auth: services.auth });
+    const mandateId = new URL(request.url).searchParams.get('payroll');
+    if (!mandateId) throw new ServerError('invalid_request', 400, 'Select a registered payroll');
+    const configuration = await services.payrollConfigurations.requireAuthorized(identity.address, mandateId, 'employee');
+    if (!streamsAreLive()) throw new ServerError('payment_configuration_failed', 503, 'Salary stream chain state is unavailable');
+    const { id } = await context.params;
+    if (!id) throw new ServerError('invalid_request', 400, 'A stream id is required');
+    let stream: SalaryStreamView;
+    try {
+      stream = await getStreamService(configuration.view.packageId).read(id);
+    } catch (error) {
+      if (error instanceof ServerError) throw error;
+      throw new ServerError('mandate_read_failed', 502, 'Salary stream state could not be read from Sui', { cause: error });
+    }
+    if (stream.mandateId !== configuration.view.mandateId || stream.employee !== configuration.view.employee || stream.employee !== identity.address) {
+      throw new ServerError('payroll_forbidden', 403, 'This stream does not belong to the selected payroll and wallet');
+    }
+    return Response.json(stream);
   } catch (error) {
     const { body, status } = toApiError(error);
     return Response.json(body, { status });

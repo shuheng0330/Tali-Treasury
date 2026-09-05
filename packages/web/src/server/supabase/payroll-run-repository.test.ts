@@ -18,6 +18,7 @@ const breakdown = {
 const row = {
   id: '11111111-1111-4111-8111-111111111111',
   employee_wallet: `0x${'7'.repeat(64)}`,
+  payroll_mandate_id: `0x${'3'.repeat(64)}`,
   breakdown,
   status: 'pending',
   digest: null,
@@ -53,16 +54,18 @@ describe('createSupabasePayrollRunRepository', () => {
     const supabase = client({ data: row, error: null });
     const repository = createSupabasePayrollRunRepository(supabase as never);
 
-    const run = await repository.create({ employee: row.employee_wallet, breakdown });
+    const run = await repository.create({ mandateId: row.payroll_mandate_id, employee: row.employee_wallet, breakdown });
 
     expect(supabase.calls.insert).toMatchObject({
       employee_wallet: row.employee_wallet,
+      payroll_mandate_id: row.payroll_mandate_id,
       gross: '3000000000',
       net: '2649000000',
       employer_cost: '3448500000',
       status: 'pending',
     });
     expect(run.status).toBe('pending');
+    expect(run.mandateId).toBe(row.payroll_mandate_id);
     expect(run.createdAtMs).toBe(Date.parse(row.created_at));
   });
 
@@ -73,7 +76,7 @@ describe('createSupabasePayrollRunRepository', () => {
     const repository = createSupabasePayrollRunRepository(supabase as never);
 
     await expect(
-      repository.create({ employee: row.employee_wallet, breakdown }),
+      repository.create({ mandateId: row.payroll_mandate_id, employee: row.employee_wallet, breakdown }),
     ).rejects.toBeInstanceOf(PayrollRunsTableMissingError);
   });
 
@@ -82,7 +85,7 @@ describe('createSupabasePayrollRunRepository', () => {
     const repository = createSupabasePayrollRunRepository(supabase as never);
 
     const error = await repository
-      .create({ employee: row.employee_wallet, breakdown })
+      .create({ mandateId: row.payroll_mandate_id, employee: row.employee_wallet, breakdown })
       .catch((thrown: unknown) => thrown);
 
     expect(error).not.toBeInstanceOf(PayrollRunsTableMissingError);
@@ -112,12 +115,19 @@ describe('createSupabasePayrollRunRepository', () => {
     expect(supabase.builder.limit).toHaveBeenCalledWith(5);
   });
 
+  it('filters history by the selected registered mandate', async () => {
+    const supabase = client({ data: [row], error: null });
+    const repository = createSupabasePayrollRunRepository(supabase as never);
+    await expect(repository.listRecentForMandate!(row.payroll_mandate_id, 5)).resolves.toHaveLength(1);
+    expect(supabase.calls['eq:payroll_mandate_id']).toBe(row.payroll_mandate_id);
+  });
+
   it('refuses a row it cannot read a timestamp from', async () => {
     const supabase = client({ data: { ...row, created_at: 'not a date' }, error: null });
     const repository = createSupabasePayrollRunRepository(supabase as never);
 
     await expect(
-      repository.create({ employee: row.employee_wallet, breakdown }),
+      repository.create({ mandateId: row.payroll_mandate_id, employee: row.employee_wallet, breakdown }),
     ).rejects.toThrow('database operation failed');
   });
 });

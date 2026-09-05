@@ -32,6 +32,8 @@ import { createClaimQuoter } from './fx/quotes';
 import { createRegisterPayrollService } from './payroll/registration';
 import { createSuiPayrollRegistrationVerifier } from './sui/payroll-registration-verifier';
 import { createSupabasePayrollConfigurationRepository } from './supabase/payroll-configuration-repository';
+import { createPayrollConfigurationService } from './payroll/configurations';
+import { requireEmployerWallet } from './auth/authorization';
 
 export interface BackendServices {
   analyzeReceipt: ReturnType<typeof createAnalyzeReceiptService>;
@@ -48,6 +50,7 @@ export interface BackendServices {
   addEventMember: ReturnType<typeof createAddEventMemberService>;
   listEventMembers: ReturnType<typeof createListEventMembersService>;
   registerPayroll: ReturnType<typeof createRegisterPayrollService>;
+  payrollConfigurations: ReturnType<typeof createPayrollConfigurationService>;
   appOrigin: string;
 }
 
@@ -100,6 +103,10 @@ export function getBackendServices(): BackendServices {
     registerPayroll: createRegisterPayrollService({
       chain: createSuiPayrollRegistrationVerifier(),
       configurations: payrollConfigurations,
+    }),
+    payrollConfigurations: createPayrollConfigurationService({
+      configurations: payrollConfigurations,
+      employer: requireEmployerWallet(),
     }),
     appOrigin,
   };

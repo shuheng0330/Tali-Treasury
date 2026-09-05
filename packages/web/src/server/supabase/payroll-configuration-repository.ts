@@ -23,6 +23,9 @@ interface QueryBuilder {
   eq(column: string, value: unknown): QueryBuilder;
   single(): Promise<QueryResult>;
   maybeSingle(): Promise<QueryResult>;
+  contains(column: string, value: unknown): QueryBuilder;
+  order(column: string, options?: { ascending: boolean }): QueryBuilder;
+  then(resolve: (value: QueryResult) => unknown, reject?: (reason: unknown) => unknown): Promise<unknown>;
 }
 
 interface SupabaseDataClient {
@@ -43,6 +46,7 @@ interface PayrollConfigurationRow {
   initial_budget: string;
   max_per_run: string;
   expiry_ms: string;
+  registered_at?: string;
 }
 
 const COLUMNS = [
@@ -59,6 +63,7 @@ const COLUMNS = [
   'initial_budget',
   'max_per_run',
   'expiry_ms',
+  'registered_at',
 ].join(', ');
 const ADDRESS = /^0x[0-9a-f]{64}$/;
 const DIGEST = /^[1-9A-HJ-NP-Za-km-z]{32,64}$/;
@@ -102,6 +107,7 @@ function isTerms(value: unknown): value is PayrollStatutoryTermSnapshot[] {
 function mapRow(input: unknown): PayrollConfigurationSnapshot {
   if (!input || typeof input !== 'object') throw databaseFailure(null);
   const row = input as PayrollConfigurationRow;
+  const registeredAtMs = row.registered_at === undefined ? undefined : Date.parse(row.registered_at);
   const scalarAddresses = [
     row.package_id,
     row.mandate_id,
@@ -119,6 +125,7 @@ function mapRow(input: unknown): PayrollConfigurationSnapshot {
     || ![row.net_min_bps, row.initial_budget, row.max_per_run, row.expiry_ms].every(
       (value) => typeof value === 'string' && UNSIGNED.test(value),
     )
+    || (registeredAtMs !== undefined && !Number.isFinite(registeredAtMs))
   ) {
     throw databaseFailure(null);
   }
@@ -136,6 +143,7 @@ function mapRow(input: unknown): PayrollConfigurationSnapshot {
     initialBudget: row.initial_budget,
     maxPerRun: row.max_per_run,
     expiryMs: row.expiry_ms,
+    ...(registeredAtMs !== undefined ? { registeredAtMs } : {}),
   };
 }
 
@@ -205,6 +213,31 @@ export function createSupabasePayrollConfigurationRepository(
       const configuration = mapRow(existing.data);
       if (!sameSnapshot(configuration, snapshot)) throw conflict(error);
       return { configuration, created: false };
+    },
+    async listByEmployer(employer) {
+      const result = await query(client)
+        .select(COLUMNS)
+        .eq('employer_wallet', employer)
+        .order('registered_at', { ascending: false }) as unknown as QueryResult;
+      if (result.error) throw databaseFailure(result.error);
+      if (!Array.isArray(result.data)) throw databaseFailure(null);
+      return result.data.map(mapRow).sort((a, b) =>
+        (b.registeredAtMs ?? 0) - (a.registeredAtMs ?? 0) || a.mandateId.localeCompare(b.mandateId));
+    },
+    async listByEmployee(employee) {
+      const result = await query(client)
+        .select(COLUMNS)
+        .contains('approved_employees', [employee])
+        .order('registered_at', { ascending: false }) as unknown as QueryResult;
+      if (result.error) throw databaseFailure(result.error);
+      if (!Array.isArray(result.data)) throw databaseFailure(null);
+      return result.data.map(mapRow).sort((a, b) =>
+        (b.registeredAtMs ?? 0) - (a.registeredAtMs ?? 0) || a.mandateId.localeCompare(b.mandateId));
+    },
+    async findByMandateId(mandateId) {
+      const result = await query(client).select(COLUMNS).eq('mandate_id', mandateId).maybeSingle();
+      if (result.error) throw databaseFailure(result.error);
+      return result.data === null ? null : mapRow(result.data);
     },
   };
 }

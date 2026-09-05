@@ -46,8 +46,9 @@ Status words are intentionally precise:
 | Claim outcomes | **Complete locally** | Paid with Auto-paid / Paid after review chips; Rejected tab; correction/rejection reasons on both screens |
 | Payroll Move module and integration | **Live package; setup pending** | Package v2 contains `payroll` and `treasury`; contract tests, builders and readers pass; a funded payroll mandate and proof remain |
 | Payroll MYR → USDC valuation | **Complete locally** | RM statutory calculation is converted leg-by-leg with one approved live-reference rate; hosted proof pending |
-| Authenticated Set Up Payroll | **Complete locally; binding and hosted migration pending** | Employer-only preview and Slush funding use one strict digest-only verifier and immutable registry; payroll pages still need explicit registered-payroll selection |
-| Live payroll run and salary stream | **Pending** | Requires a funded mandate, real employee wiring, authorization and Testnet evidence |
+| Authenticated Set Up Payroll | **Complete locally; hosted migration pending** | Employer-only preview and Slush funding use one strict digest-only verifier and immutable registry; pages select an authorized registration by mandate |
+| Registered payroll page binding | **Complete locally** | Role-aware registry views, URL selection, derived inputs, scoped history and fail-closed stream matching |
+| Live payroll run and salary stream | **Pending Testnet proof** | Development binding is complete; requires a funded registered mandate, matching stream and team verification |
 | Create Expense Treasury | **Complete locally through wallet execution** | Separate reimbursement setup screen can sign against the existing package; verified event registration remains pending |
 | Revoke and Safety Test interactions | **Complete locally; live proof pending** | Employer-authorized APIs can submit through the server signer; unsupported scenarios remain clearly labelled predictions |
 | Gemini receipt analysis and Supabase claims | **Complete locally; rollout pending** | Private drafts, authenticated access and 141 pgTAP assertions across the current schema |

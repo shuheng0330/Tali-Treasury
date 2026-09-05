@@ -35,7 +35,7 @@ function usePrefersReducedMotion(): boolean {
  * compounds, and within a minute the screen offers an amount the contract
  * refuses.
  */
-export function LiveBalance({ initial }: { initial: SalaryStreamView }) {
+export function LiveBalance({ initial, mandateId }: { initial: SalaryStreamView; mandateId: string }) {
   const { address } = useWalletSession();
   const [stream, setStream] = useState(initial);
   const [now, setNow] = useState(() => initial.startedAtMs);
@@ -80,10 +80,10 @@ export function LiveBalance({ initial }: { initial: SalaryStreamView }) {
   }, [mounted, reduced, finished]);
 
   const reload = useCallback(async () => {
-    const response = await fetch(`/api/streams/${stream.id}`, { cache: 'no-store' });
+    const response = await fetch(`/api/streams/${stream.id}?payroll=${encodeURIComponent(mandateId)}`, { cache: 'no-store' });
     if (!response.ok) return;
     setStream((await response.json()) as SalaryStreamView);
-  }, [stream.id]);
+  }, [mandateId, stream.id]);
 
   useEffect(() => {
     if (!mounted) return;
@@ -99,7 +99,7 @@ export function LiveBalance({ initial }: { initial: SalaryStreamView }) {
     setWithdrawing(true);
     setResult(null);
     try {
-      const response = await fetch(`/api/streams/${stream.id}/withdraw`, {
+      const response = await fetch(`/api/streams/${stream.id}/withdraw?payroll=${encodeURIComponent(mandateId)}`, {
         method: 'POST',
       });
       /* A non-2xx body is an ApiError, not a result. Casting it anyway left
@@ -122,7 +122,7 @@ export function LiveBalance({ initial }: { initial: SalaryStreamView }) {
     } finally {
       setWithdrawing(false);
     }
-  }, [stream.id, reload]);
+  }, [mandateId, stream.id, reload]);
 
   return (
     <div className="flex flex-col gap-6">

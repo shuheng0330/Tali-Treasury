@@ -4,6 +4,15 @@ Last updated: 5 September 2026 (MYT)
 
 ## Latest integrated verification
 
+The registered-payroll binding increment is implemented on
+`codex/registered-payroll-binding`: authenticated configuration listing, URL
+selection, configuration-scoped preview/run/history, per-run mandate persistence,
+signer/cap-owner validation and fail-closed salary-stream binding are complete
+locally. Fresh verification passed 48 Sui tests and 654 web tests with one
+intentional skip, root typecheck, production build and a zero-vulnerability
+high-severity audit. The new pgTAP test is authored; local replay is blocked only
+because Docker Desktop's Linux engine is not running.
+
 The payroll-registration branch now includes `origin/main` through `a2cda1b`.
 Parallel setup implementations were consolidated around one strict digest-only
 verifier, one immutable registry migration and the canonical
@@ -15,6 +24,11 @@ was not running; the same 141 pgTAP assertions passed immediately before this
 merge. Payroll publication and hosted migration remain pending.
 
 ## Complete locally
+
+- registered payroll selection across payroll, history, proof and earnings;
+- capability-free employer/employee configuration views;
+- registry-derived employee/statutory execution inputs and mandate-filtered runs;
+- stream wallet, employee, mandate, package and signer checks before signing;
 
 - strict Gemini receipt schema and `gemini-3.5-flash-lite` default;
 - SHA-256 hashing and event-scoped immutable storage paths;

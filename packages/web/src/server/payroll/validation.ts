@@ -11,7 +11,7 @@ const MIN_GROSS = 20_000_000n;
 
 export const payrollRequestSchema = z
   .object({
-    employee: z.string().regex(SUI_ADDRESS, 'invalid Sui address'),
+    mandateId: z.string().regex(SUI_ADDRESS, 'invalid payroll mandate ID'),
     gross: z
       .string()
       .regex(BASE_UNIT_AMOUNT, 'gross must be base units')

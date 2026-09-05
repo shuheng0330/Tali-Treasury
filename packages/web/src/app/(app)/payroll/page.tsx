@@ -1,7 +1,6 @@
 import Link from 'next/link';
-import { PayrollDesk } from '@/components/payroll/PayrollDesk';
-import { payrollStage } from '@/lib/chain-status';
-import { payrollStaff } from '@/lib/mock/payroll';
+import { PayrollPageContent } from '@/components/payroll/PayrollPageContent';
+import { Suspense } from 'react';
 import { payrollIsLive } from '@/server/payroll/dependencies';
 
 export const metadata = {
@@ -27,11 +26,9 @@ export default function PayrollPage() {
         Set Up Payroll
       </Link>
 
-      <PayrollDesk
-        staff={payrollStaff()}
-        runsAreLive={payrollIsLive()}
-        stage={payrollStage()}
-      />
+      <Suspense fallback={<p className="text-caption text-ink-3">Loading payroll…</p>}>
+        <PayrollPageContent runsAreLive={payrollIsLive()} />
+      </Suspense>
 
       <div className="flex flex-col gap-3">
         <Link href="/payroll/proof" className="btn btn--ghost btn--block">

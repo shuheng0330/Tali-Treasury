@@ -5,6 +5,20 @@
 Tali Treasury helps student organisations reimburse verified event expenses while
 keeping treasury limits enforceable by the existing Sui Move mandate.
 
+## Registered payroll selection
+
+- Operational payroll pages use an authenticated registry entry selected by
+  `?payroll=<mandateId>`; browser employee, recipient, package and capability
+  values are never authoritative.
+- Employers see their registrations and employees see registrations whose
+  immutable one-person allowlist contains their wallet.
+- One accessible payroll is selected automatically; several require an explicit
+  choice and no payroll renders a setup/access state.
+- Every new run stores its registered mandate and history excludes legacy
+  unscoped rows. The server verifies its signer against the registered cap owner.
+- Stream reads and withdrawals must match the selected mandate, registered
+  employee and authenticated employee wallet.
+
 ## Implemented receipt-backend scope
 
 The current backend increment must:

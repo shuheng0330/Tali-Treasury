@@ -51,9 +51,6 @@ export interface PayrollOperations {
 
 interface PayrollEnvironment {
   AGENT_PRIVATE_KEY?: string | undefined;
-  PAYROLL_CAP_ID?: string | undefined;
-  PAYROLL_MANDATE_ID?: string | undefined;
-  PAYROLL_PACKAGE_ID?: string | undefined;
   SUI_NETWORK?: string | undefined;
   SUI_GRPC_URL?: string | undefined;
 }
@@ -62,6 +59,17 @@ interface ExecutorOptions {
   env?: PayrollEnvironment;
   operations?: PayrollOperations;
   config?: TreasuryConfig;
+}
+
+export function assertPayrollSignerOwner(capOwnerWallet: string, env: PayrollEnvironment = process.env as PayrollEnvironment): void {
+  try {
+    const privateKey = env.AGENT_PRIVATE_KEY?.trim();
+    if (!privateKey || (env.SUI_NETWORK ?? 'testnet').trim().toLowerCase() !== 'testnet') throw new Error('unavailable');
+    const signer = normalizeAddress(Ed25519Keypair.fromSecretKey(privateKey).toSuiAddress(), 'payment signer');
+    if (signer !== normalizeAddress(capOwnerWallet, 'cap owner')) throw new Error('mismatch');
+  } catch (error) {
+    throw new ServerError('payment_configuration_failed', 503, 'The payment signer does not own this payroll capability', { cause: error });
+  }
 }
 
 function createDefaultOperations(input: {
@@ -87,16 +95,14 @@ function createDefaultOperations(input: {
 }
 
 export function createSuiPayrollExecutor(options: ExecutorOptions = {}): PayrollChainPort {
-  const env = options.env ?? process.env;
+  const env = options.env ?? (process.env as PayrollEnvironment);
 
   /* The payroll module ships in a package upgrade, which gives it a new
      address. Calls have to target that one, not the constant pointing at the
      original publish. */
   const base = options.config ?? taliTestnetUsdcConfig;
-  const packageId = env.PAYROLL_PACKAGE_ID?.trim();
-  const config = packageId ? { ...base, packageId } : base;
   let runtime:
-    | { payrollCapId: string; mandateId: string; operations: PayrollOperations }
+    | { keypair: Ed25519Keypair; signer: string }
     | undefined;
 
   function getRuntime() {
@@ -107,22 +113,13 @@ export function createSuiPayrollExecutor(options: ExecutorOptions = {}): Payroll
         throw new Error('Unsupported Sui network');
       }
       const privateKey = env.AGENT_PRIVATE_KEY?.trim();
-      const capId = env.PAYROLL_CAP_ID?.trim();
-      const mandateId = env.PAYROLL_MANDATE_ID?.trim();
-      if (!privateKey || !capId || !mandateId) {
+      if (!privateKey) {
         throw new Error('Missing payroll credentials');
       }
-
+      const keypair = Ed25519Keypair.fromSecretKey(privateKey);
       runtime = {
-        payrollCapId: normalizeAddress(capId, 'PayrollCap ID'),
-        mandateId: normalizeAddress(mandateId, 'payroll mandate ID'),
-        operations:
-          options.operations ??
-          createDefaultOperations({
-            keypair: Ed25519Keypair.fromSecretKey(privateKey),
-            config,
-            grpcUrl: env.SUI_GRPC_URL,
-          }),
+        keypair,
+        signer: normalizeAddress(keypair.toSuiAddress(), 'payment signer'),
       };
       return runtime;
     } catch {
@@ -141,12 +138,30 @@ export function createSuiPayrollExecutor(options: ExecutorOptions = {}): Payroll
 
     async run(input): Promise<PayrollSubmission> {
       const ready = getRuntime();
+      let payrollCapId: string;
+      let mandateId: string;
+      let capOwnerWallet: string;
+      let packageId: string;
+      try {
+        payrollCapId = normalizeAddress(input.payrollCapId, 'PayrollCap ID');
+        mandateId = normalizeAddress(input.mandateId, 'payroll mandate ID');
+        capOwnerWallet = normalizeAddress(input.capOwnerWallet, 'cap owner');
+        packageId = normalizeAddress(input.packageId, 'payroll package ID');
+      } catch (error) {
+        throw new ServerError('payment_configuration_failed', 503, 'Payroll configuration is unavailable', { cause: error });
+      }
+      if (ready.signer !== capOwnerWallet) assertPayrollSignerOwner(capOwnerWallet, env);
+      const operations = options.operations ?? createDefaultOperations({
+        keypair: ready.keypair,
+        config: { ...base, packageId },
+        grpcUrl: env.SUI_GRPC_URL,
+      });
 
       let prepared: PreparedTransaction;
       try {
-        prepared = await ready.operations.prepare({
-          payrollCapId: ready.payrollCapId,
-          mandateId: ready.mandateId,
+        prepared = await operations.prepare({
+          payrollCapId,
+          mandateId,
           employee: input.employee,
           gross: BigInt(input.gross),
           net: BigInt(input.net),
@@ -168,7 +183,7 @@ export function createSuiPayrollExecutor(options: ExecutorOptions = {}): Payroll
 
       let confirmed: ConfirmedTransaction;
       try {
-        confirmed = await ready.operations.submit(prepared);
+        confirmed = await operations.submit(prepared);
       } catch (error) {
         /* The transaction may well have landed. Recording it as failed could
            mark a payroll run unpaid when the wages are already gone, and a
