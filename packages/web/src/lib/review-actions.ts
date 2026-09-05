@@ -20,8 +20,21 @@ export function approvalBlockReason(
   } else if (claim.analysis && claim.analysis.currency !== 'USDC') {
     return 'This claim needs an explicit conversion quote before it can be paid.';
   }
-  if (decision.checks.some((check) => check.onChain && !check.passed)) {
-    return 'This claim fails an immutable on-chain mandate check.';
+  /**
+   * Name the rule that failed, not the category it belongs to.
+   *
+   * This used to say only "This claim fails an immutable on-chain mandate
+   * check", which is true of five different rules and actionable for none of
+   * them. An expense treasury quietly reached its expiry mid-demo and every
+   * claim against it became unapprovable with that sentence as the only
+   * explanation — two hours went into creating a payroll mandate, which is a
+   * different contract entirely and could never have helped. The check already
+   * carries a plain description of what went wrong; it was being thrown away
+   * one line before the reader needed it.
+   */
+  const failed = decision.checks.find((check) => check.onChain && !check.passed);
+  if (failed) {
+    return `${failed.detail}. The contract enforces this, so it cannot be approved until the mandate itself changes.`;
   }
   return null;
 }
