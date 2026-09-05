@@ -12,8 +12,8 @@ salary-stream binding are complete locally.
 Parallel setup implementations were consolidated around one strict digest-only
 verifier, one immutable registry migration and the canonical
 `POST /api/payroll/register` handler while preserving the latest setup UI. The
-post-merge checks pass: 42 Move tests, 48 Sui integration tests, 689 web tests
-(688 passing and one intentional skip), 154 pgTAP assertions, root typecheck,
+post-merge checks pass: 42 Move tests, 48 Sui integration tests, 690 web tests
+(689 passing and one intentional skip), 154 pgTAP assertions, root typecheck,
 production build and a zero-vulnerability audit. A forward migration preserves
 the old local registration read-only and installs the strict registry without a
 database reset. The existing setup digest has been re-verified against its

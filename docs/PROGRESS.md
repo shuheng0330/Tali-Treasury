@@ -77,7 +77,7 @@ the submission time against the organiser channel; older notes used 23:59.
   strict registry verified the finalized setup digest against its historical
   creation-state objects and stored the current demo payroll.
 - Fresh combined verification passes 42 Move tests, 48 Sui integration tests,
-  689 web tests (688 passing and one intentional skip), 154 pgTAP assertions,
+  690 web tests (689 passing and one intentional skip), 154 pgTAP assertions,
   root typecheck, production build and a zero-vulnerability audit.
 
 ### 4 September roster-backend verification
