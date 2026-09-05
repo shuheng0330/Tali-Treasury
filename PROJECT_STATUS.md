@@ -1,5 +1,11 @@
 # Project status
 
+## 5 September 2026 — employee claim-card polish
+
+- Employee expense history now uses independent claim cards and the shared
+  compact FX disclosure; claim state, payment links, calculations, and APIs are
+  unchanged.
+
 ## 5 September 2026 — mobile proof and treasury polish
 
 - Simplified the registered-payroll EPF safety journey into a default
