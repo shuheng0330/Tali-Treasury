@@ -51,7 +51,7 @@ function Field({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex flex-col gap-1">
+    <div className="flex min-w-0 flex-col gap-1">
       <label className="flex flex-col gap-1 rounded-control border border-rule bg-surface px-3 py-2">
         <span className="text-caption text-ink-2">{label}</span>
         {children}
@@ -64,6 +64,33 @@ function Field({
         <p className="text-caption text-ink-3">{hint}</p>
       ) : null}
     </div>
+  );
+}
+
+/**
+ * A section that starts closed, for the settings that already have an answer.
+ *
+ * Expiry, categories and the payer wallet all arrive filled in and almost
+ * nobody changes them, but all three were sitting in the middle of the form
+ * asking to be read. Folded away they stop competing with the five things
+ * somebody actually has to decide — and `alert` reopens the fold rather than
+ * leaving a validation error hidden behind a summary line.
+ */
+function More({
+  alert,
+  children,
+}: {
+  alert: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <details className="border-t border-rule pt-3" open={alert || undefined}>
+      <summary className="cursor-pointer text-caption font-medium text-ink underline underline-offset-4">
+        More settings
+        {alert ? <span className="text-no"> · something needs fixing</span> : null}
+      </summary>
+      <div className="mt-4 flex flex-col gap-3">{children}</div>
+    </details>
   );
 }
 
@@ -193,10 +220,14 @@ export function TreasurySetup() {
     });
   }
 
+  const advancedProblem = Boolean(
+    problems.categories || problems.expiryDays || problems.agent,
+  );
+
   return (
     <div className="flex flex-col gap-6">
       <section className="flex flex-col gap-3">
-        <h2 className="eyebrow">What this budget is for</h2>
+        <h2 className="eyebrow">The event</h2>
         <Field label="Event name" problem={ifFilled(problems.name, form.name)}>
           <input
             value={form.name}
@@ -218,87 +249,44 @@ export function TreasurySetup() {
             className={INPUT}
           />
         </Field>
-
-        <fieldset className="flex flex-col gap-2">
-          <legend className="text-caption text-ink-2">Expenses it covers</legend>
-          <div className="flex flex-wrap gap-2">
-            {ALL_CATEGORIES.map((category) => {
-              const on = form.categories.includes(category);
-              return (
-                <button
-                  key={category}
-                  type="button"
-                  disabled={funded}
-                  aria-pressed={on}
-                  onClick={() => toggle(category)}
-                  className={`rounded-badge border px-3 py-1.5 text-label uppercase transition-colors ${
-                    on
-                      ? 'border-accent-line bg-accent-soft text-accent-ink'
-                      : 'border-rule bg-surface text-ink-3 hover:text-ink'
-                  }`}
-                >
-                  {CATEGORY_LABEL[category]}
-                </button>
-              );
-            })}
-          </div>
-          {problems.categories ? (
-            <p className="text-caption text-no" role="alert">
-              {problems.categories}
-            </p>
-          ) : (
-            <p className="text-caption text-ink-3">
-              Helps sort receipts. The spending limit is the rule that is actually enforced.
-            </p>
-          )}
-        </fieldset>
       </section>
 
       <section className="flex flex-col gap-3">
-        <h2 className="eyebrow">What it may spend</h2>
-        <Field
-          label="Money to put in (USDC)"
-          problem={ifFilled(problems.budgetUsdc, form.budgetUsdc)}
-          hint="Taken from your wallet when you sign."
-        >
-          <input
-            value={form.budgetUsdc}
-            inputMode="decimal"
-            disabled={funded}
-            onChange={(event) => setForm({ ...form, budgetUsdc: event.target.value })}
-            className={`${INPUT} tnum text-title`}
-          />
-        </Field>
-        <Field
-          label="Limit for one claim (USDC)"
-          problem={ifFilled(problems.maxPerClaimUsdc, form.maxPerClaimUsdc)}
-          hint="Anything above this is refused, whoever asks."
-        >
-          <input
-            value={form.maxPerClaimUsdc}
-            inputMode="decimal"
-            disabled={funded}
-            onChange={(event) => setForm({ ...form, maxPerClaimUsdc: event.target.value })}
-            className={`${INPUT} tnum`}
-          />
-        </Field>
-        <Field
-          label="Expires in (days)"
-          problem={ifFilled(problems.expiryDays, form.expiryDays)}
-          hint="After this, nothing more can be paid out."
-        >
-          <input
-            value={form.expiryDays}
-            inputMode="numeric"
-            disabled={funded}
-            onChange={(event) => setForm({ ...form, expiryDays: event.target.value })}
-            className={`${INPUT} tnum`}
-          />
-        </Field>
+        <h2 className="eyebrow">The money</h2>
+        {/* Side by side above 640px: the two figures are read against each
+            other, and stacked they were a scroll apart on a phone. */}
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Field
+            label="Put in (USDC)"
+            problem={ifFilled(problems.budgetUsdc, form.budgetUsdc)}
+            hint="Taken from your wallet when you sign."
+          >
+            <input
+              value={form.budgetUsdc}
+              inputMode="decimal"
+              disabled={funded}
+              onChange={(event) => setForm({ ...form, budgetUsdc: event.target.value })}
+              className={`${INPUT} tnum text-subhead`}
+            />
+          </Field>
+          <Field
+            label="Limit per claim (USDC)"
+            problem={ifFilled(problems.maxPerClaimUsdc, form.maxPerClaimUsdc)}
+            hint="Anything above this is refused."
+          >
+            <input
+              value={form.maxPerClaimUsdc}
+              inputMode="decimal"
+              disabled={funded}
+              onChange={(event) => setForm({ ...form, maxPerClaimUsdc: event.target.value })}
+              className={`${INPUT} tnum text-subhead`}
+            />
+          </Field>
+        </div>
       </section>
 
       <section className="flex flex-col gap-3">
-        <h2 className="eyebrow">Who it can pay</h2>
+        <h2 className="eyebrow">Who can be paid</h2>
         <Field
           label="Wallet addresses"
           problem={ifFilled(problems.recipients, form.recipients)}
@@ -308,53 +296,75 @@ export function TreasurySetup() {
             value={form.recipients}
             disabled={funded}
             spellCheck={false}
-            rows={4}
+            rows={3}
             placeholder="0x…"
             onChange={(event) => setForm({ ...form, recipients: event.target.value })}
             className={`${ADDRESS_INPUT} resize-y`}
           />
         </Field>
-        <Field
-          label="Who pays out approved claims"
-          problem={ifFilled(problems.agent, form.agent)}
-          hint="Can spend within your rules, but can never change them. You stay in control."
-        >
-          <input
-            value={form.agent}
-            disabled={funded}
-            spellCheck={false}
-            onChange={(event) => setForm({ ...form, agent: event.target.value })}
-            className={ADDRESS_INPUT}
-          />
-        </Field>
-      </section>
 
-      {amounts ? (
-        <section className="flex flex-col gap-2 rounded-card border border-rule bg-surface p-4">
-          <h2 className="eyebrow">Before you sign</h2>
-          <dl className="flex flex-col gap-2 text-body">
-            <div className="flex items-baseline justify-between gap-4">
-              <dt className="text-ink-2">Network</dt>
-              <dd>Sui Testnet</dd>
+        <More alert={advancedProblem}>
+          <Field
+            label="Expires in (days)"
+            problem={ifFilled(problems.expiryDays, form.expiryDays)}
+            hint="After this, nothing more can be paid out."
+          >
+            <input
+              value={form.expiryDays}
+              inputMode="numeric"
+              disabled={funded}
+              onChange={(event) => setForm({ ...form, expiryDays: event.target.value })}
+              className={`${INPUT} tnum`}
+            />
+          </Field>
+
+          <fieldset className="flex flex-col gap-2">
+            <legend className="text-caption text-ink-2">Expenses it covers</legend>
+            <div className="flex flex-wrap gap-2">
+              {ALL_CATEGORIES.map((category) => {
+                const on = form.categories.includes(category);
+                return (
+                  <button
+                    key={category}
+                    type="button"
+                    disabled={funded}
+                    aria-pressed={on}
+                    onClick={() => toggle(category)}
+                    className={`rounded-badge border px-3 py-1.5 text-label uppercase transition-colors ${
+                      on
+                        ? 'border-accent-line bg-accent-soft text-accent-ink'
+                        : 'border-rule bg-surface text-ink-3 hover:text-ink'
+                    }`}
+                  >
+                    {CATEGORY_LABEL[category]}
+                  </button>
+                );
+              })}
             </div>
-            <div className="flex items-baseline justify-between gap-4">
-              <dt className="text-ink-2">Money in</dt>
-              <dd className="tnum">{toDisplay(amounts.budget.toString(), 6)} USDC</dd>
-            </div>
-            <div className="flex items-baseline justify-between gap-4">
-              <dt className="text-ink-2">Limit per claim</dt>
-              <dd className="tnum">{toDisplay(amounts.maxPerClaim.toString(), 6)} USDC</dd>
-            </div>
-            <div className="flex items-baseline justify-between gap-4">
-              <dt className="text-ink-2">People it can pay</dt>
-              <dd className="tnum">{amounts.approvedRecipients.length}</dd>
-            </div>
-          </dl>
-          <p className="text-caption text-ink-3">
-            None of this can be changed afterwards.
-          </p>
-        </section>
-      ) : null}
+            {problems.categories ? (
+              <p className="text-caption text-no" role="alert">
+                {problems.categories}
+              </p>
+            ) : (
+              <p className="text-caption text-ink-3">Helps sort receipts.</p>
+            )}
+          </fieldset>
+
+          <Field
+            label="Who pays out approved claims"
+            problem={ifFilled(problems.agent, form.agent)}
+            hint="Can spend within your rules, never change them."
+          >
+            <input
+              value={form.agent}
+              disabled={funded}
+              spellCheck={false}
+              onChange={(event) => setForm({ ...form, agent: event.target.value })}
+              className={ADDRESS_INPUT}
+            />
+          </Field>
+        </More>
+      </section>
 
       {outcome.kind === 'registered' ? (
         <section className="flex flex-col gap-2 rounded-card border border-ok-line bg-ok-soft p-4">
@@ -422,52 +432,73 @@ export function TreasurySetup() {
         </p>
       ) : null}
 
-      {!funded ? (
-        <section className="flex flex-col gap-3 rounded-card border border-rule bg-surface p-4">
-          <div className="flex flex-col gap-1">
-            <h2 className="eyebrow">Already funded? Recover registration</h2>
-            <p className="text-caption text-ink-2">
-              Paste the funding transaction digest from your wallet or SuiScan. This only
-              registers the existing mandate; it never moves funds again.
-            </p>
-          </div>
-          <Field
-            label="Funding transaction digest"
-            hint="Open the wallet’s recent activity and copy the digest for the successful funding transaction."
-          >
-            <input
-              value={recoveryDigest}
-              spellCheck={false}
-              placeholder="e.g. 9gY…"
-              onChange={(event) => setRecoveryDigest(event.target.value)}
-              className={`${ADDRESS_INPUT} w-full`}
-            />
-          </Field>
-          <button
-            type="button"
-            onClick={() => void register(recoveryDigest.trim())}
-            disabled={recoveryBlocker !== null}
-            className="btn btn--ghost btn--block h-10 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            Recover and register funded treasury
-          </button>
-          {recoveryBlocker ? <p className="text-caption text-ink-3">{recoveryBlocker}</p> : null}
-        </section>
-      ) : null}
-
       {funded ? null : (
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-3">
+          {amounts ? (
+            <div className="flex flex-col gap-2 rounded-card border border-rule bg-surface p-4">
+              <dl className="flex flex-col gap-2 text-body">
+                <div className="flex items-baseline justify-between gap-4">
+                  <dt className="text-ink-2">Money in</dt>
+                  <dd className="tnum">{toDisplay(amounts.budget.toString(), 6)} USDC</dd>
+                </div>
+                <div className="flex items-baseline justify-between gap-4">
+                  <dt className="text-ink-2">Limit per claim</dt>
+                  <dd className="tnum">{toDisplay(amounts.maxPerClaim.toString(), 6)} USDC</dd>
+                </div>
+                <div className="flex items-baseline justify-between gap-4">
+                  <dt className="text-ink-2">People it can pay</dt>
+                  <dd className="tnum">{amounts.approvedRecipients.length}</dd>
+                </div>
+              </dl>
+              <p className="text-caption text-ink-3">
+                On Sui Testnet. None of this can be changed afterwards.
+              </p>
+            </div>
+          ) : null}
+
           <button
             type="button"
             onClick={() => void sign()}
             disabled={blocker !== null || outcome.kind === 'signing'}
             className="btn btn--primary btn--block h-12 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {outcome.kind === 'signing'
-              ? 'Check your wallet…'
-              : 'Create and fund the budget'}
+            {outcome.kind === 'signing' ? 'Check your wallet…' : 'Create and fund the budget'}
           </button>
           {blocker ? <p className="text-caption text-ink-3">{blocker}</p> : null}
+
+          {/* Below the button that creates one, and closed. Above it, an escape
+              hatch for a rare failure read as a second way to start. */}
+          <details className="border-t border-rule pt-3">
+            <summary className="cursor-pointer text-caption font-medium text-ink underline underline-offset-4">
+              Already paid but it never finished?
+            </summary>
+            <div className="mt-4 flex flex-col gap-3">
+              <p className="text-caption text-ink-2">
+                Paste the transaction ID from your wallet. This only finishes the setup \u2014
+                no money moves again.
+              </p>
+              <Field label="Transaction ID">
+                <input
+                  value={recoveryDigest}
+                  spellCheck={false}
+                  placeholder="Paste the transaction ID"
+                  onChange={(event) => setRecoveryDigest(event.target.value)}
+                  className={`${ADDRESS_INPUT} w-full`}
+                />
+              </Field>
+              <button
+                type="button"
+                onClick={() => void register(recoveryDigest.trim())}
+                disabled={recoveryBlocker !== null}
+                className="btn btn--ghost btn--block h-10 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                Finish setting it up
+              </button>
+              {recoveryBlocker ? (
+                <p className="text-caption text-ink-3">{recoveryBlocker}</p>
+              ) : null}
+            </div>
+          </details>
         </div>
       )}
     </div>
