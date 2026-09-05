@@ -2,6 +2,7 @@
 
 import { toDisplay } from '@tali/shared';
 
+import { Select } from '@/components/Select';
 import {
   grossAfterUnpaidLeave,
   grossProblem,
@@ -76,22 +77,16 @@ export function WageClass({
           />
         </Field>
 
-        <Field label="Status">
-          <select
-            value={value.citizenship}
-            disabled={disabled}
-            onChange={(event) =>
-              onChange({
-                ...value,
-                citizenship: event.target.value === 'foreign' ? 'foreign' : 'local',
-              })
-            }
-            className="bg-transparent text-body outline-none disabled:opacity-60"
-          >
-            <option value="local">Malaysian</option>
-            <option value="foreign">Foreign worker</option>
-          </select>
-        </Field>
+        <Select
+          label="Status"
+          value={value.citizenship}
+          disabled={disabled}
+          onChange={(citizenship) => onChange({ ...value, citizenship })}
+          options={[
+            { value: 'local', label: 'Malaysian' },
+            { value: 'foreign', label: 'Foreign worker', note: 'EPF at 2%' },
+          ]}
+        />
       </div>
 
       <Field

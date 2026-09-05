@@ -4,6 +4,7 @@ import type { PayrollConfigurationView } from '@tali/shared';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 
+import { Select } from '@/components/Select';
 import { useWalletSession } from '@/components/wallet/WalletSessionProvider';
 import { loadPayrollConfigurations } from '@/lib/payroll-configurations-client';
 import { resolvePayrollSelection } from '@/lib/payroll-selection';
@@ -78,16 +79,16 @@ export function PayrollSelection({
   if (state.configurations.length === 0) return <p className="rounded-card border border-dashed border-rule p-4 text-caption text-ink-3">No registered payroll is available to this wallet. The employer can register one from payroll setup.</p>;
   if (state.configurations.length === 1) return null;
   return (
-    <label className="flex flex-col gap-2 text-caption text-ink-2">
-      Registered payroll
-      <select className="input" value={state.selected?.mandateId ?? ''} onChange={(event) => state.select(event.target.value)}>
-        <option value="" disabled>Choose a payroll</option>
-        {state.configurations.map((configuration) => (
-          <option key={configuration.mandateId} value={configuration.mandateId}>
-            {configuration.mandateId.slice(0, 10)}… · {configuration.role}
-          </option>
-        ))}
-      </select>
-    </label>
+    <Select
+      label="Registered payroll"
+      placeholder="Choose a payroll"
+      value={state.selected?.mandateId ?? ''}
+      onChange={(mandateId) => state.select(mandateId)}
+      options={state.configurations.map((configuration) => ({
+        value: configuration.mandateId,
+        label: `${configuration.mandateId.slice(0, 10)}…`,
+        note: configuration.role,
+      }))}
+    />
   );
 }

@@ -13,6 +13,7 @@ interface Props {
   onCorrect: (claim: Claim) => void;
   captureDisabled?: boolean;
   onCapture: (file: File) => void;
+  onManual: () => void;
 }
 
 const CAPTURE_UNAVAILABLE =
@@ -36,6 +37,7 @@ export function ClaimHome({
   onCorrect,
   captureDisabled = false,
   onCapture,
+  onManual,
 }: Props) {
   const used = budget === '0' ? 0 : 100 - ratioBps(available, budget) / 100;
   const needsCorrection = claims.filter((claim) => claim.state === 'needs_correction');
@@ -78,6 +80,20 @@ export function ClaimHome({
           }}
         />
       </label>
+
+      {/* Two ways in, not one. A receipt is the better evidence and stays the
+          first button, but a fare paid in an app, a parking coupon that blew
+          away and a bank transfer are all real expenses with nothing to
+          photograph, and refusing them means the claim is either never made or
+          made against an invented receipt. */}
+      <button
+        type="button"
+        onClick={onManual}
+        disabled={captureDisabled}
+        className="btn btn--ghost btn--block -mt-4"
+      >
+        No receipt? Enter it by hand
+      </button>
 
       {captureDisabled ? (
         <p className="-mt-4 text-caption text-ink-3">{CAPTURE_UNAVAILABLE}</p>

@@ -4,6 +4,7 @@ import type {
   CreateClaimRequest,
   CreateClaimResponse,
   CreateWalletChallengeResponse,
+  ExpenseCategory,
   GetWalletSessionResponse,
   ListClaimsResponse,
   ProcessClaimRequest,
@@ -65,6 +66,29 @@ export async function analyzeReceipt(
 
   return responseJson<AnalyzeReceiptResponse>(
     await fetch('/api/receipts/analyze', { method: 'POST', body: form }),
+  );
+}
+
+export interface ManualClaimRequest {
+  merchant: string;
+  amount: string;
+  currency: 'MYR' | 'USDC';
+  receiptDate: string;
+  category: ExpenseCategory;
+  description: string;
+}
+
+/** The typed counterpart of `analyzeReceipt`: same draft out, no image in. */
+export async function createManualDraft(
+  request: ManualClaimRequest,
+  eventId: string,
+): Promise<AnalyzeReceiptResponse> {
+  return responseJson<AnalyzeReceiptResponse>(
+    await fetch('/api/claims/manual', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ ...request, eventId }),
+    }),
   );
 }
 

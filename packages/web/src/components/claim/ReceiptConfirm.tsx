@@ -4,6 +4,8 @@ import { useState } from 'react';
 import type { DraftClaim, ExpenseCategory, ReceiptAnalysis } from '@tali/shared';
 import { COIN_DECIMALS, EXPENSE_CATEGORIES, toBaseUnits, toDisplay } from '@tali/shared';
 
+import { Select } from '@/components/Select';
+
 interface Props {
   photoUrl: string;
   analysis: ReceiptAnalysis | null;
@@ -208,19 +210,16 @@ export function ReceiptConfirm({
           />
         </Field>
 
-        <Field label="Category" uncertain={uncertain.has('category')}>
-          <select
-            value={category}
-            onChange={(e) => setCategory(e.target.value as ExpenseCategory)}
-            className="bg-transparent text-body capitalize outline-none"
-          >
-            {EXPENSE_CATEGORIES.map((option) => (
-              <option key={option} value={option} className="capitalize">
-                {option}
-              </option>
-            ))}
-          </select>
-        </Field>
+        <Select
+          label="Category"
+          uncertain={uncertain.has('category')}
+          value={category}
+          onChange={setCategory}
+          options={EXPENSE_CATEGORIES.map((option) => ({
+            value: option,
+            label: option.charAt(0).toUpperCase() + option.slice(1),
+          }))}
+        />
 
         <Field label="Short description">
           <input

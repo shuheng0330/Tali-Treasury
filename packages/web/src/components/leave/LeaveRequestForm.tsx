@@ -19,6 +19,7 @@ import { PAYROLL_EMPLOYEE, SINGLE_WALLET_DEMO } from '@/lib/demo-config';
 import { walletAccess, type AccessCopy } from '@/lib/wallet-access';
 import { useWalletSession } from '@/components/wallet/WalletSessionProvider';
 import { DataNotice } from '@/components/DataNotice';
+import { Select } from '@/components/Select';
 import { RoleNotice } from '@/components/RoleNotice';
 import { LeaveList } from './LeaveList';
 
@@ -265,30 +266,25 @@ export function LeaveRequestForm() {
           </Field>
         </div>
 
-        <Field
+        <Select
           label="Kind of leave"
+          value={kind}
+          disabled={!access.permitted}
+          onChange={(next) => {
+            setKind(next);
+            setSent(null);
+          }}
+          options={KINDS.map((option) => ({
+            value: option,
+            label: LEAVE_KIND_LABEL[option],
+            note: option === 'unpaid' ? 'reduces the wage' : undefined,
+          }))}
           hint={
             kind === 'unpaid'
               ? 'Unpaid leave reduces the wage, and with it every statutory base.'
               : 'Ordinary wages. Payroll pays the month exactly as it would have.'
           }
-        >
-          <select
-            value={kind}
-            disabled={!access.permitted}
-            onChange={(event) => {
-              setKind(event.target.value as LeaveKind);
-              setSent(null);
-            }}
-            className="bg-transparent text-body outline-none disabled:opacity-60"
-          >
-            {KINDS.map((option) => (
-              <option key={option} value={option}>
-                {LEAVE_KIND_LABEL[option]}
-              </option>
-            ))}
-          </select>
-        </Field>
+        />
 
         <Field
           label="Days taken"

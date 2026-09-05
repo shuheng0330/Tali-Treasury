@@ -6,6 +6,7 @@ import {
   createReconcileClaimService,
   createReviewClaimService,
 } from './claims/services';
+import { createManualDraftService } from './claims/manual';
 import { createResubmitClaimService } from './claims/resubmit';
 import { createPayApprovedClaimService } from './claims/pay';
 import {
@@ -37,6 +38,7 @@ import { requireEmployerWallet } from './auth/authorization';
 
 export interface BackendServices {
   analyzeReceipt: ReturnType<typeof createAnalyzeReceiptService>;
+  createManualDraft: ReturnType<typeof createManualDraftService>;
   createClaim: ReturnType<typeof createClaimService>;
   listClaims: ReturnType<typeof createListClaimsService>;
   processClaim: ReturnType<typeof createProcessClaimService>;
@@ -88,6 +90,7 @@ export function getBackendServices(): BackendServices {
 
   services = {
     analyzeReceipt: createAnalyzeReceiptService({ analyzer, claims, receipts, drafts }),
+    createManualDraft: createManualDraftService({ claims, drafts }),
     createClaim: createClaimService({ drafts }),
     listClaims: createListClaimsService({ claims, receipts }),
     processClaim: createProcessClaimService({ claims, mandates, payments, quotes }),

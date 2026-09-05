@@ -22,7 +22,7 @@ describe('claim outcome presentation', () => {
   it('shows the correction reason in both the shared treasury summary and My Claims', () => {
     const claim: Claim = { ...base, state: 'needs_correction', review: { ...review, action: 'request_correction', reason: 'Please upload a readable receipt.' } };
     const summary = renderToStaticMarkup(<ClaimStatusSummary claim={claim} />);
-    const home = renderToStaticMarkup(<ClaimHome eventName="Demo" available="10000000" budget="10000000" claims={[claim]} onCapture={() => {}} onCorrect={() => {}} />);
+    const home = renderToStaticMarkup(<ClaimHome eventName="Demo" available="10000000" budget="10000000" claims={[claim]} onCapture={() => {}} onManual={() => {}} onCorrect={() => {}} />);
     for (const html of [summary, home]) {
       expect(html).toContain('Please upload a readable receipt.');
       expect(html).toContain('Needs correction');
