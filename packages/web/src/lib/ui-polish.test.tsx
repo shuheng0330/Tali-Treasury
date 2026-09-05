@@ -234,6 +234,12 @@ describe('production-ready application copy', () => {
     expect(html).not.toContain('fell back because');
   });
 
+  it('does not call manual claim entry a live-data fallback before it makes a request', () => {
+    const claim = source('../components/claim/ClaimFlow.tsx');
+
+    expect(claim).toContain("step === 'reading' || step === 'manual' ? null");
+  });
+
   it('renders a concise request fallback when a form opts into brief status', () => {
     const html = renderToStaticMarkup(
       <DataNotice

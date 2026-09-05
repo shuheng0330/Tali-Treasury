@@ -274,7 +274,7 @@ export function ClaimFlow({ apiEnabled, mandate, mandateReadError }: Props) {
 
   return (
     <div className="mx-auto flex w-full max-w-md flex-col px-5 py-6">
-      {step === 'reading' ? null : (
+      {step === 'reading' || step === 'manual' ? null : (
         <div className="mb-6">
           <DataNotice
             source={home ? (homeLive ? 'live' : 'mock') : source}
