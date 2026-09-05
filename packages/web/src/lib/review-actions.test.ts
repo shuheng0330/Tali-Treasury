@@ -64,7 +64,30 @@ describe('treasurer review UI rules', () => {
         },
       ],
     };
-    expect(approvalBlockReason(claim, unsafe)).toContain('on-chain');
+    /* The rule that failed, not the category it belongs to. "Fails an on-chain
+       check" is true of five rules and actionable for none of them. */
+    const reason = approvalBlockReason(claim, unsafe);
+    expect(reason).toContain('Revoked');
+    expect(reason).toContain('cannot be approved');
+  });
+
+  /* The case that cost an afternoon: a treasury reached its expiry mid-demo and
+     every claim against it became unapprovable, with no hint that expiry was
+     the reason. */
+  it('says so when the mandate has expired rather than naming the category', () => {
+    const expired = {
+      ...decision,
+      checks: [
+        {
+          rule: 'not_expired' as const,
+          passed: false,
+          label: 'Mandate not expired',
+          detail: 'Mandate has expired or has an invalid expiry',
+          onChain: true,
+        },
+      ],
+    };
+    expect(approvalBlockReason(claim, expired)).toContain('expired');
   });
 
   it('allows approval when only overridable checks failed', () => {
