@@ -7,6 +7,11 @@ import { ROLE_LABEL, viewerRole } from '@/lib/viewer-role';
 
 import { useWalletSession } from './WalletSessionProvider';
 
+/* 44px tall, full-bleed and highlighted on hover: a menu of rows scans faster
+   than a stack of identically outlined buttons, which is what this was. */
+const ROW =
+  'flex min-h-11 w-full items-center gap-3 rounded-control px-2.5 text-left text-body text-ink transition-colors duration-150 hover:bg-raised focus-visible:bg-raised';
+
 function shortAddress(address: string): string {
   return `${address.slice(0, 6)}…${address.slice(-4)}`;
 }
@@ -59,6 +64,13 @@ export function WalletSessionControl({ className = '' }: { className?: string })
       document.removeEventListener('keydown', onKey);
     };
   }, [open]);
+
+  const copy = () => {
+    void navigator.clipboard
+      ?.writeText(session.address ?? '')
+      .then(() => setCopied(true))
+      .catch(() => setCopied(false));
+  };
 
   if (!mounted) {
     return (
@@ -124,51 +136,69 @@ export function WalletSessionControl({ className = '' }: { className?: string })
 
           {open ? (
             <div
-              className="absolute right-0 top-[calc(100%+0.5rem)] z-40 flex w-[17rem] max-w-[calc(100vw-2rem)] flex-col gap-4 rounded-card border border-rule bg-canvas p-4 text-left shadow-float"
+              className="absolute right-0 top-[calc(100%+0.5rem)] z-40 w-64 max-w-[calc(100vw-2rem)] overflow-hidden rounded-card border border-rule bg-canvas text-left shadow-float"
               role="menu"
             >
-              <div className="flex flex-col gap-1.5">
+              {/* Truncated, with copy underneath, rather than 66 characters of
+                  hex wrapped over three lines. Every wallet UI settles on the
+                  short form for the same reason: the full address is something
+                  you copy, not something you read. */}
+              <div className="flex flex-col gap-1 border-b border-rule px-4 py-3">
+                {/* Names the network, not the role: the trigger already says
+                    the role, and which chain this is is the fact a reader of a
+                    payroll app most needs and cannot get anywhere else here. */}
                 <span className="eyebrow">Signed in on Sui testnet</span>
-                <span className="break-all font-mono text-caption text-ink-2">
-                  {session.address}
+                <span className="font-mono text-caption text-ink-2">
+                  {shortAddress(session.address)}
                 </span>
-                {role ? (
-                  <span className="text-caption text-ink-3">
-                    This wallet is the {ROLE_LABEL[role].toLowerCase()}.
-                  </span>
-                ) : null}
               </div>
 
-              <div className="flex flex-col gap-2">
-                <button
-                  type="button"
-                  className="btn btn--ghost h-9 w-full px-4 text-label"
-                  onClick={() => {
-                    void navigator.clipboard
-                      ?.writeText(session.address ?? '')
-                      .then(() => setCopied(true))
-                      .catch(() => setCopied(false));
-                  }}
-                >
+              <div className="flex flex-col p-1.5">
+                <button type="button" role="menuitem" className={ROW} onClick={copy}>
+                  <svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.4" aria-hidden className="shrink-0 text-ink-3">
+                    <rect x="5.5" y="5.5" width="8" height="8" rx="1.8" />
+                    <path d="M10.5 2.5H3.8A1.3 1.3 0 0 0 2.5 3.8v6.7" strokeLinecap="round" />
+                  </svg>
                   {copied ? 'Copied' : 'Copy address'}
                 </button>
+
+                <a
+                  role="menuitem"
+                  href={`https://suiscan.xyz/testnet/account/${session.address}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className={ROW}
+                  onClick={() => setOpen(false)}
+                >
+                  <svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden className="shrink-0 text-ink-3">
+                    <path d="M9.5 2.5H13.5V6.5" />
+                    <path d="M13.5 2.5L7.5 8.5" />
+                    <path d="M12.5 9.8v3A1.2 1.2 0 0 1 11.3 14H3.2A1.2 1.2 0 0 1 2 12.8V4.7a1.2 1.2 0 0 1 1.2-1.2h3" />
+                  </svg>
+                  View on Suiscan
+                </a>
+              </div>
+
+              <div className="flex flex-col border-t border-rule p-1.5">
                 <button
                   type="button"
-                  className="btn btn--ghost h-9 w-full px-4 text-label"
+                  role="menuitem"
+                  className={ROW}
                   onClick={() => {
                     setOpen(false);
                     void session.signOut();
                   }}
                 >
+                  <svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden className="shrink-0 text-ink-3">
+                    <path d="M6.5 13.5H3.2A1.2 1.2 0 0 1 2 12.3V3.7a1.2 1.2 0 0 1 1.2-1.2h3.3" />
+                    <path d="M10.5 11 14 8l-3.5-3M14 8H6.5" />
+                  </svg>
                   Sign out
                 </button>
               </div>
 
-              {/* Says where the wallet's own controls went, rather than leaving
-                  a reader to conclude they are gone. */}
-              <p className="text-caption text-ink-3">
-                Signing out brings back the wallet button, where disconnecting
-                and switching account live.
+              <p className="border-t border-rule px-4 py-3 text-caption text-ink-3">
+                Sign out first to disconnect the wallet.
               </p>
             </div>
           ) : null}
