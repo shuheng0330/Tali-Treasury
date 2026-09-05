@@ -1,4 +1,9 @@
-import { DEMO_TREASURER, EMPLOYER_WALLET, SINGLE_WALLET_DEMO } from './demo-config';
+import {
+  DEMO_TREASURER,
+  EMPLOYER_WALLET,
+  PAYROLL_EMPLOYEE,
+  SINGLE_WALLET_DEMO,
+} from './demo-config';
 
 export type ViewerRole = 'treasurer' | 'employer' | 'employee' | 'member';
 
@@ -37,7 +42,13 @@ export function viewerRole(
   eventTreasurer?: string | null,
 ): ViewerRole | null {
   if (!address) return null;
-  if (SINGLE_WALLET_DEMO) return 'treasurer';
+  if (SINGLE_WALLET_DEMO) {
+    /* Demo mode is a presentation shortcut; it must not erase the known
+       employer/employee distinction in the account control. */
+    if (sameAddress(address, PAYROLL_EMPLOYEE)) return 'employee';
+    if (sameAddress(address, EMPLOYER_WALLET)) return 'employer';
+    return 'treasurer';
+  }
   const treasurer = eventTreasurer?.trim() || DEMO_TREASURER;
   if (sameAddress(address, treasurer)) return 'treasurer';
   if (sameAddress(address, EMPLOYER_WALLET)) return 'employer';
