@@ -148,7 +148,7 @@ export function ClaimHome({
                 </div>
                 <div className="flex min-w-0 flex-1 flex-col gap-2">
                   <ClaimStatusSummary claim={claim} />
-                  <FxQuoteSummary claim={claim} />
+                  <FxQuoteSummary claim={claim} variant="compact" />
                   <span className="text-caption text-ink-3" suppressHydrationWarning>
                     Updated {relative(claim.updatedAtMs)}
                   </span>
