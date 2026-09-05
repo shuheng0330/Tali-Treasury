@@ -123,8 +123,26 @@ export function createSupabaseEventRegistrationRepository(
     }
   }
 
-  async function ensureMembers(eventId: string, recipients: Address[]): Promise<void> {
-    for (const address of recipients) await ensureMember(eventId, address);
+  /**
+   * The treasurer belongs on the roster of their own event.
+   *
+   * Only the approved recipients were added, which are the wallets a claim can
+   * be paid to. Reading the queue is gated on membership by
+   * `assertEventViewer`, so the person who funded the treasury and is the only
+   * one allowed to decide its claims could not list them: the read threw, the
+   * client fell back to fixture data, and the employer saw a queue that never
+   * contained anything a member had actually submitted.
+   *
+   * The seeded event was patched by hand in a migration once this was hit.
+   * Every treasury created through the app since then had the same hole,
+   * because the patch was data and the cause was here.
+   */
+  async function ensureMembers(
+    eventId: string,
+    treasurer: Address,
+    recipients: Address[],
+  ): Promise<void> {
+    for (const address of [treasurer, ...recipients]) await ensureMember(eventId, address);
   }
 
   return {
@@ -138,7 +156,11 @@ export function createSupabaseEventRegistrationRepository(
       if (existing.data) {
         const event = existing.data as EventRow;
         if (!sameEvent(event, input)) throw registrationConflict();
-        await ensureMembers(event.id, input.snapshot.approvedRecipients);
+        await ensureMembers(
+          event.id,
+          input.snapshot.treasurerWallet,
+          input.snapshot.approvedRecipients,
+        );
         return { eventId: event.id, mandateId: input.snapshot.mandateId, created: false };
       }
 
@@ -158,7 +180,11 @@ export function createSupabaseEventRegistrationRepository(
 
       const eventId = (created.data as { id?: unknown }).id;
       if (typeof eventId !== 'string') throw databaseFailure(null);
-      await ensureMembers(eventId, input.snapshot.approvedRecipients);
+      await ensureMembers(
+        eventId,
+        input.snapshot.treasurerWallet,
+        input.snapshot.approvedRecipients,
+      );
       return { eventId, mandateId: input.snapshot.mandateId, created: true };
     },
   };
