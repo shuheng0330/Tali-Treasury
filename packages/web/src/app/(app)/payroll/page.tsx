@@ -25,8 +25,8 @@ export default function PayrollPage() {
         <PayrollPageContent runsAreLive={payrollIsLive()} />
       </Suspense>
 
-      <Link href="/safety/payroll" className="btn btn--ghost btn--block">
-        Try underpaying EPF
+      <Link href="/safety/payroll" className="link self-start text-caption">
+        Try underpaying EPF and watch the contract refuse
       </Link>
     </div>
   );

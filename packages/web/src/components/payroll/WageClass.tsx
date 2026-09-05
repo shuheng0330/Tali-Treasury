@@ -11,9 +11,17 @@ import {
   type WageClassValue,
 } from '@/lib/payroll-wage';
 
-function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
+function Field({
+  label,
+  hint,
+  children,
+}: {
+  label: string;
+  hint?: string;
+  children: React.ReactNode;
+}) {
   return (
-    <label className="flex flex-col gap-1 rounded-control border border-rule bg-surface px-3 py-2">
+    <label className="flex min-w-0 flex-col gap-1 rounded-control border border-rule bg-canvas px-3 py-2">
       <span className="text-caption text-ink-2">{label}</span>
       {children}
       {hint ? <span className="text-caption text-ink-3">{hint}</span> : null}
@@ -22,13 +30,14 @@ function Field({ label, hint, children }: { label: string; hint?: string; childr
 }
 
 /**
- * The three inputs that decide the whole statutory split.
+ * The wage, and the three things that change what it costs.
  *
- * They are on screen because the rates genuinely turn on them: a worker aged 60
- * or over pays no EPF and the employer's share drops to 4%, EIS stops entirely,
- * and a foreign worker contributes a flat 2% on each side. A demo pinned to one
- * class shows none of that, and the arithmetic underneath it is the part worth
- * showing.
+ * The rates genuinely turn on all four: a worker aged 60 or over pays no EPF and
+ * the employer's share drops to 4%, EIS stops entirely, and a foreign worker
+ * contributes a flat 2% on each side. But three of them arrive with an answer
+ * and almost never change, and standing in a column of equal boxes they read as
+ * four questions rather than one. They are folded, and the fold's own summary
+ * line carries their current values so nothing has to be opened to be seen.
  */
 export function WageClass({
   value,
@@ -43,16 +52,17 @@ export function WageClass({
   const leaveProblem = unpaidLeaveProblem(value);
   const afterLeave = grossAfterUnpaidLeave(value);
   const reduced = value.unpaidLeaveDays > 0 && afterLeave !== null && problem === null;
+  const ageProblem = value.age < 16 || value.age > 100;
 
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex flex-col gap-3">
       <Field label="Monthly gross wage (RM)">
         <input
           value={value.gross}
           inputMode="decimal"
           disabled={disabled}
           onChange={(event) => onChange({ ...value, gross: event.target.value })}
-          className="tnum bg-transparent text-title outline-none disabled:opacity-60"
+          className="tnum bg-transparent text-lead outline-none disabled:opacity-60"
         />
       </Field>
 
@@ -62,50 +72,75 @@ export function WageClass({
         </p>
       ) : null}
 
-      <div className="grid grid-cols-2 gap-2">
-        <Field label="Age" hint={value.age >= 60 ? 'Retirement rates apply' : undefined}>
-          <input
-            type="number"
-            min={16}
-            max={100}
-            value={value.age}
-            disabled={disabled}
-            onChange={(event) =>
-              onChange({ ...value, age: Number(event.target.value) || 0 })
-            }
-            className="tnum bg-transparent text-body outline-none disabled:opacity-60"
-          />
-        </Field>
-
-        <Select
-          label="Status"
-          value={value.citizenship}
-          disabled={disabled}
-          onChange={(citizenship) => onChange({ ...value, citizenship })}
-          options={[
-            { value: 'local', label: 'Malaysian' },
-            { value: 'foreign', label: 'Foreign worker', note: 'EPF at 2%' },
-          ]}
-        />
-      </div>
-
-      <Field
-        label="Unpaid leave (days this month)"
-        hint={`A day not worked is a day not paid. Prorated at one twenty-sixth of the month, the ordinary rate of pay.`}
+      <details
+        className="disclosure-card bg-canvas"
+        open={Boolean(leaveProblem) || ageProblem || undefined}
       >
-        <input
-          type="number"
-          min={0}
-          max={MAX_UNPAID_LEAVE_DAYS}
-          value={value.unpaidLeaveDays}
-          disabled={disabled}
-          onChange={(event) =>
-            onChange({ ...value, unpaidLeaveDays: Math.trunc(Number(event.target.value)) || 0 })
-          }
-          className="tnum bg-transparent text-body outline-none disabled:opacity-60"
-        />
-      </Field>
+        <summary>
+          {value.age} years old ·{' '}
+          {value.citizenship === 'local' ? 'Malaysian' : 'Foreign worker'} ·{' '}
+          {value.unpaidLeaveDays === 0
+            ? 'no unpaid leave'
+            : `${value.unpaidLeaveDays} day${value.unpaidLeaveDays === 1 ? '' : 's'} unpaid leave`}
+        </summary>
 
+        <div className="mt-4 flex flex-col gap-3">
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Age" hint={value.age >= 60 ? 'Retirement rates apply' : undefined}>
+              <input
+                type="number"
+                min={16}
+                max={100}
+                value={value.age}
+                disabled={disabled}
+                onChange={(event) => onChange({ ...value, age: Number(event.target.value) || 0 })}
+                className="tnum bg-transparent text-body outline-none disabled:opacity-60"
+              />
+            </Field>
+
+            <Select
+              label="Status"
+              value={value.citizenship}
+              disabled={disabled}
+              onChange={(citizenship) => onChange({ ...value, citizenship })}
+              options={[
+                { value: 'local', label: 'Malaysian' },
+                { value: 'foreign', label: 'Foreign worker', note: 'EPF at 2%' },
+              ]}
+            />
+          </div>
+
+          <Field
+            label="Unpaid leave (days this month)"
+            hint="A day not worked is a day not paid, at one twenty-sixth of the month."
+          >
+            <input
+              type="number"
+              min={0}
+              max={MAX_UNPAID_LEAVE_DAYS}
+              value={value.unpaidLeaveDays}
+              disabled={disabled}
+              onChange={(event) =>
+                onChange({
+                  ...value,
+                  unpaidLeaveDays: Math.trunc(Number(event.target.value)) || 0,
+                })
+              }
+              className="tnum bg-transparent text-body outline-none disabled:opacity-60"
+            />
+          </Field>
+
+          {ageProblem ? (
+            <p className="text-caption text-no" role="alert">
+              An age between 16 and 100.
+            </p>
+          ) : null}
+        </div>
+      </details>
+
+      {/* Outside the fold on purpose. Both of these say the wage is not the
+          number typed above, and that has to be visible without opening
+          anything before somebody presses Run payroll. */}
       {leaveProblem ? (
         <p className="text-caption text-no" role="alert">
           {leaveProblem}
@@ -113,17 +148,11 @@ export function WageClass({
       ) : reduced ? (
         <p className="text-caption text-ink-2">
           <span className="font-medium">
-            Payable this month: <span className="tnum">{toDisplay(afterLeave.toString())}</span> MYR
+            Payable this month: <span className="tnum">{toDisplay(afterLeave.toString())}</span>{' '}
+            MYR
           </span>{' '}
-          — down from <span className="tnum">{value.gross}</span>. The statutory split below is
-          computed on the reduced wage, not scaled down afterwards, so EPF can fall into a
-          lower Third Schedule band.
-        </p>
-      ) : null}
-
-      {value.age < 16 || value.age > 100 ? (
-        <p className="text-caption text-no" role="alert">
-          An age between 16 and 100.
+          — down from <span className="tnum">{value.gross}</span>. EPF is worked out on the
+          lower figure, not scaled down afterwards.
         </p>
       ) : null}
     </div>
