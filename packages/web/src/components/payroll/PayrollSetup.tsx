@@ -24,6 +24,7 @@ import type { PayrollSetupPreview } from '@/server/payroll/setup';
  */
 const FIELD = 'flex flex-col gap-1 rounded-control border border-rule bg-surface px-3 py-2';
 const INPUT = 'bg-transparent text-body outline-none disabled:opacity-60';
+const SUI_DIGEST = /^[1-9A-HJ-NP-Za-km-z]{32,64}$/;
 
 function defaultExpiry(): string {
   const date = new Date();
@@ -54,6 +55,7 @@ export function PayrollSetup() {
   const [status, setStatus] = useState<'idle' | 'previewing' | 'ready' | 'signing' | 'verifying' | 'registered'>('idle');
   const [error, setError] = useState<string | null>(null);
   const [digest, setDigest] = useState<string | null>(null);
+  const [existingDigest, setExistingDigest] = useState('');
   const [registration, setRegistration] = useState<RegisterPayrollResponse | null>(null);
 
   useEffect(() => {
@@ -151,6 +153,26 @@ export function PayrollSetup() {
     }
   }
 
+  async function registerExistingPayroll() {
+    const transactionDigest = existingDigest.trim();
+    if (!SUI_DIGEST.test(transactionDigest)) {
+      setError('Enter the finalized Sui transaction digest for the existing payroll setup.');
+      return;
+    }
+    setStatus('verifying');
+    setError(null);
+    setRegistration(null);
+    try {
+      const registered = await registerPayrollSetup(transactionDigest);
+      setDigest(transactionDigest);
+      setRegistration(registered);
+      setStatus('registered');
+    } catch (reason) {
+      setStatus('idle');
+      setError(reason instanceof Error ? reason.message : 'Payroll registration is unavailable.');
+    }
+  }
+
   return (
     <div className="flex flex-col gap-6">
       <div className="rounded-card border border-rule bg-surface p-5">
@@ -182,6 +204,32 @@ export function PayrollSetup() {
         <button className="btn btn--primary btn--block" type="button" onClick={loadPreview}
           disabled={!access.permitted || status === 'previewing' || status === 'signing' || !employee || !expiry}>
           {status === 'previewing' ? 'Getting live quote…' : 'Preview payroll setup'}
+        </button>
+      </div>
+
+      <div className="flex flex-col gap-4 rounded-card border border-rule bg-surface p-5">
+        <div>
+          <p className="eyebrow">Already funded on Sui?</p>
+          <p className="mt-2 text-caption text-ink-2">
+            Register the finalized setup transaction. This verifies existing chain objects and cannot create or fund another mandate.
+          </p>
+        </div>
+        <label className={FIELD}>
+          <span className="text-caption text-ink-2">Setup transaction digest</span>
+          <input
+            className={`${INPUT} font-mono text-caption`}
+            value={existingDigest}
+            onChange={(event) => setExistingDigest(event.target.value.trim())}
+            placeholder="Sui transaction digest"
+          />
+        </label>
+        <button
+          className="btn btn--ghost btn--block"
+          type="button"
+          onClick={registerExistingPayroll}
+          disabled={!access.permitted || status === 'verifying' || !SUI_DIGEST.test(existingDigest)}
+        >
+          {status === 'verifying' ? 'Verifying existing payroll…' : 'Register existing payroll'}
         </button>
       </div>
 

@@ -1,4 +1,5 @@
 import { TransactionError } from '@mysten/sui/client';
+import { SuiGraphQLClient } from '@mysten/sui/graphql';
 import { Ed25519Keypair } from '@mysten/sui/keypairs/ed25519';
 import type { SuiGrpcClient } from '@mysten/sui/grpc';
 import {
@@ -24,16 +25,16 @@ export interface PayrollRegistrationTransaction {
   checkpoint: string | null;
   sender: string;
   status: { success: true; error: null } | { success: false; error: unknown };
-  createdObjects: Array<{ objectId: string; type: string }>;
+  createdObjects: Array<{ objectId: string; type: string; version: string }>;
 }
 
 export interface PayrollRegistrationOperations {
   lookup(digest: string): Promise<PayrollRegistrationTransaction | null>;
-  readMandate(mandateId: string): Promise<{
+  readMandate(mandateId: string, version: string): Promise<{
     state: PayrollMandateState;
     previousTransaction: string | null;
   }>;
-  readCap(capId: string): Promise<PayrollCapState>;
+  readCap(capId: string, version: string): Promise<PayrollCapState>;
 }
 
 interface RegistrationConfig {
@@ -41,6 +42,33 @@ interface RegistrationConfig {
   coinType: string;
   capOwner: string;
   statutoryRecipients: string[];
+}
+
+const TESTNET_GRAPHQL_URL = 'https://graphql.testnet.sui.io/graphql';
+const HISTORICAL_OBJECT_QUERY = `
+  query HistoricalPayrollObject($address: SuiAddress!, $version: UInt53!) {
+    object(address: $address, version: $version) {
+      address
+      version
+      digest
+      previousTransaction { digest }
+      owner { __typename ... on AddressOwner { address { address } } }
+      asMoveObject { contents { json type { repr } } }
+    }
+  }
+`;
+
+interface HistoricalObjectResult {
+  object: {
+    address: string;
+    version: number;
+    digest: string;
+    previousTransaction: { digest: string } | null;
+    owner: { __typename: string; address?: { address: string } | null };
+    asMoveObject: {
+      contents: { json: unknown; type: { repr: string } };
+    } | null;
+  } | null;
 }
 
 export function isPendingTransactionLookupError(error: unknown): boolean {
@@ -113,7 +141,45 @@ function loadConfiguration(env: EnvLike): RegistrationConfig {
 function createDefaultOperations(input: {
   client: SuiGrpcClient;
   config: TreasuryConfig;
+  graphqlUrl?: string;
 }): PayrollRegistrationOperations {
+  const graphql = new SuiGraphQLClient({
+    network: 'testnet',
+    url: input.graphqlUrl ?? TESTNET_GRAPHQL_URL,
+  });
+
+  async function historicalObject(objectId: string, versionInput: string) {
+    const version = Number(versionInput);
+    if (!Number.isSafeInteger(version) || version < 0) {
+      throw new Error('Invalid created object version');
+    }
+    const result = await graphql.query<HistoricalObjectResult, {
+      address: string;
+      version: number;
+    }>({
+      query: HISTORICAL_OBJECT_QUERY,
+      variables: { address: objectId, version },
+    });
+    const historical = result.data?.object;
+    const contents = historical?.asMoveObject?.contents;
+    if (result.errors?.length || !historical || !contents) {
+      throw new Error('Historical payroll object is unavailable');
+    }
+    const owner = historical.owner.__typename === 'AddressOwner'
+      && historical.owner.address?.address
+      ? { $kind: 'AddressOwner', AddressOwner: historical.owner.address.address }
+      : { $kind: historical.owner.__typename };
+    return {
+      objectId: historical.address,
+      version: String(historical.version),
+      digest: historical.digest,
+      type: contents.type.repr,
+      owner,
+      previousTransaction: historical.previousTransaction?.digest ?? null,
+      json: contents.json,
+    };
+  }
+
   return {
     async lookup(digest) {
       let result: unknown;
@@ -149,23 +215,22 @@ function createDefaultOperations(input: {
           .map((change) => ({
             objectId: change.objectId,
             type: objectTypes[change.objectId] ?? '',
+            version: change.outputVersion ?? '',
           })),
       };
     },
 
-    async readMandate(mandateId) {
-      const [state, metadata] = await Promise.all([
-        readPayrollMandate(input.client, input.config, mandateId),
-        input.client.getObject({
-          objectId: mandateId,
-          include: { previousTransaction: true },
-        }),
-      ]);
-      return { state, previousTransaction: metadata.object.previousTransaction };
+    async readMandate(mandateId, version) {
+      const object = await historicalObject(mandateId, version);
+      const reader = { getObject: async () => ({ object }) };
+      const state = await readPayrollMandate(reader as never, input.config, mandateId);
+      return { state, previousTransaction: object.previousTransaction };
     },
 
-    async readCap(capId) {
-      return readPayrollCap(input.client, input.config, capId);
+    async readCap(capId, version) {
+      const object = await historicalObject(capId, version);
+      const reader = { getObject: async () => ({ object }) };
+      return readPayrollCap(reader as never, input.config, capId);
     },
   };
 }
@@ -177,7 +242,11 @@ interface RegistrationTransactionValue {
   transaction?: { sender?: string | null };
   objectTypes?: Record<string, string>;
   effects?: {
-    changedObjects: Array<{ objectId: string; idOperation: string }>;
+    changedObjects: Array<{
+      objectId: string;
+      idOperation: string;
+      outputVersion: string | null;
+    }>;
   };
 }
 
@@ -230,6 +299,7 @@ export function createSuiPayrollRegistrationVerifier(options: {
       const operations = options.operations ?? createDefaultOperations({
         client: createTestnetClient(env.SUI_GRPC_URL),
         config: { packageId: config.packageId, coinType: config.coinType },
+        graphqlUrl: env.SUI_GRAPHQL_URL,
       });
 
       let transaction: PayrollRegistrationTransaction | null;
@@ -256,13 +326,16 @@ export function createSuiPayrollRegistrationVerifier(options: {
       if (mandates.length !== 1 || caps.length !== 1) throw refused();
       const mandateId = mandates[0]!.objectId;
       const capId = caps[0]!.objectId;
+      const mandateVersion = mandates[0]!.version;
+      const capVersion = caps[0]!.version;
+      if (!/^\d+$/.test(mandateVersion) || !/^\d+$/.test(capVersion)) throw refused();
 
       let mandateRead: Awaited<ReturnType<PayrollRegistrationOperations['readMandate']>>;
       let cap: PayrollCapState;
       try {
         [mandateRead, cap] = await Promise.all([
-          operations.readMandate(mandateId),
-          operations.readCap(capId),
+          operations.readMandate(mandateId, mandateVersion),
+          operations.readCap(capId, capVersion),
         ]);
       } catch (error) {
         throw rpcFailure(error);
