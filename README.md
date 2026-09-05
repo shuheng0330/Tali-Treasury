@@ -16,6 +16,22 @@ They must not be combined into one setup transaction or configuration flow.
 
 > Testnet only. All SUI and USDC used here have no financial value.
 
+## Problem statement
+
+Company payroll, overtime, leave, and expense reimbursements are often handled in
+separate systems with limited visibility into approvals, statutory deductions, and
+available funds. Tali Treasury gives employers and employees one auditable workflow:
+Sui smart contracts hold the budget, enforce deterministic payroll and reimbursement
+rules, and record the resulting payment activity on Testnet.
+
+## Team members
+
+| Member | Role |
+| --- | --- |
+| Shu Heng | Move smart contracts, Sui integration, and Testnet operations |
+| Ku Kian Xiang | Product web application and frontend integration |
+| Lim Wey Cheng | Product web application and frontend integration |
+
 ## Project status
 
 Status words are intentionally precise:
@@ -71,8 +87,8 @@ The payroll-first release order and acceptance gate live in
 
 | Item | Identifier |
 | --- | --- |
-| Original package v1 (expense treasury) | [`0x7be8aa…9dc523`](https://suiscan.xyz/testnet/object/0x7be8aa82872facbd01372cdeb20375a82f74011dca1512e41737664a759dc523) |
-| Current package v2 (payroll + treasury) | [`0xeb973d…b97688`](https://suiscan.xyz/testnet/object/0xeb973dbac9e4e5c2ea0c31ffb6b51b4df1f34e05443f970e89a35301e6b97688) |
+| Original package v1 (expense treasury) | [`0x7be8aa82872facbd01372cdeb20375a82f74011dca1512e41737664a759dc523`](https://suiscan.xyz/testnet/object/0x7be8aa82872facbd01372cdeb20375a82f74011dca1512e41737664a759dc523) |
+| Current package v2 (payroll + treasury) | [`0xeb973dbac9e4e5c2ea0c31ffb6b51b4df1f34e05443f970e89a35301e6b97688`](https://suiscan.xyz/testnet/object/0xeb973dbac9e4e5c2ea0c31ffb6b51b4df1f34e05443f970e89a35301e6b97688) |
 | Package upgrade | [`86914s…AaSfN`](https://suiscan.xyz/testnet/tx/86914sL2wFj9s7sfcMqdYx9ekST8FRU8Y1tLT5SAaSfN) |
 | Payroll setup | [`85PdAX…8ne73`](https://suiscan.xyz/testnet/tx/85PdAXLeVT82SetGWUK9a98vX3UAEcrarRRtUv8ne73) |
 | Payroll mandate | [`0xa04894…f1100`](https://suiscan.xyz/testnet/object/0xa04894a0d3852092d08df2476bb36e47992ec13ad78ba2a6e38cb891f77f1100) |
