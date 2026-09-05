@@ -15,8 +15,7 @@ import {
   workingDaysBetween,
 } from '@/lib/leave-form';
 import { DEMO_MONTHLY_WAGE, isoDay } from '@/lib/overtime-form';
-import { PAYROLL_EMPLOYEE, SINGLE_WALLET_DEMO } from '@/lib/demo-config';
-import { walletAccess, type AccessCopy } from '@/lib/wallet-access';
+import { signedInAccess, type AccessCopy } from '@/lib/wallet-access';
 import { useWalletSession } from '@/components/wallet/WalletSessionProvider';
 import { DataNotice } from '@/components/DataNotice';
 import { Select } from '@/components/Select';
@@ -25,7 +24,7 @@ import { LeaveList } from './LeaveList';
 
 const LEAVE_COPY: AccessCopy = {
   action: 'ask for leave',
-  holder: "the employee's wallet",
+  holder: 'your wallet',
 };
 
 const KINDS: readonly LeaveKind[] = ['annual', 'sick', 'unpaid'];
@@ -64,7 +63,7 @@ function Field({
  */
 export function LeaveRequestForm() {
   const wallet = useWalletSession();
-  const access = walletAccess(wallet.address, PAYROLL_EMPLOYEE, LEAVE_COPY);
+  const access = signedInAccess(wallet.address, LEAVE_COPY);
 
   const [listing, setListing] = useState<LeaveListing>(EMPTY_LISTING);
   const [loading, setLoading] = useState(false);
@@ -108,9 +107,10 @@ export function LeaveRequestForm() {
     };
   }, [address, reload]);
 
-  /* One wallet plays every part in the single-wallet demo, so filtering by the
-     signed-in address there would hide the requests it just submitted. */
-  const mine = SINGLE_WALLET_DEMO ? listing.data : ownLeave(listing.data, address);
+  /* Always the signed-in wallet's own, for the reason the overtime screen
+     filters: the server hands an employer everybody's requests to build the
+     approval queue from, and this screen is their own leave. */
+  const mine = ownLeave(listing.data, address);
 
   const monthlyWage = leaveWageOfRecord(mine) ?? DEMO_MONTHLY_WAGE;
   const counted = workingDaysBetween(startOn, endOn);

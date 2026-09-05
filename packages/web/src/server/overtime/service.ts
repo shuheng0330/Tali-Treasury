@@ -148,16 +148,18 @@ export function createOvertimeService(deps: {
     return parsed.data;
   }
 
-  function employee(value: string): Address {
-    const address = actor(value);
-    if (sameWallet(address, deps.employer)) {
-      throw new ServerError(
-        'forbidden',
-        403,
-        'Overtime and leave are claimed by the person who worked or took them',
-      );
-    }
-    return address;
+  /**
+   * Anyone signed in may ask for overtime or leave, the employer included.
+   *
+   * This used to refuse the employer on the grounds that overtime is claimed by
+   * the person who worked it. True, and beside the point: an employer works
+   * late and takes days off like anybody else, and refusing them left the one
+   * account that can reach every screen unable to use the one thing every
+   * employee does. Deciding a request is still the employer's alone — see
+   * `employer` below, which is the check that matters.
+   */
+  function claimant(value: string): Address {
+    return actor(value);
   }
 
   function employer(value: string): Address {
@@ -191,7 +193,7 @@ export function createOvertimeService(deps: {
     },
 
     async submitClaim(actorValue, input) {
-      const address = employee(actorValue);
+      const address = claimant(actorValue);
       const request = parse(submitOvertimeSchema, input, 'Invalid overtime claim');
       const wage = await deps.wages.resolve(address);
 
@@ -271,7 +273,7 @@ export function createOvertimeService(deps: {
     },
 
     async submitLeave(actorValue, input) {
-      const address = employee(actorValue);
+      const address = claimant(actorValue);
       const request = parse(submitLeaveSchema, input, 'Invalid leave request');
 
       const span = spanInDays(request.startOn, request.endOn);

@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
 import { PAYROLL_EMPLOYEE } from '@/lib/demo-config';
-import { activeSection, orderSections, otherRolesNote } from '@/lib/nav';
+import { activeSection, visibleSections } from '@/lib/nav';
 import { viewerRoles } from '@/lib/viewer-role';
 import { useWalletSession } from './wallet/WalletSessionProvider';
 
@@ -15,9 +15,11 @@ export function AppNav({ className = '' }: { className?: string }) {
   /* No event is in scope up here, so the treasurer answer falls back to the
      build-time constant. A screen that has read an event decides for itself. */
   const roles = viewerRoles(session.address, { employee: PAYROLL_EMPLOYEE });
-  const sections = orderSections(roles);
+  const sections = visibleSections(roles);
   const current = activeSection(pathname);
-  const note = otherRolesNote(roles);
+  /* Two rows on a phone whatever the count: three sections give two and one,
+     five give three and two. Ceil so the first row is never the short one. */
+  const columns = Math.ceil(sections.length / 2);
 
   return (
     <div className={`flex min-w-0 flex-col gap-2 ${className}`}>
@@ -25,22 +27,19 @@ export function AppNav({ className = '' }: { className?: string }) {
           strip ran wider than the box and left the last sections off the
           right-hand edge with nothing on screen to say they existed. Left to
           wrap, it broke wherever the width happened to run out, which reads as
-          an accident rather than a layout. Equal columns split them evenly
-          whatever the width.
+          an accident rather than a layout.
 
-          Two columns below 360px and three from there, which is where
-          APPROVALS — nine tracked uppercase characters, the longest label —
-          starts fitting a third of the row. 360px is the width the rest of the
-          design already turns on. Both counts give six sections whole rows;
-          `NAV_SECTIONS` is tested for that count so a seventh cannot quietly
-          leave one pill stranded alone on the last row. */}
+          The column count follows what this wallet can actually reach, because
+          that is no longer always six: an employee sees three, an employer
+          five, a visitor who has not connected one sees all six. Splitting the
+          row evenly beats a fixed breakpoint once the count can change. */}
       <nav
-        className="grid grid-cols-2 gap-1 rounded-badge border border-rule bg-surface p-1 min-[360px]:grid-cols-3 sm:flex sm:flex-wrap sm:items-center"
+        className="grid gap-1 rounded-badge border border-rule bg-surface p-1 sm:flex sm:flex-wrap sm:items-center"
+        style={{ gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }}
         aria-label="Sections"
       >
         {sections.map((section) => {
           const active = current?.href === section.href;
-          const theirs = roles.size > 0 && !roles.has(section.role);
 
           return (
             <Link
@@ -49,11 +48,7 @@ export function AppNav({ className = '' }: { className?: string }) {
               aria-current={active ? 'page' : undefined}
               title={section.full}
               className={`flex min-h-11 shrink-0 items-center justify-center rounded-badge px-2.5 text-center font-display text-label uppercase transition-colors duration-150 sm:min-h-0 sm:py-2 ${
-                active
-                  ? 'bg-ink text-canvas'
-                  : theirs
-                    ? 'text-ink-2 hover:bg-raised hover:text-ink'
-                    : 'text-ink hover:bg-raised'
+                active ? 'bg-ink text-canvas' : 'text-ink hover:bg-raised'
               }`}
             >
               {section.label}
@@ -61,8 +56,6 @@ export function AppNav({ className = '' }: { className?: string }) {
           );
         })}
       </nav>
-
-      {note ? <p className="text-caption text-ink-2 sm:max-w-sm">{note}</p> : null}
     </div>
   );
 }

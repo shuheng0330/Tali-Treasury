@@ -30,11 +30,11 @@ describe('walletAccess', () => {
     expect(access.notice).toContain('0x9391…b471');
   });
 
-  it('does not let the single-wallet presentation shortcut impersonate an employee', () => {
-    const access = walletAccess(SOMEBODY, EMPLOYER, EMPLOYEE_COPY, {
-      requireExpected: true,
-      singleWalletDemo: true,
-    });
+  /* Every gate in the app used to be opened by a presentation flag, so that one
+     account could play every part. An employee-only withdrawal offered to the
+     employer was the clearest case of what that cost. */
+  it('never lets one wallet stand in for another', () => {
+    const access = walletAccess(SOMEBODY, EMPLOYER, EMPLOYEE_COPY);
     expect(access.permitted).toBe(false);
     expect(access.notice).toContain('Only 0x9391…b471');
   });

@@ -11,7 +11,7 @@ import {
   DEMO_TREASURER,
   SINGLE_WALLET_DEMO,
 } from '@/lib/demo-config';
-import { viewerRole } from '@/lib/viewer-role';
+import { viewerRoles } from '@/lib/viewer-role';
 import { reviewQueue, settledClaims } from '@/lib/mock/api';
 import { committedFrom, settledFrom, toReviewQueue } from '@/lib/queue';
 import { useClaims } from '@/lib/api/useClaims';
@@ -324,7 +324,10 @@ export function TreasuryDashboard({
         revokeNotice={revokeAccess.notice}
       />
 
-      {viewerRole(wallet.address, eventTreasurer) === 'treasurer' ? (
+      {/* The set, not the single label: a wallet that is both employer and
+          treasurer is called Employer on its badge, and asking for that one
+          word here would hide the roster from the person who holds it. */}
+      {viewerRoles(wallet.address, { eventTreasurer }).has('treasurer') ? (
         <AddMemberForm eventId={DEMO_EVENT_ID} onAdded={() => live.reload()} />
       ) : null}
 
