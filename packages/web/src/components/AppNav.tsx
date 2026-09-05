@@ -21,8 +21,14 @@ export function AppNav({ className = '' }: { className?: string }) {
 
   return (
     <div className={`flex min-w-0 flex-col gap-2 ${className}`}>
+      {/* Wraps rather than scrolls. As a single scrolling row the strip was
+          506px of tabs in a 341px box on a phone, which left Claim and Safety
+          off the right-hand edge with nothing on screen to say they existed —
+          a horizontal scroller inside a vertically scrolling page is close to
+          undiscoverable. Two rows of three costs one line of header and shows
+          every section. */}
       <nav
-        className="flex snap-x items-center gap-1 overflow-x-auto rounded-badge border border-rule bg-surface p-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        className="flex flex-wrap items-center gap-1 rounded-badge border border-rule bg-surface p-1"
         aria-label="Sections"
       >
         {tabs.map((tab) => {
@@ -35,7 +41,7 @@ export function AppNav({ className = '' }: { className?: string }) {
               href={tab.href}
               aria-current={active ? 'page' : undefined}
               title={tab.full}
-              className={`shrink-0 snap-start rounded-badge px-3 py-2 text-center font-display text-label uppercase transition-colors duration-150 sm:px-4 ${
+              className={`shrink-0 rounded-badge px-3 py-2 text-center font-display text-label uppercase transition-colors duration-150 ${
                 active
                   ? 'bg-ink text-canvas'
                   : theirs

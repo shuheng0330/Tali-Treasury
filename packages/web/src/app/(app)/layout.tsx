@@ -28,8 +28,13 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             <span className="truncate">Tali Treasury</span>
           </Link>
 
-          <AppNav className="w-full sm:ml-auto sm:w-auto" />
-          <WalletSessionControl />
+          {/* Wallet sits on the top row beside the wordmark, not on a third row
+              of its own under the tabs. Stacked below the nav it read as a
+              piece of the page rather than the account control, and it pushed
+              the sticky header to 165px on a phone. Source order is the mobile
+              order; sm reorders it back to nav-then-wallet. */}
+          <WalletSessionControl className="ml-auto sm:order-3 sm:ml-0" />
+          <AppNav className="w-full sm:order-2 sm:ml-auto sm:w-auto" />
         </div>
       </header>
 
