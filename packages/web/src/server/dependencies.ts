@@ -26,7 +26,10 @@ import {
   createAddEventMemberService,
   createListEventMembersService,
 } from './events/members';
+import { createRegisterEventService } from './events/registration';
 import { createSupabaseEventMemberRepository } from './supabase/event-member-repository';
+import { createSupabaseEventRegistrationRepository } from './supabase/event-registration-repository';
+import { createSuiEventRegistrationVerifier } from './sui/event-registration-verifier';
 import { createSupabaseRateCache } from './fx/cache';
 import { createOpenExchangeRateReader } from './fx/rates';
 import { createClaimQuoter } from './fx/quotes';
@@ -51,6 +54,7 @@ export interface BackendServices {
   completeWalletSession: ReturnType<typeof createCompleteWalletSessionService>;
   addEventMember: ReturnType<typeof createAddEventMemberService>;
   listEventMembers: ReturnType<typeof createListEventMembersService>;
+  registerEvent: ReturnType<typeof createRegisterEventService>;
   registerPayroll: ReturnType<typeof createRegisterPayrollService>;
   payrollConfigurations: ReturnType<typeof createPayrollConfigurationService>;
   appOrigin: string;
@@ -81,6 +85,7 @@ export function getBackendServices(): BackendServices {
   const payments = createSuiPaymentExecutor();
   const auth = createSupabaseWalletAuthRepository(client);
   const members = createSupabaseEventMemberRepository(client);
+  const eventRegistrations = createSupabaseEventRegistrationRepository(client);
   const payrollConfigurations = createSupabasePayrollConfigurationRepository(client);
   const appOrigin = requireAppOrigin();
   const quotes = createClaimQuoter({ rates: createOpenExchangeRateReader({
@@ -103,6 +108,10 @@ export function getBackendServices(): BackendServices {
     completeWalletSession: createCompleteWalletSessionService({ auth }),
     addEventMember: createAddEventMemberService({ members }),
     listEventMembers: createListEventMembersService({ members }),
+    registerEvent: createRegisterEventService({
+      chain: createSuiEventRegistrationVerifier(),
+      events: eventRegistrations,
+    }),
     registerPayroll: createRegisterPayrollService({
       chain: createSuiPayrollRegistrationVerifier(),
       configurations: payrollConfigurations,

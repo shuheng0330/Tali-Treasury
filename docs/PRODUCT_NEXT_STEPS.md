@@ -77,12 +77,12 @@ Owner: frontend + backend, with Sui integration support.
    existing `buildCreateMandateTransaction` wrapper and ask the connected treasurer
    wallet to sign. Retain the AdminCap in that wallet; issue the AgentCap to the
    configured backend signer. No private-key input in the browser.
-3. Add a protected backend event-registration endpoint. Independently verify the
-   successful transaction, sender, package/coin type, new mandate fields and cap
-   owners against the request before inserting the event and members in Supabase.
-4. Make registration idempotent by transaction/mandate, and recover when funding
-   succeeds but database registration fails. Retrying registration must not fund
-   another mandate. Handle cancelled wallet prompts without creating an event.
+3. ✅ Add a protected backend event-registration endpoint. It independently
+   verifies the successful transaction, sender, package/coin type, new mandate
+   fields and cap owners before inserting the event and members in Supabase.
+4. ✅ Make registration idempotent by mandate and recover when funding succeeds
+   but database registration fails. Retrying registration never funds another
+   mandate. Cancelled wallet prompts still create no event.
 5. Replace fixed demo selection with event selection/routing. Bind every claim,
    dashboard read and backend capability to the same selected event. The current
    single global AgentCap setting needs an event-aware mapping before multiple
@@ -90,10 +90,11 @@ Owner: frontend + backend, with Sui integration support.
 6. Verify unauthorized creation, forged transaction IDs, mismatched recipients,
    retry after registration failure, and a wallet-created event's reimbursement.
 
-This feature is planned, not implemented by the claim-history change. Event records
-hold metadata and roles; the Sui reimbursement mandate holds USDC. It remains
-separate so payroll employees, statutory recipients, `PayrollCap` and salary rules
-cannot be confused with claim recipients, `AgentCap` or per-claim policy.
+The registration slice is implemented locally; event selection/routing and
+event-aware capability mapping remain. Event records hold metadata and roles; the
+Sui reimbursement mandate holds USDC. It remains separate so payroll employees,
+statutory recipients, `PayrollCap` and salary rules cannot be confused with claim
+recipients, `AgentCap` or per-claim policy.
 
 ## Demo release priorities
 
