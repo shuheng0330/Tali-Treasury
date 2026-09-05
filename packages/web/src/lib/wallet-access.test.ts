@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { EMPLOYER_COPY, REVIEW_COPY, REVOKE_COPY, SETUP_COPY, walletAccess } from './wallet-access';
+import { EMPLOYEE_COPY, EMPLOYER_COPY, REVIEW_COPY, REVOKE_COPY, SETUP_COPY, walletAccess } from './wallet-access';
 
 const EMPLOYER = '0x939194a716226335b1089c5b36088ebc0b57a928c206d63c9ddcad70ff76b471';
 const SOMEBODY = '0x405200312d4c8ee0159d44429ca69ef0cf035f4a00c12f2035a0bdef882bb16e';
@@ -28,6 +28,15 @@ describe('walletAccess', () => {
     expect(access.permitted).toBe(false);
     expect(access.notice).toContain('0x4052…b16e');
     expect(access.notice).toContain('0x9391…b471');
+  });
+
+  it('does not let the single-wallet presentation shortcut impersonate an employee', () => {
+    const access = walletAccess(SOMEBODY, EMPLOYER, EMPLOYEE_COPY, {
+      requireExpected: true,
+      singleWalletDemo: true,
+    });
+    expect(access.permitted).toBe(false);
+    expect(access.notice).toContain('Only 0x9391…b471');
   });
 
   /* The screen cannot know who the employer is before one is configured.

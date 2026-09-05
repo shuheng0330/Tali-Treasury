@@ -51,7 +51,7 @@ export interface PayrollOperations {
   submit(prepared: PreparedTransaction): Promise<ConfirmedTransaction>;
 }
 
-interface PayrollEnvironment {
+export interface PayrollEnvironment {
   AGENT_PRIVATE_KEY?: string | undefined;
   SUI_NETWORK?: string | undefined;
   SUI_GRPC_URL?: string | undefined;

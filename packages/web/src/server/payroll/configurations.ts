@@ -58,12 +58,19 @@ export function createPayrollConfigurationService(deps: {
       if (!deps.configurations.findByMandateId) throw new ServerError('database_failed', 500, 'The database operation failed');
       const row = await deps.configurations.findByMandateId(parsedMandate.data);
       if (!row) throw new ServerError('payroll_not_found', 404, 'Registered payroll not found');
-      const actualRole: PayrollViewerRole | null = address === row.employerWallet
-        ? 'employer'
-        : row.approvedEmployees.includes(address) ? 'employee' : null;
-      if (!actualRole || (role && role !== actualRole)) {
+      const isEmployer = address === row.employerWallet;
+      const isEmployee = row.approvedEmployees.includes(address);
+      const permitted = role === 'employer'
+        ? isEmployer
+        : role === 'employee'
+          ? isEmployee
+          : isEmployer || isEmployee;
+      if (!permitted) {
         throw new ServerError('payroll_forbidden', 403, 'This wallet cannot access the selected payroll');
       }
+      /* A demo wallet may deliberately hold both roles. An explicit employee
+         operation must keep that role instead of losing to employer precedence. */
+      const actualRole: PayrollViewerRole = role ?? (isEmployer ? 'employer' : 'employee');
       return { snapshot: row, view: view(row, actualRole), role: actualRole };
     },
   };

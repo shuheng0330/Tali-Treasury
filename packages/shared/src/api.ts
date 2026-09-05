@@ -14,7 +14,11 @@ import type {
   RuleId,
 } from './claims.js';
 import type { MandateView } from './mandate.js';
-import type { PayrollConfigurationView, PayrollRunView } from './payroll.js';
+import type {
+  PayrollConfigurationView,
+  PayrollRunView,
+  SalaryStreamRegistrationView,
+} from './payroll.js';
 
 export interface ApiError {
   error: string;
@@ -190,6 +194,18 @@ export interface ListPayrollRunsResponse {
   runs: PayrollRunView[];
   persisted: boolean;
   storageWarning?: string;
+}
+
+/** POST /api/payroll/streams. Amount is explicitly micro-USDC. */
+export interface OpenSalaryStreamRequest {
+  mandateId: ObjectId;
+  totalAmount: Amount;
+  durationMinutes: number;
+}
+
+/** GET/POST /api/payroll/streams?payroll=<mandateId> */
+export interface SalaryStreamRegistrationResponse {
+  stream: SalaryStreamRegistrationView | null;
 }
 
 /** GET /api/events/:id/claims?state=... */

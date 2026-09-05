@@ -99,13 +99,12 @@ export function getStreamService(packageId?: string): StreamService {
 }
 
 /**
- * True once stream reads and withdrawals go to Sui rather than the sample.
- * Both the published stream and a signer are required: a stream id on its own
- * would read real figures under a withdraw button that cannot pay.
+ * True once registered-stream reads and withdrawals go to Sui rather than the
+ * sample. Stream and package ids come from the authenticated registry; only
+ * the server signer remains deployment configuration.
  */
 export function streamsAreLive(env: EnvLike = process.env): boolean {
-  const streamId = env.DEMO_STREAM_ID?.trim() || env.NEXT_PUBLIC_DEMO_STREAM_ID?.trim();
-  return Boolean(env.AGENT_PRIVATE_KEY?.trim() && streamId);
+  return Boolean(env.AGENT_PRIVATE_KEY?.trim());
 }
 
 export const DEMO_STREAM_ID =

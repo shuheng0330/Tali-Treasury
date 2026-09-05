@@ -75,7 +75,28 @@ The local Supabase run record stores the same digest and `abort_code = 24`, so
 the product can link its refusal explanation to independently verifiable chain
 evidence.
 
+## Salary stream opened
+
+Transaction [`2tLwnY…Qq1Tq`](https://suiscan.xyz/testnet/tx/2tLwnYYVZkdn3QVAvYhSwixJkyAKb9cDJH12Z2RQq1Tq)
+opened salary stream
+[`0x64aa6d…6eef8`](https://suiscan.xyz/testnet/object/0x64aa6def14dc646831b3fa3b820c042a7dd8cbcb65c110b8e56e58ca6b26eef8)
+at checkpoint `379993839`.
+
+| Stream field | Verified value |
+| --- | --- |
+| Payroll mandate | `0xa04894a0d3852092d08df2476bb36e47992ec13ad78ba2a6e38cb891f77f1100` |
+| Employee | `0x405200312d4c8ee0159d44429ca69ef0cf035f4a00c12f2035a0bdef882bb16e` |
+| Reserved amount | `1.000000 USDC` |
+| Period start | `2026-09-05T07:01:50.330Z` |
+| Period end | `2026-09-05T07:11:50.330Z` |
+| Net opening gas | `0.003527304 SUI` |
+
+The post-opening mandate state is `3.317095 USDC` budget,
+`1.000000 USDC` committed and `2.317095 USDC` spendable. The local application
+reads the registered stream and displays its live per-second accrual to either
+authorized payroll party. Withdrawal remains restricted to the immutable
+employee wallet.
+
 ## Evidence still required
 
-- One salary stream opened from the remaining budget and an accrued withdrawal
-  paid to the registered employee.
+- One accrued withdrawal paid to the registered employee.
