@@ -38,7 +38,7 @@ function Row({ run }: { run: PayrollRunView }) {
       </div>
 
       <div className="flex items-baseline justify-between gap-3">
-        <span className="text-caption text-ink-3">Taken home</span>
+        <span className="text-caption text-ink-3">Worker takes home</span>
         <Money amount={run.breakdown.net} size="row" />
       </div>
 
@@ -50,7 +50,7 @@ function Row({ run }: { run: PayrollRunView }) {
           </div>
         ))}
         <div className="flex items-baseline justify-between gap-3 border-t border-rule pt-2">
-          <dt className="text-caption text-ink-2">Cost to the treasury</dt>
+          <dt className="text-caption text-ink-2">Total cost</dt>
           <dd className="tnum text-caption font-medium">
             {toDisplay(run.breakdown.employerCost)}
           </dd>
@@ -71,15 +71,14 @@ function Row({ run }: { run: PayrollRunView }) {
       {run.status === 'failed' ? (
         <p className="text-caption text-no">
           {run.abortCode === null
-            ? 'Nothing was paid. The run did not reach a decision from the contract.'
-            : `Nothing was paid. The contract refused this run on abort ${run.abortCode}.`}
+            ? 'Nobody was paid. This run never got an answer from the contract.'
+            : `Nobody was paid. The contract refused it (code ${run.abortCode}).`}
         </p>
       ) : null}
 
       {run.status === 'pending' ? (
         <p className="text-caption text-wait">
-          Recorded before signing. If it stays here, the outcome is unknown and needs
-          checking by hand rather than running again.
+          Still waiting on an answer. If it stays like this, check before running again.
         </p>
       ) : null}
     </li>
@@ -89,11 +88,9 @@ function Row({ run }: { run: PayrollRunView }) {
 export function RunHistory({ runs }: { runs: PayrollRunView[] }) {
   if (runs.length === 0) {
     return (
-      <p className="rounded-card border border-dashed border-rule bg-surface p-5 text-body text-ink-3">
-        Nothing has reached the contract yet. A run is recorded here before it is
-        signed, so this list shows what was attempted, not only what succeeded.
-        Attempts refused before that point — an unpublished module, missing
-        credentials — never get this far.
+      <p className="rounded-card border border-rule bg-surface p-5 text-body text-ink-3">
+        No payroll has been run yet. Once one is, it appears here whether it went
+        through or was refused.
       </p>
     );
   }

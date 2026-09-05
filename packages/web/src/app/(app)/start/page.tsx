@@ -52,11 +52,9 @@ export default async function StartPage() {
     <div className="mx-auto flex w-full max-w-md flex-col gap-6 px-5 py-6">
       <header className="flex flex-col gap-2">
         <p className="eyebrow">Where to start</p>
-        <h1 className="text-display">Four ways in</h1>
+        <h1 className="text-display">Your way in</h1>
         <p className="text-body text-ink-2">
-          Tali has an employer, a treasurer, the people being paid and the people
-          claiming expenses. They see different screens. Connect a wallet and this page
-          says which of them you are.
+          Connect your wallet and this page shows the screens that belong to you.
         </p>
       </header>
 
@@ -64,14 +62,13 @@ export default async function StartPage() {
 
       {!reviewsRecordable ? (
         <p className="text-caption text-ink-3">
-          Claim decisions cannot be recorded right now, so the treasurer queue is
-          readable but its review controls will not save.
+          Claim decisions cannot be saved right now. You can still read the queue.
         </p>
       ) : null}
 
       <p className="text-caption text-ink-3">
-        Nothing here is hidden by role. Every screen is reachable by URL, and each one
-        checks the wallet itself before it writes anything.
+        Screens that are not yours are hidden, not locked. Every one of them still checks
+        your wallet before it saves anything.
       </p>
 
       <Link href="/" className="link self-start">

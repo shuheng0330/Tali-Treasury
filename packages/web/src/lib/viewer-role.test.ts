@@ -7,7 +7,7 @@ vi.mock('./demo-config', () => ({
   SINGLE_WALLET_DEMO: false,
 }));
 
-const { viewerRole, viewerRoles, can, capabilitiesOf } = await import('./viewer-role');
+const { viewerRole, viewerRoles, can, canAny, capabilitiesOf } = await import('./viewer-role');
 
 describe('viewerRole', () => {
   it('labels nobody when there is no address', () => {
@@ -42,8 +42,15 @@ describe('viewerRoles', () => {
     expect([...viewerRoles('0xsomeoneelse')]).toEqual(['member']);
   });
 
-  it('gives the employer wallet the employer role and membership', () => {
-    expect([...viewerRoles('0xEMPLOYER')].sort()).toEqual(['employer', 'member']);
+  /* The employer holds this and nothing else. Membership carries `request`, so
+     a union that added it back would put the three claim forms in front of the
+     one person whose job is to decide them. */
+  it('gives the employer wallet the employer role alone', () => {
+    expect([...viewerRoles('0xEMPLOYER')]).toEqual(['employer']);
+  });
+
+  it('keeps the employer the employer even when a stream names them', () => {
+    expect([...viewerRoles('0xEMPLOYER', { employee: '0xemployer' })]).toEqual(['employer']);
   });
 
   it('recognises the employee only when one has been supplied', () => {
@@ -103,15 +110,34 @@ describe('capabilities', () => {
    * withdraw what you have already earned. Gating that on one configured wallet
    * left everybody else unable to see their own pay.
    */
-  it('lets every signed-in wallet reach its own earnings', () => {
-    for (const role of ['employer', 'employee', 'member']) {
+  it('lets everybody who is paid reach their own earnings', () => {
+    for (const role of ['employee', 'member']) {
       expect(can(roles(role), 'earn'), role).toBe(true);
     }
   });
 
-  it('lets everybody signed in ask for something and read the proofs', () => {
-    for (const role of ['employer', 'employee', 'member']) {
+  /* The employer draws no salary from a mandate they fund, so `earn` would open
+     a screen with nothing on it. They get the team's instead, and the team view
+     has no withdraw control anywhere on it. */
+  it('gives the employer oversight of earnings rather than earnings', () => {
+    expect(can(roles('employer'), 'earn')).toBe(false);
+    expect(can(roles('employer'), 'overseeEarnings')).toBe(true);
+    for (const role of ['employee', 'member']) {
+      expect(can(roles(role), 'overseeEarnings'), role).toBe(false);
+    }
+  });
+
+  /* Asked for by teammates: the employer meets all three kinds of request in
+     the approval queue, and never files one. */
+  it('keeps the employer out of the request forms', () => {
+    expect(can(roles('employer'), 'request')).toBe(false);
+    for (const role of ['employee', 'member']) {
       expect(can(roles(role), 'request'), role).toBe(true);
+    }
+  });
+
+  it('lets everybody signed in read the proofs', () => {
+    for (const role of ['employer', 'employee', 'member']) {
       expect(can(roles(role), 'proof'), role).toBe(true);
     }
   });
@@ -126,9 +152,16 @@ describe('capabilities', () => {
   });
 
   it('unions what two roles carry rather than taking the first', () => {
-    const both = capabilitiesOf(roles('employer', 'employee'));
-    expect(both.has('approve')).toBe(true);
+    const both = capabilitiesOf(roles('employee', 'member'));
     expect(both.has('earn')).toBe(true);
+    expect(both.has('request')).toBe(true);
+  });
+
+  it('holds a capability when any one of several is held', () => {
+    expect(canAny(roles('employer'), ['earn', 'overseeEarnings'])).toBe(true);
+    expect(canAny(roles('member'), ['earn', 'overseeEarnings'])).toBe(true);
+    expect(canAny(roles('member'), ['approve', 'runPayroll'])).toBe(false);
+    expect(canAny(roles('member'), [])).toBe(false);
   });
 
   /* Every role is spelled out, so a role added later cannot silently carry

@@ -17,8 +17,7 @@ export default function PayrollPage() {
       <header className="flex flex-col gap-2">
         <h1 className="text-display">Run payroll</h1>
         <p className="text-body text-ink-2">
-          A wage and its statutory contributions leave the treasury as one transaction. If
-          any of them is short, none of them moves.
+          The wage, EPF, SOCSO and EIS leave together. If one is short, none of them moves.
         </p>
       </header>
 

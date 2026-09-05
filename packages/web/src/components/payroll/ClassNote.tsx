@@ -25,13 +25,13 @@ export function ClassNote({ breakdown }: { breakdown: PayrollBreakdown }) {
   const notes: string[] = [];
 
   if (epf.employee === 0n && epf.employer > 0n) {
-    notes.push('No EPF is taken from the wage, and the employer share drops to the retirement rate.');
+    notes.push('Nothing is taken from the wage for EPF, and your share drops to the retirement rate.');
   }
   if (eis.employee === 0n && eis.employer === 0n) {
-    notes.push('EIS does not cover this worker, so nothing is withheld for it.');
+    notes.push('EIS does not cover this worker, so nothing is taken for it.');
   }
   if (socso.employee > 0n && BigInt(source.gross) > 6_000_000_000n) {
-    notes.push('SOCSO and EIS are charged on the first RM6,000 of wages only.');
+    notes.push('SOCSO and EIS are charged on the first RM6,000 of the wage only.');
   }
 
   if (notes.length === 0) return null;

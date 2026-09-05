@@ -31,16 +31,25 @@ export type Capability =
   | 'runPayroll'
   | 'holdTreasury'
   | 'earn'
+  | 'overseeEarnings'
   | 'proof';
 
 /**
- * Gate authority over other people, never what is somebody's own.
+ * Gate authority over other people, and keep what is yours apart from theirs.
  *
  * Approving a claim, running payroll and holding the treasury are powers over
- * others, and they are the whole of what this table restricts. Asking for
- * something, reading your own pay and watching the contract refuse are not
- * powers at all: they are a person's own business, and every signed-in wallet
- * carries them.
+ * others. Asking for something, reading your own pay and watching the contract
+ * refuse are not powers at all: they are a person's own business, and every
+ * wallet that is paid here carries them.
+ *
+ * The employer is the one wallet that carries neither request nor earn, and
+ * that is a statement about the job rather than a restriction. They do not file
+ * a claim with themselves — the approval queue is the same three kinds of
+ * request seen from the deciding side — and they draw no salary from a mandate
+ * they fund, so the earnings screen would open on nothing. What they hold
+ * instead is `overseeEarnings`: the same screen showing what everybody they pay
+ * has earned so far, and no withdraw button anywhere on it. Only the wallet a
+ * stream names can take money out of it, and the contract is what says so.
  *
  * `earn` was briefly the employee's alone, which was a plain mistake. The
  * screen behind it resolves the connected wallet's own payrolls — the server
@@ -54,7 +63,7 @@ export type Capability =
  * answers it honestly. It was never a question about permission.
  */
 const CAPABILITIES: Record<ViewerRole, readonly Capability[]> = {
-  employer: ['request', 'earn', 'approve', 'runPayroll', 'holdTreasury', 'proof'],
+  employer: ['approve', 'runPayroll', 'holdTreasury', 'overseeEarnings', 'proof'],
   employee: ['request', 'earn', 'proof'],
   member: ['request', 'earn', 'proof'],
 };
@@ -67,8 +76,9 @@ function sameAddress(a: string | null | undefined, b: string | null | undefined)
 /**
  * Every capability the held roles add up to.
  *
- * A union, not a maximum: one wallet may be both employer and treasurer, and
- * taking the first role that matched would drop half of what it may do.
+ * A union, not a maximum: the wallet a salary stream names is also a member of
+ * the event, and taking the first role that matched would drop half of what it
+ * may do.
  */
 export function capabilitiesOf(roles: ReadonlySet<ViewerRole>): ReadonlySet<Capability> {
   const held = new Set<Capability>();
@@ -80,6 +90,22 @@ export function capabilitiesOf(roles: ReadonlySet<ViewerRole>): ReadonlySet<Capa
 
 export function can(roles: ReadonlySet<ViewerRole>, capability: Capability): boolean {
   return capabilitiesOf(roles).has(capability);
+}
+
+/**
+ * Whether any one of several capabilities is held.
+ *
+ * One screen can belong to two kinds of wallet without belonging to everybody.
+ * The earnings screen is the case that needed this: an employee holds `earn`
+ * and sees their own pay, the employer holds `overseeEarnings` and sees the
+ * team's, and nobody holding neither gets in.
+ */
+export function canAny(
+  roles: ReadonlySet<ViewerRole>,
+  capabilities: readonly Capability[],
+): boolean {
+  const held = capabilitiesOf(roles);
+  return capabilities.some((capability) => held.has(capability));
 }
 
 /**
@@ -131,8 +157,17 @@ export function viewerRoles(
 ): ReadonlySet<ViewerRole> {
   if (!address) return new Set();
 
+  /* The employer holds this role and no other. Membership is what carries
+     `request`, so a union that added it back would put the three claim forms in
+     front of the one person whose job is to decide them — the employer would
+     approve their own overtime, and the approval queue would be filling itself.
+     Where the same wallet is also named on a stream, employer still wins: the
+     precedence below already says which of the two this account is, and a
+     withdrawal is refused by the contract to anyone but the employee the stream
+     names, whatever this file thinks. */
+  if (sameAddress(address, EMPLOYER_WALLET)) return new Set<ViewerRole>(['employer']);
+
   const roles = new Set<ViewerRole>();
-  if (sameAddress(address, EMPLOYER_WALLET)) roles.add('employer');
   /* Absent means the caller had nothing to pass and the configured wallet
      stands in; an explicit null means they read a stream and it named nobody,
      which is a real answer and must not be overridden. */

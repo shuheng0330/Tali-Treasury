@@ -13,22 +13,21 @@ export default function TreasurySetupPage() {
   return (
     <div className="mx-auto flex w-full max-w-md flex-col gap-6 px-5 py-6">
       <header className="flex flex-col gap-2">
-        <h1 className="text-display">Create expense treasury</h1>
+        <h1 className="text-display">Set up an expense budget</h1>
         <p className="text-body text-ink-2">
-          This funds a reimbursement mandate on Sui from your wallet. The per-claim cap,
-          the expiry and the list of addresses it may pay are fixed at creation and cannot
-          be edited afterwards.
+          Put money aside to pay staff back for receipts. Once created, the limit and the
+          people it can pay cannot be changed.
         </p>
       </header>
 
       <TreasurySetup />
 
       <p className="text-caption text-ink-3">
-        Paying salaries is a separate mandate with its own statutory rules.{' '}
+        Paying salaries is separate.{' '}
         <Link href="/payroll/setup" className="link">
           Set up payroll
         </Link>{' '}
-        is not created here.
+        for that.
       </p>
     </div>
   );
