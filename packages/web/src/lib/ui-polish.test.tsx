@@ -234,6 +234,64 @@ describe('production-ready application copy', () => {
     expect(html).not.toContain('fell back because');
   });
 
+  it('renders a concise request fallback when a form opts into brief status', () => {
+    const html = renderToStaticMarkup(
+      <DataNotice
+        source="mock"
+        reason="the service is unavailable"
+        live="Your requests"
+        simulated="Approval is the employer's."
+        brief={{
+          live: 'Your requests are live.',
+          fallback: 'Live requests are unavailable — saved temporarily. Employer approval is still required.',
+        }}
+      />,
+    );
+
+    expect(html).toContain('Live requests are unavailable — saved temporarily.');
+    expect(html).toContain('Employer approval is still required.');
+    expect(html).not.toContain('Live data is temporarily unavailable.');
+  });
+
+  it('puts overtime rates and statutory evidence behind calculation details', () => {
+    const overtime = source('../components/overtime/OvertimePreview.tsx');
+
+    expect(overtime).toContain('Estimated overtime');
+    expect(overtime).toContain('Added to next payroll if approved.');
+    expect(overtime).toContain('SOCSO and EIS include overtime · EPF excludes it.');
+    expect(overtime).toContain('View calculation details');
+    expect(overtime).toContain('<details');
+    expect(overtime).not.toContain('<details open');
+    expect(overtime.indexOf('<details')).toBeLessThan(
+      overtime.indexOf('EPF Act 1991'),
+    );
+  });
+
+  it('uses concise employee request copy and keeps the detailed material disclosed', () => {
+    const overtimePage = source('../app/(app)/requests/overtime/page.tsx');
+    const leavePage = source('../app/(app)/requests/leave/page.tsx');
+    const overtimeForm = source('../components/overtime/OvertimeClaimForm.tsx');
+    const timesheet = source('../components/overtime/TimesheetCapture.tsx');
+    const leaveForm = source('../components/leave/LeaveRequestForm.tsx');
+    const overtimePreview = source('../components/overtime/OvertimePreview.tsx');
+
+    expect(overtimePage).toContain('Log extra hours. Approved overtime is added to your next payroll.');
+    expect(leavePage).toContain('Request time off. Only unpaid leave reduces your next payroll.');
+    expect(overtimeForm).toContain('label="Overtime hours"');
+    expect(overtimeForm).toContain('label="Work summary"');
+    expect(timesheet).toContain('Scan timesheet (optional)');
+    expect(leaveForm).toContain('label="Reason"');
+    expect(leaveForm).toContain('Payroll impact');
+    expect(leaveForm).toContain('Deducted from next payroll');
+    expect(leaveForm).toContain('No payroll change');
+    expect(leaveForm.indexOf('<details')).toBeLessThan(
+      leaveForm.indexOf('Unpaid leave lowers the wage base'),
+    );
+    expect(overtimePreview.indexOf('<details')).toBeLessThan(
+      overtimePreview.indexOf('EPF Act 1991'),
+    );
+  });
+
   it('uses preview language for local safety evidence', () => {
     const safety = source('../components/safety/SafetyTest.tsx');
     expect(safety).toContain('Local preview · no transaction submitted');

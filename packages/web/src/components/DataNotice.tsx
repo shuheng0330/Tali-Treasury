@@ -11,6 +11,7 @@ export function DataNotice({
   live,
   simulated,
   plural = false,
+  brief,
   /**
    * What the fallback actually is, when it is not sample data. Records held in
    * memory are real; calling them a sample would be its own inaccuracy.
@@ -26,6 +27,8 @@ export function DataNotice({
   /** Set when `live` names more than one thing. */
   plural?: boolean;
   fallbackLabel?: string;
+  /** A single concise status message for focused employee request forms. */
+  brief?: { live: string; fallback: string };
 }) {
   const isLive = source === 'live';
 
@@ -35,7 +38,9 @@ export function DataNotice({
         isLive ? 'border-ok-line bg-ok-soft text-ok' : 'border-wait-line bg-wait-soft text-wait'
       }`}
     >
-      {isLive ? (
+      {brief ? (
+        <span className="font-medium">{isLive ? brief.live : brief.fallback}</span>
+      ) : isLive ? (
         <>
           <span className="font-medium">
             {live} {plural ? 'are' : 'is'} live.

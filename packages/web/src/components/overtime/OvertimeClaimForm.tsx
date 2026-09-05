@@ -236,6 +236,10 @@ export function OvertimeClaimForm() {
           plural
           simulated="Approval is the employer's, and payment waits for the next payroll run."
           fallbackLabel={listing.reached ? 'Held in memory.' : 'Nothing loaded.'}
+          brief={{
+            live: 'Your requests are live.',
+            fallback: 'Live requests are unavailable — saved temporarily. Employer approval is still required.',
+          }}
         />
       )}
 
@@ -287,15 +291,15 @@ export function OvertimeClaimForm() {
           }))}
           hint={
             chosenKind === null
-              ? 'Set from the date. Change it if this was your rest day or a public holiday.'
-              : 'Your correction. The multiplier follows the Employment Act either way.'
+              ? 'Check rest day or public holiday.'
+              : 'Your correction. The statutory multiplier still applies.'
           }
         />
 
         <Field
-          label="Hours past the normal day"
+          label="Overtime hours"
           uncertain={uncertain.has('hours')}
-          hint="Eight hours is a normal working day. Claim only what came after it."
+          hint="Hours after your 8-hour day."
         >
           <span className="flex items-baseline gap-2">
             <input
@@ -313,7 +317,7 @@ export function OvertimeClaimForm() {
           </span>
         </Field>
 
-        <Field label="What you were doing">
+        <Field label="Work summary">
           <input
             value={reason}
             disabled={!access.permitted}

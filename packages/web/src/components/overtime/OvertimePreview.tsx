@@ -130,84 +130,88 @@ export function OvertimePreview({ monthlyWage, wageIsOnRecord, kind, hours }: Pr
   const readableHours = centihours === null ? '0' : fromCentihours(centihours);
 
   return (
-    <section className="flex flex-col gap-5">
-      <div className="flex flex-col gap-3 rounded-panel border border-rule bg-surface p-5">
-        <h2 className="eyebrow">What this claim is worth</h2>
+    <section className="flex flex-col gap-3 rounded-panel border border-rule bg-surface p-5">
+      <h2 className="eyebrow">Estimated overtime</h2>
+      <Money amount={pay} size="hero" unit="MYR" />
 
-        <Money amount={pay} size="hero" unit="MYR" />
+      <p className="text-body text-ink-2">
+        {worked
+          ? `${readableHours} ${readableHours === '1' ? 'hour' : 'hours'} · ${OVERTIME_KIND_LABEL[kind]} · ${OVERTIME_KIND_RATE[kind]}. Added to next payroll if approved.`
+          : 'Enter overtime hours to see your estimate.'}
+      </p>
+      <p className="text-caption text-ink-3">SOCSO and EIS include overtime · EPF excludes it.</p>
 
-        <div className="flex flex-col divide-y divide-rule">
-          <Line
-            label="Monthly wage of record"
-            value={toDisplay(monthlyWage)}
-            unit="MYR"
-          />
-          <Line
-            label="Ordinary rate of pay"
-            detail="Monthly wage ÷ 26 · s.60I(1A)"
-            value={toDisplay(ordinaryRate(monthlyWage))}
-            unit="a day"
-          />
-          <Line
-            label="Hourly rate"
-            detail="Ordinary rate ÷ 8 normal hours"
-            value={toDisplay(hourlyRate(monthlyWage))}
-            unit="an hour"
-          />
-          <Line
-            label={`${OVERTIME_KIND_LABEL[kind]} at ${OVERTIME_KIND_RATE[kind]}`}
-            detail={KIND_AUTHORITY[kind]}
-            value={toDisplay(overtimeHourlyRate(monthlyWage, kind))}
-            unit="an hour"
-          />
-          <Line
-            label={`${readableHours} ${readableHours === '1' ? 'hour' : 'hours'} worked`}
-            value={toDisplay(pay)}
-            unit="MYR"
-            strong
-          />
-        </div>
+      <details className="border-t border-rule pt-3">
+        <summary className="cursor-pointer text-caption font-medium text-ink underline underline-offset-4">
+          View calculation details
+        </summary>
+        <div className="mt-4 flex flex-col gap-4">
+          <div>
+            <h3 className="eyebrow">Pay rate</h3>
+            <div className="mt-2 flex flex-col divide-y divide-rule">
+              <Line
+                label="Monthly wage of record"
+                value={toDisplay(monthlyWage)}
+                unit="MYR"
+              />
+              <Line
+                label="Ordinary rate of pay"
+                detail="Monthly wage ÷ 26 · s.60I(1A)"
+                value={toDisplay(ordinaryRate(monthlyWage))}
+                unit="a day"
+              />
+              <Line
+                label="Hourly rate"
+                detail="Ordinary rate ÷ 8 normal hours"
+                value={toDisplay(hourlyRate(monthlyWage))}
+                unit="an hour"
+              />
+              <Line
+                label={`${OVERTIME_KIND_LABEL[kind]} at ${OVERTIME_KIND_RATE[kind]}`}
+                detail={KIND_AUTHORITY[kind]}
+                value={toDisplay(overtimeHourlyRate(monthlyWage, kind))}
+                unit="an hour"
+              />
+              <Line
+                label={`${readableHours} ${readableHours === '1' ? 'hour' : 'hours'} worked`}
+                value={toDisplay(pay)}
+                unit="MYR"
+                strong
+              />
+            </div>
+          </div>
 
-        {wageIsOnRecord ? null : (
-          <p className="text-caption text-ink-3">
-            No claim of yours has been priced yet, so this uses the wage of record for the
-            registered mandate. The server prices what you submit against the same
-            figure — this preview is not a second opinion.
-          </p>
-        )}
-      </div>
+          <div>
+            <h3 className="eyebrow">Statutory wage bases</h3>
+            <div className="mt-2 flex flex-col divide-y divide-rule">
+              <BodyBase body="epf" base={bases.epf} counted={false} delta={null} />
+              <BodyBase body="socso" base={bases.socso} counted delta={delta} />
+              <BodyBase body="eis" base={bases.eis} counted delta={delta} />
+            </div>
+          </div>
 
-      <div className="flex flex-col gap-4 rounded-panel border border-rule bg-canvas p-5">
-        <h2 className="eyebrow">What each body counts</h2>
+          {bases.deemed ? (
+            <p className="text-caption text-ink-2">
+              SOCSO and EIS count{' '}
+              <span className="tnum">{toDisplay(INSURED_WAGE_CAP.toString())}</span> MYR at most.
+              Act 4 s.5(2) deems a higher wage to be that figure rather than capping the
+              contribution afterwards, so overtime counts toward reaching it.
+            </p>
+          ) : null}
 
-        <p className="font-display text-lead font-medium">
-          {worked
-            ? 'These hours raise the SOCSO and EIS wage. EPF does not count them at all.'
-            : 'Add hours above, and two of these three move.'}
-        </p>
-
-        <div className="flex flex-col divide-y divide-rule">
-          <BodyBase body="epf" base={bases.epf} counted={false} delta={null} />
-          <BodyBase body="socso" base={bases.socso} counted delta={delta} />
-          <BodyBase body="eis" base={bases.eis} counted delta={delta} />
-        </div>
-
-        {bases.deemed ? (
           <p className="text-caption text-ink-2">
-            SOCSO and EIS count{' '}
-            <span className="tnum">{toDisplay(INSURED_WAGE_CAP.toString())}</span> MYR at most.
-            Act 4 s.5(2) deems a higher wage to be that figure rather than capping the
-            contribution afterwards, so overtime counts toward reaching it.
+            EPF Act 1991 s.2(b) excludes overtime payment from wages. SOCSO (Act 4 s.2(24))
+            and EIS (Act 800 s.3) include payment for overtime.
           </p>
-        ) : null}
 
-        <p className="text-caption text-ink-2">
-          EPF Act 1991 s.2(b) leaves overtime payment out of wages, and KWSP says it plainly:
-          overtime is not subject to EPF contribution. SOCSO (Act 4 s.2(24)) and EIS (Act 800
-          s.3) both define wages to include payment for overtime. Three bodies, three wage
-          bases — payroll that keeps one base is wrong in every month somebody worked late.
-        </p>
-      </div>
+          {wageIsOnRecord ? null : (
+            <p className="text-caption text-ink-3">
+              This preview uses the wage of record for the registered mandate. The server
+              prices your submitted claim against the same figure.
+            </p>
+          )}
+        </div>
+      </details>
     </section>
   );
 }
