@@ -38,7 +38,7 @@ const quoteClaim: Claim = {
 describe('mobile payroll proof polish', () => {
   it('uses concise safety-test copy and removes the old challenge prose', () => {
     const source = readFileSync(
-      new URL('../app/(app)/payroll/proof/page.tsx', import.meta.url),
+      new URL('../app/(app)/safety/payroll/page.tsx', import.meta.url),
       'utf8',
     );
     expect(source).toContain('Payroll Safety Test');

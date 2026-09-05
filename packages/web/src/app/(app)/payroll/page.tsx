@@ -15,29 +15,20 @@ export default function PayrollPage() {
   return (
     <div className="mx-auto flex w-full max-w-md flex-col gap-6 px-5 py-6">
       <header className="flex flex-col gap-2">
-        <h1 className="text-display">Payroll</h1>
+        <h1 className="text-display">Run payroll</h1>
         <p className="text-body text-ink-2">
           A wage and its statutory contributions leave the treasury as one transaction. If
           any of them is short, none of them moves.
         </p>
       </header>
 
-      <Link href="/payroll/setup" className="btn btn--primary btn--block">
-        Set Up Payroll
-      </Link>
-
       <Suspense fallback={<p className="text-caption text-ink-3">Loading payroll…</p>}>
         <PayrollPageContent runsAreLive={payrollIsLive()} />
       </Suspense>
 
-      <div className="flex flex-col gap-3">
-        <Link href="/payroll/proof" className="btn btn--ghost btn--block">
-          Try underpaying EPF
-        </Link>
-        <Link href="/payroll/history" className="link self-start">
-          What has been run
-        </Link>
-      </div>
+      <Link href="/safety/payroll" className="btn btn--ghost btn--block">
+        Try underpaying EPF
+      </Link>
     </div>
   );
 }

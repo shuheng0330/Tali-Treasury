@@ -157,7 +157,7 @@ which — it is a better answer than being caught by it.
 | 0:00–0:20 | Landing | "Unpaid EPF is the quietest way a payroll goes wrong." Read the headline. |
 | 0:20–0:50 | `/payroll/setup` | The screen that created the funded mandate. Point at the rules fixed at creation — do not sign a second one live; the mandate has 3.317095 USDC left and a run costs 9.046290. |
 | 0:50–1:40 | `/payroll` | **Do not run a payroll live — it will abort on 26.** Show the split, then open the recorded run `HpUwPs…`: four payments, one transaction. See [the budget note](#the-mandate-cannot-fund-another-run) below. |
-| 1:40–2:20 | `/payroll/proof` | **This one you can run live.** Underpay EPF; the contract aborts on 24 before it ever looks at the budget. Show that no balance moved. |
+| 1:40–2:20 | `/safety/payroll` | **This one you can run live.** Underpay EPF; the contract aborts on 24 before it ever looks at the budget. Show that no balance moved. |
 | 2:20–2:45 | `/payroll` | Enter unpaid leave days. The wage drops and the split recomputes on the reduced wage rather than being scaled, so EPF can fall into a lower Third Schedule band. Stronger than `/earnings`, whose withdrawal has no Testnet proof. |
 | 2:45–3:00 | Close | "Wages and EPF leave together, or neither does. That is a contract, not a policy." |
 
@@ -173,7 +173,7 @@ against it.
 | 0:00–0:20 | Landing | Same opening. |
 | 0:20–0:55 | Landing evidence | Seven real Testnet transactions: three allowed, three refused, one package publication. Read the two payroll digests aloud rather than opening them. Stress that the agent held a valid capability and was refused anyway. |
 | 0:55–1:45 | `/claim` | Photograph an RM receipt. Agent reads it, quotes MYR to USDC, treasurer approves the exact payout. Show the payment digest. |
-| 1:45–2:25 | `/payroll` + `/payroll/proof` | The statutory split against the EPF Third Schedule, and the refusal that already happened on chain: budget and total-paid unchanged after abort 24. |
+| 1:45–2:25 | `/payroll` + `/safety/payroll` | The statutory split against the EPF Third Schedule, and the refusal that already happened on chain: budget and total-paid unchanged after abort 24. |
 | 2:25–2:45 | `/payroll` | Enter unpaid leave days. The wage drops, and the split recomputes on the reduced wage rather than being scaled — EPF can fall into a lower Third Schedule band. |
 | 2:45–3:00 | Close | Same close. |
 
