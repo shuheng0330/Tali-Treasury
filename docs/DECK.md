@@ -53,6 +53,11 @@ switch to the app.
 
 ## 4 — Live demo · 0:40–2:25
 
+**Do not run a valid payroll live.** The funded mandate has 3.317095 USDC left
+against a 9.046290 run, so it would abort on 26. The deficient run still aborts
+on **24** — the floors are checked before the budget — so the refusal is live
+and the successful run is a recorded digest. `SUBMISSION.md` has the arithmetic.
+
 **No slide. Switch to the app.** Follow script A from
 [SUBMISSION.md](SUBMISSION.md). The funded mandate, a real atomic payroll and a
 real abort-24 refusal all exist — A is the strong script and it is now true.
